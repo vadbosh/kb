@@ -335,6 +335,17 @@ not by the built-in patterns, not by gitleaks, not by trufflehog. The author of
 gitleaks says as much about `MyServiceToken="secret123"`. This lowers the risk;
 it does not replace not writing credentials down.
 
+### Testing the scan
+
+A credential with a correct format is indistinguishable from a live one, both to
+this scan and to everyone else's. **Do not commit sample credentials as test
+fixtures**, even fake ones: GitHub's own secret scanning will flag them, and so
+will the scanners of everyone who clones the repository. Generate them inside the
+test from a template instead, so no valid-looking value is ever stored in a file.
+
+The same applies to the notes themselves. A fake key pasted into a note "to see
+what happens" is a real finding as far as every tool is concerned.
+
 ### Blocking a commit
 
 ```bash

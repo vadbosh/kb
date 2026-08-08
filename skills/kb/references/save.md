@@ -74,6 +74,10 @@ leaving it for the user to notice:
 | **file over the size threshold** | `kb outline` → judge by kind-mixing → propose a seam OR say "no seam, leaving it" |
 | `*.bak.*` left over | verify against the originals, then propose deleting |
 
+Never write a sample credential into a note to see whether the scan catches it.
+A correctly formatted key is a real finding to every tool that touches the
+repository afterwards, including GitHub's own scanning — fake or not.
+
 **Exit 4 is different: a credential was found in a note.** Do not quietly edit
 the file. If the notes are under version control the value is already in
 history, and a silent fix hides that from the person who has to rotate it. Say
