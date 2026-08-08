@@ -300,7 +300,15 @@ class Note:
 
 def find_root(explicit: str | None, *, for_init: bool = False) -> Path:
     if explicit:
-        return Path(explicit)
+        # An explicit --dir was trusted without checking, so every reading
+        # command crashed with a traceback when the directory held no index --
+        # which happens routinely for a path that has since been moved or
+        # deleted, exactly the case `kb list` reports.
+        root = Path(explicit)
+        if not for_init and not (root / OVERVIEW).is_file():
+            die(f"no {OVERVIEW} in {root} — "
+                "the directory is empty, moved or deleted")
+        return root
     cwd = Path.cwd()
     if (cwd / "kb" / OVERVIEW).exists():
         return cwd / "kb"
