@@ -16,10 +16,21 @@ reaching for `kb status` first silently decides the session had one subject.
 **Do not enumerate them from memory.** Recall returns whatever is most recent
 and reads as complete either way, and after the conversation has been compacted
 it is provably not — you cannot tell "nothing else happened" from "I no longer
-have it". If the harness keeps a transcript on disk, take the list from there:
-the directories mentioned across the session's own messages, which is far
-cheaper to extract than its prose. Otherwise say plainly that the list is from
-memory and may be short, and ask.
+have it". Ask the transcript instead:
+
+```
+kb streams              directories this session mentioned, commonest first
+kb streams --sessions 3 when the work spans more than the current one
+```
+
+It reads the harness's own transcript and extracts **paths**, not prose — a
+tenth of the cost, and the question is which directories anyway. When it finds
+no transcript it says so; then the list is yours to give, and the fact that it
+came from memory is worth saying out loud.
+
+Work with no directory at all — a web console, a mailbox rule, a remote host —
+leaves nothing to extract. `kb streams` shows a tail of messages that mention no
+path, but that is a hint, not a second list.
 
 Best avoided altogether by **saving at the boundary** — one stream finished,
 one save, while the context is still whole. Then there is never more than one.

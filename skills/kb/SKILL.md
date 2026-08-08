@@ -1,7 +1,7 @@
 ---
 name: kb
 description: Read and write a project's kb/ work-notes — a Markdown knowledge base whose index is generated rather than maintained by hand. Handles phrases "kbsave", "kbrestore", "/kb", "запиши в kb", "запиши в заметки", "прочитай kb", "прочитай заметки", "восстанови контекст из kb", "save to kb", "read kb", "что в заметках", "задокументируй это", "оформи в kb". Use at the start of work to load the notes and see what changed, and at the end to persist findings, decisions, traps or a dated snapshot instead of leaving them in the conversation.
-version: "2.5.0"
+version: "2.6.0"
 ---
 
 # kb
@@ -58,15 +58,17 @@ kb sync                                       rebuild the index table
 kb add <slug> --kind <kind> --title "<...>"   new note + front matter + reindex
 kb outline [file]                             section map — where the seams are
 kb list                                       every kb known on this machine
+kb streams                                    directories this session touched
 ```
 
 Resolve the notes directory from cwd (`./kb`). Not the project dir →
 `--dir <path>`. No `kb/` yet → `kb add` creates it, no `init` needed.
 
-**One kb covers one work stream, and a session often touches several.** Nothing
-in the tool notices that: every command answers for a single directory, so
-running one and stopping silently decides the session had one subject. Deciding
-how many there were is the skill's job — `references/save.md` step 1.
+**One kb covers one work stream, and a session often touches several.** Every
+other command answers for a single directory, so running one and stopping
+silently decides the session had one subject. `kb streams` answers the other
+question — which directories came up — by reading the transcript rather than
+trusting recall. `references/save.md` step 1.
 
 ## The five kinds
 

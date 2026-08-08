@@ -34,6 +34,7 @@ Exit codes:
     3 — drift found (`kb check` only)
 """
 import argparse
+import json
 import os
 import re
 import shutil
@@ -957,6 +958,150 @@ def cmd_outline(args) -> int:
     return 0
 
 
+# ── which work streams did a session touch ─────────────────────────────────
+# The question `save` opens with, answered from evidence instead of recall.
+# Recall returns the directory you happen to be standing in and reads as
+# complete either way; after the conversation has been compacted it is provably
+# not, and nothing from the inside distinguishes the two.
+#
+# Transcripts are per-harness and none of this is guaranteed to exist, so every
+# probe is best-effort and absence is reported rather than papered over.
+# DIRECTORIES are extracted, not prose: the question is which streams, and paths
+# cost roughly a tenth of what the messages do.
+TRANSCRIPTS = [
+    ("claude", Path.home() / ".claude/projects", "*.jsonl"),
+    ("codex",  Path.home() / ".codex/sessions",  "rollout-*.jsonl"),
+]
+OC_DB = Path.home() / ".local/share/opencode/opencode.db"
+PATH_RE = re.compile(r"(?:/[A-Za-z0-9._-]+){2,}|~/[A-Za-z0-9._/-]+")
+
+
+def _newest_transcripts(limit: int) -> list[tuple[str, Path]]:
+    found = []
+    for harness, root, pattern in TRANSCRIPTS:
+        if root.is_dir():
+            for f in root.rglob(pattern):
+                try:
+                    found.append((f.stat().st_mtime, harness, f))
+                except OSError:
+                    pass
+    found.sort(reverse=True)
+    return [(h, f) for _, h, f in found[:limit]]
+
+
+def _user_messages(path: Path):
+    """User turns from a JSONL transcript, across harness formats.
+
+    Claude Code writes `{"type":"user","message":{"content":"..."}}`.
+    Codex writes `{"type":"response_item","payload":{"role":"user",
+    "content":[{"type":"input_text","text":"..."}]}}` — a different envelope,
+    a different key, and content as blocks. Keying on the role rather than the
+    envelope covers both; keying on `type == "user"` covered only the first,
+    which is what an untested claim of Codex support looked like.
+    """
+    with path.open(encoding="utf-8", errors="replace") as fh:
+        for line in fh:
+            try:
+                d = json.loads(line)
+            except (json.JSONDecodeError, ValueError):
+                continue
+            msg = d.get("message") or d.get("payload") or {}
+            if not isinstance(msg, dict):
+                continue
+            role = msg.get("role") or (d.get("type") if d.get("type") == "user" else None)
+            if role != "user":
+                continue
+            c = msg.get("content")
+            if isinstance(c, list):
+                c = " ".join(b.get("text", "") for b in c if isinstance(b, dict))
+            if isinstance(c, str) and c.strip():
+                yield " ".join(c.split())
+
+
+def _opencode_sessions(limit: int):
+    """Opencode keeps sessions in sqlite rather than files, so it cannot join
+    the mtime sort above — it gets asked separately, but automatically. Behind a
+    flag it would be invisible to the one person who needs it: whoever is
+    running inside Opencode.
+
+    The text lives in `part.data`, joined to `message` for the role. Reading
+    every string column instead returns tool output and file contents; a first
+    attempt produced `/_next/static` twenty-six thousand times.
+    """
+    if not OC_DB.is_file():
+        return []
+    import sqlite3
+    out = []
+    try:
+        con = sqlite3.connect(f"file:{OC_DB}?mode=ro", uri=True)
+        sessions = con.execute(
+            "SELECT id, directory FROM session "
+            "ORDER BY time_updated DESC LIMIT ?", (limit,)).fetchall()
+        for sid, directory in sessions:
+            texts = []
+            for (blob,) in con.execute(
+                    "SELECT p.data FROM part p JOIN message m "
+                    "ON p.message_id = m.id "
+                    "WHERE m.session_id = ? "
+                    "AND json_extract(m.data, '$.role') = 'user'", (sid,)):
+                try:
+                    d = json.loads(blob)
+                except (json.JSONDecodeError, ValueError):
+                    continue
+                if d.get("type") == "text" and isinstance(d.get("text"), str):
+                    texts.append(" ".join(d["text"].split()))
+            if texts:
+                out.append((f"opencode:{directory}", texts))
+        con.close()
+    except sqlite3.Error:
+        return out
+    return out
+
+
+def cmd_streams(args) -> int:
+    sources, texts = [], []
+    for harness, path in _newest_transcripts(args.sessions):
+        got = list(_user_messages(path))
+        if got:
+            sources.append(harness)
+            texts.extend(got)
+    for label, got in _opencode_sessions(args.sessions):
+        sources.append(label.split(":")[0])
+        texts.extend(got)
+
+    if not texts:
+        print("no transcript found — this harness may not keep one, or it keeps "
+              "it somewhere this does not know about.\nEnumerate the streams by "
+              "hand, and say the list is from memory.")
+        return 1
+
+    seen = set()
+    paths, pathless = {}, []
+    for t in texts:
+        if t.startswith(("<", "Caveat", "#")) or t in seen:
+            continue
+        seen.add(t)
+        hits = PATH_RE.findall(t)
+        if hits:
+            for h in hits:
+                root = "/".join(h.rstrip('.,;:)"\'').split("/")[:3])
+                paths[root] = paths.get(root, 0) + 1
+        elif len(t) >= 30:
+            pathless.append(t[:52])
+
+    tally = {h: sources.count(h) for h in dict.fromkeys(sources)}
+    print("  read: " + ", ".join(f"{h} ×{n}" for h, n in tally.items()))
+    print()
+    for root, n in sorted(paths.items(), key=lambda kv: -kv[1])[:args.top]:
+        print(f"  {n:>3}  {root}")
+    if pathless:
+        print(f"\n  mentioning no path ({len(pathless)}) — work with no directory "
+              "does not appear above at all:")
+        for line in pathless[:6]:
+            print(f"    • {line}")
+    return 0
+
+
 def cmd_status(args) -> int:
     root = find_root(args.dir)
     notes = load_notes(root)
@@ -1150,6 +1295,12 @@ def main() -> int:
     p.add_argument("--scan", metavar="DIR", help="pick up existing kbs under DIR")
     p.add_argument("--prune", action="store_true", help="drop dead entries")
     p.set_defaults(fn=cmd_list)
+
+    p = sub.add_parser("streams", help="which directories this session touched")
+    p.add_argument("--sessions", type=int, default=1,
+                   help="how many recent transcripts to read (default 1)")
+    p.add_argument("--top", type=int, default=12, help="directories to show")
+    p.set_defaults(fn=cmd_streams)
 
     p = sub.add_parser("verify", help="advisory: paths that vanished, notes gone stale")
     p.set_defaults(fn=cmd_verify)
