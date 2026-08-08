@@ -9,6 +9,8 @@ about it is specific to code.
 
 [Русская версия](README.RU.md) · Full manual: [English](docs/kb.en.md) · [Русский](docs/kb.ru.md)
 
+**Just want to start?** → [Install](#install), then [Usage](#usage). Three steps.
+
 ---
 
 ## The idea
@@ -178,23 +180,38 @@ whatever it replaces as `<file>.bak.<timestamp>`.
 
 ---
 
-## Using it
+## Usage
 
-Two words, typed into your assistant like any other message:
+What you MUST do, in order:
 
-| You type | When | What runs underneath |
-|---|---|---|
-| `kbrestore` | starting work | `kb status` + `kb check` + `kb verify`, then the index and the current snapshot, then only the files the task needs |
-| `kbsave` | something is worth keeping | `kb status` → decides append-or-new → `kb add` → writes the body → `kb sync` → `kb check` |
+1. **Install** — `./install.sh` (Linux/macOS) or `.\install.ps1` (Windows). See
+   [Install](#install).
+2. **`cd` into your project** and start your assistant there.
+3. **Type `/kb save`.** This is the step that creates `kb/` and writes the first
+   note. Before it, the project has no `kb/` — launching the assistant does not
+   create one, and that is normal.
 
-Both are ordinary words in a prompt — the skill picks them up. `/kb save` and
-`/kb restore` are the explicit slash form and do exactly the same thing; use
-whichever you prefer.
+After that, two commands are the whole workflow:
 
-**`kb/` is not created by launching the assistant.** Nothing is set up in
-advance, but nothing appears on its own either: the directory and the first note
-are written the first time you say `kbsave`. Until then the project has no
-`kb/` at all, and that is the expected state.
+```
+/kb restore    first thing when you sit down — loads the notes, says what changed
+/kb save       any time something is worth keeping
+```
+
+That is all. You never run `kb` in a shell; the assistant does it for you.
+
+Saying `kbrestore` or `kbsave` as plain words in a message works identically —
+use whichever you find easier to remember.
+
+<details>
+<summary>What those two actually run</summary>
+
+| Command | Underneath |
+|---|---|
+| `/kb restore` | `kb status` + `kb check` + `kb verify`, then the index and the current snapshot, then only the files the task needs |
+| `/kb save` | `kb status` → decides append-or-new → `kb add` → writes the body → `kb sync` → `kb check` |
+
+</details>
 
 ### Adopting notes you already have
 
