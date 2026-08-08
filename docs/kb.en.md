@@ -1,19 +1,31 @@
-# kb — work notes with a generated index
+# kb — the manual
 
-A `kb/` directory in the project: an index `00-overview.md` plus numbered files
-`NN-slug.md`. The table inside the index is **generated** from each file's front
-matter.
+A Markdown knowledge base per work stream: an index `00-overview.md` plus
+numbered files `NN-slug.md`. Two properties carry the whole design:
 
-Two layers:
+- **the index table is generated** from each file's front matter, so it cannot
+  drift from the files it describes
+- **every note is typed by how it expires** — `state` and `plan` are superseded
+  by newer ones, `reference` and `recipe` are edited in place, a `decision`
+  never expires because it records why a choice was made
 
-| Layer | What | Where |
+Why that matters, and what the tool refuses to do, is in
+[README.md](../README.md). This file is the working manual: how to drive it day
+to day and what each mechanism actually guarantees.
+
+| Layer | Owns | Lives in |
 |---|---|---|
-| skill `kbsave` | write knowledge into the notes | from the assistant, like `qsave` |
-| skill `kbrestore` | load the notes into the session | from the assistant, like `qrestore` |
-| CLI `kb` | mechanics: numbering, table, drift | `~/.local/bin/kb`, Python 3.10+, stdlib only |
+| Skill `kb` | judgement — what to write, where, what to read | your assistant's skills directory |
+| CLI `kb` | mechanics — numbering, the table, drift detection | `<skill-dir>/scripts/kb` |
 
-Normal work goes through the skills. The CLI is needed by hand rarely: migrating
-an old directory, and a quick check.
+The skill loads one half on demand: `references/save.md` to write,
+`references/restore.md` to read. You address them by saying `kbsave` or
+`kbrestore`; the slash form is `/kb save` and `/kb restore`.
+
+Normal work never touches the shell — the skill calls the CLI itself. The one
+routine exception is `kb adopt`, once per directory you are migrating.
+
+Install, configuration and uninstall: [README.md](../README.md#install).
 
 ---
 
@@ -75,7 +87,7 @@ it earns its keep when **time has passed** or **another session wrote**.
 | resumed a session, need context | `kbrestore` |
 | what is in the notes at all | `kbrestore` |
 
-Slash form works too: `/kbsave`, `/kbrestore`.
+Slash form works too: `/kb save`, `/kb restore`.
 
 ---
 
