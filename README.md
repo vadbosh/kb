@@ -15,14 +15,14 @@ about it is specific to code.
 
 ## The idea
 
-Almost everyone eventually writes a wiki for their own work: one file listing the
-others, topic files around it. It works for about three weeks.
+Almost everyone ends up keeping a wiki for their own work: one file listing the
+rest, topic files around it. While there are few files, it holds together.
 
-Then files get added, renamed, split. The list is updated by hand — until it
-isn't. The "current status" heading keeps a date nobody touched. Links point at
-files that moved. The usual archaeological evidence is a stack of
-`00-overview.md.bak.*` beside the real directory, one per attempt to keep the
-thing honest.
+Then files get added, renamed, split. Each of those changes means editing the
+list by hand, and sooner or later nobody does. That is where the divergence
+starts: the "current status" section keeps a date no one refreshed, links lead to
+files that moved long ago, and a stack of `00-overview.md.bak.*` builds up beside
+the directory — one copy per attempt to put the index back in order.
 
 Three mechanisms below work against that. The first two remove the source of the
 divergence automatically. The third fixes nothing — it shows you where the
@@ -104,7 +104,7 @@ What the tool then gets for free:
   that supersedes it, so the reasoning behind the old choice stays readable —
   usually the thing you actually needed six months later.
 
-### 3. Rot is reported through two separate channels
+### 3. Two independent checks watch for staleness
 
 ```
 kb check     mechanical: index vs files, dead links, missing front matter, size
@@ -186,6 +186,10 @@ After that, two commands are the whole workflow:
 ```
 
 That is all. You never run `kb` in a shell; the assistant does it for you.
+
+A command name on its own works too — `/kb check`, `/kb status`, `/kb list`. The
+assistant runs that one command and reports what it said, without loading the
+notes or writing anything.
 
 There is no `/kbsave` or `/kbrestore` — the skill is named `kb`, so the command
 is `/kb` and the half is chosen by the first word. Saying "kbsave" or "kbrestore"
