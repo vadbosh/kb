@@ -13,6 +13,17 @@ A stream is a body of work with its own directory or repository. A long session
 often has several, and every kb command answers for one directory only — so
 reaching for `kb status` first silently decides the session had one subject.
 
+**Do not enumerate them from memory.** Recall returns whatever is most recent
+and reads as complete either way, and after the conversation has been compacted
+it is provably not — you cannot tell "nothing else happened" from "I no longer
+have it". If the harness keeps a transcript on disk, take the list from there:
+the directories mentioned across the session's own messages, which is far
+cheaper to extract than its prose. Otherwise say plainly that the list is from
+memory and may be short, and ask.
+
+Best avoided altogether by **saving at the boundary** — one stream finished,
+one save, while the context is still whole. Then there is never more than one.
+
 - **One stream** → write it. Do not turn a routine save into a questionnaire.
 - **Several** → list them and ask which to write. Enumerating is your job;
   choosing is not.
