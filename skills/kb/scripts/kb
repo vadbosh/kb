@@ -132,7 +132,7 @@ KINDS = {
     "recipe": "traps and ready-to-run verification commands",
 }
 
-NAME_RE = re.compile(r"^(\d{2})-(.+)\.md$")
+NAME_RE = re.compile(r"^(\d{2,})-(.+)\.md$")
 DATE_IN_NAME_RE = re.compile(r"(\d{4}-\d{2}-\d{2})")
 FM_FENCE = "---"
 
@@ -403,9 +403,20 @@ def load_notes(root: Path) -> list[Note]:
     return notes
 
 
+ISO_DATE_RE = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
 def current_state(notes: list[Note]) -> Note | None:
-    """Newest snapshot by the date in its filename — the rule, enforced."""
-    states = [n for n in notes if n.kind == "state"]
+    """Newest snapshot by the date in its filename — the rule, enforced.
+
+    Dates are compared as strings, so anything that is not an ISO date sorts
+    unpredictably against real ones and can win outright: a typo in `updated`
+    used to promote its file to "current snapshot", the single claim the whole
+    index rests on. Snapshots without a usable date are excluded from the
+    contest; `check` reports them separately.
+    """
+    states = [n for n in notes
+              if n.kind == "state" and ISO_DATE_RE.match(n.sort_date)]
     return max(states, key=lambda n: (n.sort_date, n.num)) if states else None
 
 
@@ -476,7 +487,7 @@ def harvest_table(text: str) -> dict[str, str]:
         cells = [c.strip() for c in line.strip().strip("|").split("|")]
         fname = ""
         for cell in cells:
-            m = re.search(r"`?([0-9]{2}-[^`\s|]+\.md)`?", cell)
+            m = re.search(r"`?([0-9]{2,}-[^`\s|]+\.md)`?", cell)
             if m:
                 fname = m.group(1)
                 break
@@ -491,7 +502,7 @@ def harvest_table(text: str) -> dict[str, str]:
 
 def linked_files(text: str) -> set[str]:
     """Filenames referenced anywhere in the overview — backticks or md links."""
-    return set(re.findall(r"[`(]([0-9]{2}-[^`)\s]+\.md)[`)]", text))
+    return set(re.findall(r"[`(]([0-9]{2,}-[^`)\s]+\.md)[`)]", text))
 
 
 # ── commands ────────────────────────────────────────────────────────────────
@@ -572,6 +583,14 @@ def cmd_add(args) -> int:
     # referenced from a commit message, another note, or somewhere outside.
     num = max((n.num for n in notes), default=0) + 1
     slug = args.slug
+    # Whitespace in a filename cannot be referenced: the link check matches a
+    # run of non-space characters, so `08-two words.md` is unlinkable-to and any
+    # broken reference to it stays invisible. Every shell one-liner in the docs
+    # would need quoting too. Cheaper to refuse it here than to widen a regex
+    # that would then match half of the surrounding prose.
+    if slug != slug.strip() or any(c.isspace() for c in slug):
+        die(f"whitespace in slug {slug!r} — use hyphens: "
+            f"{'-'.join(slug.split())!r}")
     # A snapshot without a date in its name cannot be ordered against the others.
     if args.kind == "state" and not DATE_IN_NAME_RE.search(slug):
         slug = f"{slug}-{date.today().isoformat()}"
@@ -649,6 +668,22 @@ def cmd_check(args) -> int:
             problems.append(f"{n.name}: no front matter (kind/title guessed)")
         elif n.kind not in KINDS:
             problems.append(f"{n.name}: unknown kind {n.kind!r}")
+        # A date that is not a date sorts as a string against real ones and can
+        # win. `updated` also drives the staleness check, which simply skips
+        # what it cannot parse -- so a typo here disables two things quietly.
+        if n.has_fm and n.updated and not ISO_DATE_RE.match(n.updated):
+            problems.append(
+                f"{n.name}: updated is not a date: {n.updated!r} — expected YYYY-MM-DD")
+        if n.kind == "state" and not ISO_DATE_RE.match(n.sort_date):
+            problems.append(
+                f"{n.name}: a state with no date in its name and no usable "
+                "`updated` — it can never be the current snapshot")
+
+    for n in notes:
+        if any(c.isspace() for c in n.name):
+            problems.append(
+                f"{n.name}: whitespace in the filename — a link to it can never "
+                "be verified; rename with hyphens")
 
     strays = [p.name for p in sorted(root.glob("*.md"))
               if p.name != OVERVIEW and not NAME_RE.match(p.name)]
@@ -947,6 +982,24 @@ def cmd_status(args) -> int:
     return 0
 
 
+def plan_renames(root: Path) -> list[tuple[Path, Path]]:
+    """Unnumbered `*.md` → the next free numbers, in name order.
+
+    Deterministic on purpose: the same directory adopted twice produces the same
+    numbers, so a preview can be trusted to describe the apply that follows.
+    """
+    taken = {n.num for n in load_notes(root)}
+    nxt = max(taken, default=0) + 1
+    out = []
+    for src in sorted(root.glob("*.md")):
+        if src.name == OVERVIEW or NAME_RE.match(src.name):
+            continue
+        slug = "-".join(src.stem.split())
+        out.append((src, root / f"{nxt:02d}-{slug}.md"))
+        nxt += 1
+    return out
+
+
 def cmd_adopt(args) -> int:
     """Retrofit an existing hand-made directory: front matter + markers.
 
@@ -956,6 +1009,20 @@ def cmd_adopt(args) -> int:
     """
     root = find_root(args.dir)
 
+    # A hand-made directory rarely uses NN- names -- that convention is what
+    # adopt is supposed to INTRODUCE. Numbering them is therefore part of the
+    # job, not a precondition for it: without this, adopt silently reported
+    # "0 numbered files" on exactly the directories it exists for.
+    renames = plan_renames(root)
+    if renames:
+        print(f"── kb adopt: numbering {len(renames)} unnumbered file(s) ──")
+        for src, dst in renames:
+            print(f"  {src.name}  →  {dst.name}")
+        if args.apply:
+            for src, dst in renames:
+                shutil.move(str(src), str(dst))
+            print(f"  renamed {len(renames)}")
+
     # Notes belong in a directory of their own, never loose in the project root —
     # that is the whole convention. A legacy layout is MIGRATED, not blessed.
     moving = root.name != "kb" and not args.in_place
@@ -963,7 +1030,8 @@ def cmd_adopt(args) -> int:
     if moving:
         print(f"── kb adopt: {root} → {target} ──")
         print(f"  move into {target.name}/: {OVERVIEW} + "
-              f"{len(load_notes(root))} numbered file(s)")
+              f"{len(load_notes(root)) + (len(renames) if not args.apply else 0)} "
+              "numbered file(s)")
         print("  (only the numbered notes and the index move; *.bak.*, dotfiles "
               "and everything else stay where they are)")
         if not args.apply:
