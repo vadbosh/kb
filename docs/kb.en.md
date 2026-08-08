@@ -277,6 +277,7 @@ what `kb check` catches (`index table is stale`, exit 3). Inside `/kb save` both
 | `kb sync` | rebuild the index table from front matter |
 | `kb add <slug> --kind <k> --title "..."` | new file + front matter + rebuild |
 | `kb list [--scan DIR] [--prune]` | every known kb: where it lives, what is inside |
+| `kb streams [--sessions N]` | directories this session touched, read from the transcript |
 | `kb outline [file]` | section map with weights — where the seams are |
 | `kb init [--title ...]` | index skeleton only |
 | `kb adopt [--apply] [--in-place]` | migrate an existing hand-made directory |
@@ -287,7 +288,8 @@ what `kb check` catches (`index table is stale`, exit 3). Inside `/kb save` both
 the scan covers and what it cannot is in
 [README](../README.md#credentials).
 
-`kb check` catches: a stale table, links to deleted files, files without front
+`kb check` catches: a stale table, links to deleted files, an `updated` that is
+not a date, whitespace in a filename, files without front
 matter, `.md` outside the `NN-slug.md` scheme, leftover `.bak`, **files past the
 size threshold**.
 

@@ -76,8 +76,10 @@ $ kb check
 ```
 
 The guess works, but only until you correct it: write the fields out and the
-file stops being a special case. That is all `kb adopt` does — walk a directory
-and add front matter to every such file at once.
+file stops being a special case. `kb adopt` does exactly that across a whole
+directory — and first renames anything not already in the `NN-slug.md` shape,
+since a hand-made directory rarely is. It previews before it writes, and the
+backup it takes of each file is verified and removed once the write is confirmed.
 
 ---
 
@@ -218,6 +220,45 @@ Current snapshot: `03-state-2026-08-08.md` (2026-08-08).
 
 ---
 
+## Which directories a session touched
+
+`kb streams` answers a question none of the other commands do: over this
+session, which places did the work actually happen in? It reads the harness's
+own transcript — Claude Code and Codex keep JSONL files, Opencode a sqlite
+store — and pulls out the **directories** mentioned, not the prose.
+
+```console
+$ kb streams
+  read: claude ×1
+
+   21  ~/src/api
+   13  ~/src/deploy
+   11  /srv/gateway
+
+  mentioning no path (93) — work with no directory does not appear above at all:
+    • have a look at the journal, there may be mysql errors
+```
+
+Paths rather than messages on purpose: the question is which directories, and it
+costs about a tenth as much to answer that way.
+
+```bash
+kb streams                  # the current session
+kb streams --sessions 3     # when the work spans several
+kb streams --top 20         # more directories
+```
+
+Why it exists: after a long session, and especially after the conversation has
+been compacted, remembering what was touched returns whatever is most recent and
+reads as complete either way. This does not remember; it reads.
+
+Two things it cannot do. Work with **no directory** — a web console, a mailbox
+rule, a host you only reached over ssh — leaves nothing to extract; the tail of
+pathless messages is a hint, not a second list. And if the harness keeps no
+transcript it says so, and the list is yours to give.
+
+---
+
 ## Working from somewhere else
 
 `--dir` points at the notes from any working directory, which is what makes kb
@@ -257,8 +298,9 @@ kb list --prune             # forget entries whose directory is gone
 | `kb sync` | rebuild the index table from front matter |
 | `kb outline [file]` | section map with weights; no argument means every file over 400 lines |
 | `kb list [--scan DIR] [--prune]` | every kb known on this machine |
+| `kb streams [--sessions N]` | directories this session touched, read from the transcript |
 | `kb init [--title ...]` | the index skeleton alone |
-| `kb adopt [--apply] [--in-place]` | retrofit a directory of hand-written notes |
+| `kb adopt [--apply] [--in-place]` | retrofit hand-written notes: numbers unnumbered `.md`, adds front matter, builds the index |
 | `kb hook` | install a git pre-commit that refuses a commit holding a credential |
 
 Flags: `--dir <path>` anywhere, `--supersedes <file>` on `add`, `--no-sync` on

@@ -272,6 +272,7 @@ CLI also works on its own if you prefer driving it by hand.
 | `kb add <slug> --kind <k> --title "…"` | next numbered note + front matter + rebuild |
 | `kb outline [file]` | section map with weights — where the seams for a split are |
 | `kb list [--scan DIR] [--prune]` | every kb known on this machine |
+| `kb streams [--sessions N]` | which directories this session touched, read from the transcript |
 | `kb adopt [--apply] [--in-place]` | migrate a hand-made notes directory |
 | `kb hook --install` | git pre-commit that refuses a commit on exit 4 |
 | `--dir X` | operate on X instead of `./kb` |
