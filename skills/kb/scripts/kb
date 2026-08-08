@@ -310,8 +310,14 @@ def find_root(explicit: str | None, *, for_init: bool = False) -> Path:
         # deleted, exactly the case `kb list` reports.
         root = Path(explicit)
         if not for_init and not (root / OVERVIEW).is_file():
-            die(f"no {OVERVIEW} in {root} — "
-                "the directory is empty, moved or deleted")
+            # Two different situations, and guessing between them reads as
+            # nonsense: "the directory is empty" about a directory full of
+            # files is simply false. Report the fact, name the fix.
+            if not root.is_dir():
+                die(f"no such directory: {root}")
+            die(f"no {OVERVIEW} in {root} — not a kb directory. "
+                f"`kb init --dir {root}` starts one; "
+                "`kb list --prune` drops the entry if it moved")
         return root
     cwd = Path.cwd()
     if (cwd / "kb" / OVERVIEW).exists():
