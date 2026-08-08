@@ -61,9 +61,21 @@ derived from them.
 
 ### 2. Knowledge is typed by how it expires
 
-This is the part an ordinary wiki has no answer for. A note about *how something
-works* and a note about *what the situation was on Tuesday* age completely
-differently, and mixing them is why wikis stop being trusted.
+In an ordinary wiki every page is equal: nothing on the page tells you whether it
+describes how things are or how they were. Yet they expire differently — two
+files from the same directory:
+
+- `02-pipeline.md`, "how the log pipeline works". True for months. When the
+  pipeline changes the file is edited in place; the previous text is of no use to
+  anyone.
+- `15-state-2026-08-05.md`, "what is done and what is open as of 5 August". True
+  for exactly that date. A week later it is **not wrong** — it is a historical
+  fact. Rewriting it destroys evidence; a newer snapshot appears next to it while
+  this one stays.
+
+The first is maintained, the second is frozen and superseded. Put both in one
+undifferentiated list and the reader cannot tell which is which — and starts
+doubting both. kb makes you say which it is, in the `kind` field.
 
 | kind | holds | how it ages |
 |---|---|---|
