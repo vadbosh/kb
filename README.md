@@ -268,6 +268,7 @@ CLI also works on its own if you prefer driving it by hand.
 | `kb outline [file]` | section map with weights — where the seams for a split are |
 | `kb list [--scan DIR] [--prune]` | every kb known on this machine |
 | `kb adopt [--apply] [--in-place]` | migrate a hand-made notes directory |
+| `kb hook --install` | git pre-commit that refuses a commit on exit 4 |
 | `--dir X` | operate on X instead of `./kb` |
 
 ---
@@ -287,6 +288,54 @@ language means adding one key to the `STRINGS` dict in the CLI.
 
 No path anywhere is hardcoded to a particular machine.
 
+---
+
+## Credentials
+
+`kb check` scans the notes for credentials on every run — which means on every
+`/kb save`, since the skill calls it there. Two layers, and the report always
+says which of them ran:
+
+```
+secrets: none found — checked with built-in patterns + trufflehog 3.95.3
+secrets: none found — checked with built-in patterns only
+         install gitleaks or trufflehog for the full ruleset
+```
+
+**Layer 1, always** — shapes with an unmistakable prefix or header: AWS access
+keys, GitHub and Slack tokens, Google and Stripe keys, PEM private keys, JWTs,
+passwords inside connection URLs. No install, works everywhere.
+
+**Layer 2, when present** — `gitleaks`, `trufflehog` or `detect-secrets`,
+whichever is found on PATH first, run over the same directory. Roughly 150 rules
+instead of ten. Missing is not an error; it narrows coverage, and the report
+says so.
+
+A finding exits **4**, distinct from 3 for ordinary drift, so a hook or a
+pipeline can tell "the table is stale" from "there is a key in a note".
+
+### What it does not catch
+
+An entropy pass was written for this and then removed. On two real note
+directories it produced four findings, all four false: a file path, a config
+value, a Kubernetes pod name, another path. Identifiers and paths are long and
+look random; no threshold separated them from a token. A report at that ratio
+stops being read within days.
+
+So **a short generic password sitting in a sentence is caught by nothing here** —
+not by the built-in patterns, not by gitleaks, not by trufflehog. The author of
+gitleaks says as much about `MyServiceToken="secret123"`. This lowers the risk;
+it does not replace not writing credentials down.
+
+### Blocking a commit
+
+```bash
+kb hook --install     # git pre-commit; refuses a commit on exit 4
+```
+
+Only meaningful when the notes are inside a git repository. Plenty are not — in
+that case the control that applies is `kb check` at the end of every save, which
+runs regardless.
 ---
 
 ## Design notes

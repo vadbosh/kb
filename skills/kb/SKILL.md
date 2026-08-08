@@ -37,7 +37,7 @@ Requires Python 3.10+ and nothing else.
 
 ```
 kb status                                     where the kb is, what is in it
-kb check                                      mechanical drift; exit 3 if any
+kb check                                      drift (exit 3), credentials (exit 4)
 kb verify                                     advisory: dead paths, stale notes
 kb sync                                       rebuild the index table
 kb add <slug> --kind <kind> --title "<...>"   new note + front matter + reindex

@@ -37,6 +37,7 @@ import argparse
 import os
 import re
 import shutil
+import subprocess
 import sys
 from dataclasses import dataclass
 from datetime import date
@@ -150,6 +151,85 @@ REGISTRY = Path(os.environ.get(
 # Pruned when scanning: never contain notes, always expensive to walk.
 SCAN_SKIP = {".git", "node_modules", ".terraform", ".venv", "__pycache__",
              ".cache", ".memsearch", ".ai-context"}
+
+
+# ── secret detection ────────────────────────────────────────────────────────
+# Two layers, and the report always says which of them ran. Built-in patterns
+# work everywhere with no install; an external scanner, when one happens to be
+# present, brings a far larger ruleset. Silence about which layer ran would be
+# worse than no check at all — it reads as "clean" when it may mean "unchecked".
+#
+# Only shapes with an unmistakable prefix or header are listed. Generic
+# `password=`-style matches and entropy heuristics are deliberately absent:
+# notes about infrastructure are full of paths, pod names and config values that
+# look exactly as random as a token. A report that is mostly false positives
+# stops being read within days — the same lesson `verify` was built on.
+#
+# What none of this catches: a short generic password sitting in a sentence.
+# The gitleaks author says as much about `MyServiceToken="secret123"`. This
+# lowers risk; it does not replace not writing secrets down.
+SECRET_PATTERNS = [
+    ("AWS access key",      re.compile(r"\bAKIA[0-9A-Z]{16}\b")),
+    ("GitHub token",        re.compile(r"\b(?:ghp|gho|ghs|ghu|ghr)_[A-Za-z0-9]{36,}\b")),
+    ("GitHub fine-grained", re.compile(r"\bgithub_pat_[A-Za-z0-9_]{22,}\b")),
+    ("Slack token",         re.compile(r"\bxox[baprs]-[A-Za-z0-9-]{10,}")),
+    ("private key",         re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH |PGP )?PRIVATE KEY-----")),
+    ("JWT",                 re.compile(r"\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.")),
+    ("password in a URL",   re.compile(r"://[^/\s:@]+:[^/\s@]{3,}@")),
+    ("Google API key",      re.compile(r"\bAIza[A-Za-z0-9_-]{35}\b")),
+    ("Stripe key",          re.compile(r"\b(?:sk|rk)_live_[A-Za-z0-9]{20,}\b")),
+]
+
+EXTERNAL_SCANNERS = [
+    ("gitleaks",       ["gitleaks", "detect", "--no-git", "--no-banner", "-s"]),
+    ("trufflehog",     ["trufflehog", "filesystem", "--no-update", "--fail"]),
+    ("detect-secrets", ["detect-secrets", "scan"]),
+]
+
+
+def scan_line(line: str) -> list[str]:
+    """Named shapes only — no entropy heuristic.
+
+    An entropy pass was written and then removed: on two real note directories it
+    produced four findings, all four false — a file path, a config value, a
+    Kubernetes pod name and another path. Identifiers and paths are long and
+    look random, and no threshold separated them from a token. That is the exact
+    ratio this project refuses to ship, so layer 1 stays precise and narrow, and
+    entropy is left to the external scanners in layer 2, which tune it properly.
+    """
+    return [name for name, rx in SECRET_PATTERNS if rx.search(line)]
+
+
+def external_scanner() -> tuple[str, list[str]] | None:
+    for name, cmd in EXTERNAL_SCANNERS:
+        if shutil.which(cmd[0]):
+            return name, cmd
+    return None
+
+
+def find_secrets(root: Path, notes: list) -> tuple[list[str], str]:
+    """Returns (findings, one line describing what was actually checked)."""
+    found = []
+    for n in notes:
+        for i, line in enumerate(
+                n.path.read_text(encoding="utf-8", errors="replace").split("\n"), 1):
+            for what in scan_line(line):
+                found.append(f"{n.name}:{i}: looks like {what}")
+
+    ext = external_scanner()
+    coverage = "built-in patterns only"
+    if ext:
+        name, cmd = ext
+        try:
+            res = subprocess.run(cmd + [str(root)], capture_output=True,
+                                 text=True, timeout=120)
+            coverage = f"built-in patterns + {name}"
+            if res.returncode != 0 and (res.stdout.strip() or res.stderr.strip()):
+                found.append(f"{name} reported findings — run it directly to see them:"
+                             f"  {' '.join(cmd)} {root}")
+        except (OSError, subprocess.SubprocessError):
+            coverage = f"built-in patterns only ({name} failed to run)"
+    return found, coverage
 
 
 def die(msg: str) -> None:
@@ -509,12 +589,34 @@ def cmd_check(args) -> int:
         problems.append(f"{len(baks)} *.bak.* file(s) — the index is generated now, "
                         "these are safe to delete once you have checked them")
 
-    if not problems:
+    # Secrets are reported apart from the rest and carry their own exit code: a
+    # stale table and a private key in a note are not the same kind of news, and
+    # anything automating this needs to tell them apart.
+    secrets, coverage = find_secrets(root, notes)
+
+    if not problems and not secrets:
         print(f"clean: {len(notes)} files, index current")
+        print(f"secrets: none found — checked with {coverage}")
+        if "only" in coverage:
+            print("         install gitleaks or trufflehog for the full ruleset")
         return 0
-    print(f"{len(problems)} problem(s):")
-    for p in problems:
-        print(f"  - {p}")
+
+    if problems:
+        print(f"{len(problems)} problem(s):")
+        for p in problems:
+            print(f"  - {p}")
+
+    if secrets:
+        print(f"\nSECRETS ({len(secrets)}) — checked with {coverage}:")
+        for hit in secrets:
+            print(f"  ! {hit}")
+        print("\n  Do not quietly rewrite the file: if it is under version control the"
+              "\n  value is already in history, and a silent edit hides that. Tell the"
+              "\n  human what was found and where, then rotate the credential."
+              "\n  A short generic password in a sentence is caught by nothing here.")
+        return 4
+
+    print(f"\nsecrets: none found — checked with {coverage}")
     return 3
 
 
@@ -652,6 +754,60 @@ def cmd_verify(args) -> int:
     print("\nAdvisory only. Whether a fact about a live cluster still holds "
           "cannot be answered here — only by a human or a command.")
     return 3
+
+
+HOOK_BODY = """#!/bin/sh
+# Installed by `kb hook --install`. Blocks a commit when kb check finds a
+# credential in the notes (exit 4). Other kb findings do not block.
+"{kb}" --dir "{root}" check
+[ $? -eq 4 ] && {{
+    echo "commit refused: a credential was found in the notes (see above)" >&2
+    exit 1
+}}
+exit 0
+"""
+
+
+def cmd_hook(args) -> int:
+    """Install a git pre-commit hook that blocks on exit 4.
+
+    Only useful when the notes are inside a git repository — plenty of them are
+    not, which is why this is opt-in rather than part of install. Where there is
+    no repository the real control is `kb check` running at the end of every
+    save, which happens regardless.
+    """
+    root = find_root(args.dir)
+    git_dir = None
+    p = root.resolve()
+    while p != p.parent:
+        if (p / ".git").is_dir():
+            git_dir = p / ".git"
+            break
+        p = p.parent
+    if not git_dir:
+        die(f"{root} is not inside a git repository — nothing to hook into.\n"
+            "  `kb check` still runs at the end of every save; that is the check\n"
+            "  that applies when the notes are not versioned.")
+
+    hook = git_dir / "hooks" / "pre-commit"
+    body = HOOK_BODY.format(kb=Path(sys.argv[0]).resolve(), root=root.resolve())
+
+    if hook.exists() and "kb hook --install" not in hook.read_text(
+            encoding="utf-8", errors="replace"):
+        die(f"{hook} exists and was not written by kb — refusing to overwrite.\n"
+            "  Add this line to it by hand:\n"
+            f'    "{Path(sys.argv[0]).resolve()}" --dir "{root.resolve()}" check '
+            "|| [ $? -ne 4 ]")
+
+    if args.dry_run:
+        print(f"would write {hook}")
+        return 0
+    hook.parent.mkdir(parents=True, exist_ok=True)
+    hook.write_text(body, encoding="utf-8")
+    hook.chmod(0o755)
+    print(f"installed {hook}")
+    print("  a commit is now refused when a credential is found in the notes")
+    return 0
 
 
 def cmd_outline(args) -> int:
@@ -840,6 +996,11 @@ def main() -> int:
 
     p = sub.add_parser("verify", help="advisory: paths that vanished, notes gone stale")
     p.set_defaults(fn=cmd_verify)
+
+    p = sub.add_parser("hook", help="git pre-commit that blocks on a found credential")
+    p.add_argument("--install", action="store_true", help="write the hook")
+    p.add_argument("--dry-run", action="store_true", help="print what would happen")
+    p.set_defaults(fn=cmd_hook)
 
     p = sub.add_parser("outline", help="section map with weights — where the seams are")
     p.add_argument("file", nargs="?", help="file; omitted = every file over "

@@ -55,7 +55,7 @@ bad    Fluent-bit                  (a noun, answers nothing)
 ## Step 3 — write the body
 
 `kb add` creates the file with front matter and an `# H1`; you fill the body.
-Lead with the concrete subject. Prose, not a transcript — the durable model of
+Lead with the concrete subject. Written text, not a transcript — the durable model of
 how something works, not the tape of what was typed.
 
 Reversing an earlier decision → `kb add … --kind decision --supersedes <file>`.
@@ -73,6 +73,13 @@ leaving it for the user to notice:
 | no front matter / unknown kind | add the front matter |
 | **file over the size threshold** | `kb outline` → judge by kind-mixing → propose a seam OR say "no seam, leaving it" |
 | `*.bak.*` left over | verify against the originals, then propose deleting |
+
+**Exit 4 is different: a credential was found in a note.** Do not quietly edit
+the file. If the notes are under version control the value is already in
+history, and a silent fix hides that from the person who has to rotate it. Say
+what was found and where, then let the human decide. Note also what the check
+covered — the report says whether an external scanner was available, and a short
+generic password in a sentence is caught by nothing.
 
 Never stay silent about size and never defer it — it is the one signal that
 otherwise accumulates for years. But never split silently either: propose the

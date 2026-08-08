@@ -243,7 +243,11 @@ kb list --prune            # drop entries whose index disappeared
 | `kb outline [file]` | section map with weights — where the seams are |
 | `kb init [--title ...]` | index skeleton only |
 | `kb adopt [--apply] [--in-place]` | migrate an existing hand-made directory |
+| `kb hook --install` | git pre-commit that refuses a commit on exit 4 |
 | `--dir X` | operate on X instead of `./kb` |
+
+`kb check` exit 3 is drift; **exit 4 means a credential was found in a note**.
+See [README](../README.md#credentials) for what the scan covers and what it cannot.
 
 `kb check` catches: stale table, links to deleted files, files without front
 matter, `.md` outside the `NN-slug.md` scheme, leftover `.bak`, oversized files.
