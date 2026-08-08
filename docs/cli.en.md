@@ -309,24 +309,104 @@ written from that point on.
 
 ---
 
-## Two things worth automating
+## Where the CLI actually earns its keep
 
-**Refuse a commit that carries a credential.** Inside a git repository:
+Two situations, honestly: **a machine doing it without you**, and **no assistant
+within reach**. Everything else is more comfortable through `/kb`.
+
+### A scheduled sweep over every knowledge base
+
+Notes about infrastructure fill up with paths — to config directories, to
+scripts, to mount points. They rot silently: someone renames a directory and the
+note keeps claiming the old one. Nobody opens an assistant to check that. Cron
+does:
+
+```cron
+0 9 * * 1  kb list | awk '/^ *\// {print $1}' | while read -r d; do kb --dir "$d" verify; done
+```
+
+Note the `^ *` — `kb list` indents its output, and an anchor without it matches
+nothing. To get mail only when something is actually wrong:
+
+```bash
+kb list | awk '/^ *\// {print $1}' | while read -r d; do
+  out=$(kb --dir "$d" verify 2>&1) || { echo "── $d"; echo "$out" | grep '✗'; }
+done
+```
+
+Run against two live knowledge bases, that prints:
+
+```
+── /AI_P/NLM/kb
+    ✗ /etc/nginx/custom-conf-parts/
+    ✗ /etc/nginx/custom-lua-scripts/
+```
+
+Four paths cited by a note that no longer exist on this host. They may still
+live inside a container — `verify` reports suspicion, not fact — but that is
+exactly the list a human should glance at once a week.
+
+### Refusing a commit that carries a credential
+
+`kb check` exits 4 when it finds one, and 4 is the only code worth treating as a
+hard stop. Inside a git repository:
 
 ```bash
 kb hook
 ```
 
-It refuses to overwrite a pre-commit hook it did not write, printing the line to
-add by hand instead.
+It will not overwrite a pre-commit hook it did not write; it prints the line to
+add by hand instead. In CI, where the notes live in a repository:
 
-**Check the notes on a schedule**, when they are not under git:
-
-```cron
-0 9 * * 1  kb --dir /srv/project/kb check || true
+```yaml
+kb-check:
+  script:
+    - kb --dir docs/kb check || [ $? -ne 4 ]
 ```
 
-`|| true` keeps cron quiet about exit 3; drop it if you want the mail.
+That lets exit 3 (drift) through while failing the job on a credential. Invert
+it if you want stale indexes to fail too.
+
+### A machine where no assistant is installed
+
+kb is one file with no dependencies, so `scp` is the whole install. Working out
+at three in the morning why a database stopped answering, you can write the
+`recipe` right there, on the host where you found it, instead of carrying it in
+your head until morning.
+
+### kb as an output target for other programs
+
+Any script can write a note. That is the part people miss:
+
+```bash
+kb add apply-$(date +%s) --kind state \
+   --title "what this terraform apply changed" --dir /srv/infra/kb
+```
+
+A wrapper around `terraform apply`, a post-incident script, a nightly report —
+all of them can deposit into the same knowledge base an assistant later reads.
+kb stops being an assistant's notebook and becomes a format other tooling can
+target.
+
+### Orientation that costs nothing
+
+`kb status` answers in milliseconds and says which snapshot is current and which
+files are heaviest. Sometimes that is all you needed, and starting a session for
+it is overkill.
+
+### Colleagues who do not use AI at all
+
+It is Markdown plus one command. Reading a knowledge base requires installing
+nothing whatsoever — which is what makes it shareable across a team where not
+everyone works the same way.
+
+### What this list deliberately does not include
+
+Writing notes by hand, day to day. Typing `kb add --kind --title` every time you
+learn something is work an assistant does better, because the interesting part
+is judgement: append or start a new file, which `kind` fits, how to phrase the
+title for a reader rather than for yourself. The CLI does not attempt any of
+that — see the last section.
 
 ---
 
