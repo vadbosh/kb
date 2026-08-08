@@ -1226,16 +1226,20 @@ def cmd_adopt(args) -> int:
     # Built by hand, not with_suffix(): a multi-dot suffix is not a valid
     # argument for it, and the name may already contain dots.
     stamp = date.today().strftime("%Y%m%d")
+    made = []          # backups this run created, to verify and drop below
     for n in planned:
         body = n.path.read_text(encoding="utf-8")
-        (n.path.parent / f"{n.name}.bak.{stamp}").write_text(body, encoding="utf-8")
+        bak = n.path.parent / f"{n.name}.bak.{stamp}"
+        bak.write_text(body, encoding="utf-8")
         fm = [FM_FENCE, f"title: {titles[n.name]}", f"kind: {n.kind}",
               f"updated: {n.updated}", FM_FENCE, ""]
         n.path.write_text("\n".join(fm) + body, encoding="utf-8")
+        made.append((bak, n.path, body))
         print(f"  wrote front matter: {n.name}")
 
     if not has_block:
-        (overview.parent / f"{OVERVIEW}.bak.{stamp}").write_text(text, encoding="utf-8")
+        obak = overview.parent / f"{OVERVIEW}.bak.{stamp}"
+        obak.write_text(text, encoding="utf-8")
         lines = text.split("\n")
         if table_start is not None:
             end = table_start
@@ -1245,7 +1249,30 @@ def cmd_adopt(args) -> int:
         else:
             lines += ["", S("index_heading"), "", MARK_BEGIN + S("block_note"), MARK_END]
         overview.write_text("\n".join(lines), encoding="utf-8")
+        made.append((obak, overview, None))
         print(f"  inserted managed block: {OVERVIEW}")
+
+    # A backup earns its keep only until the write it guards is verified. Kept
+    # past that it is litter that `check` then nags about for years, and the
+    # nagging is what teaches people to ignore `check`. So: read the file back,
+    # confirm the original body survived intact, drop the copy. Anything that
+    # does not match is left alone and named -- that is the case backups exist
+    # for, and it is the one nobody should clean up automatically.
+    if made and not args.keep_backups:
+        dropped, kept = 0, []
+        for bak, live, body in made:
+            now = live.read_text(encoding="utf-8")
+            intact = (body is not None and now.endswith(body)) or \
+                     (body is None and MARK_BEGIN in now)
+            if intact:
+                bak.unlink()
+                dropped += 1
+            else:
+                kept.append(bak.name)
+        if dropped:
+            print(f"  verified and removed {dropped} backup(s)")
+        for name in kept:
+            print(f"  KEPT {name} — the file changed in more than front matter")
 
     # The migration moved the overview into kb/, so the directory named on the
     # command line no longer holds one. `sync` resolves the root from scratch --
@@ -1316,6 +1343,8 @@ def main() -> int:
     p.set_defaults(fn=cmd_outline)
 
     p = sub.add_parser("adopt", help="retrofit an existing hand-made directory")
+    p.add_argument("--keep-backups", action="store_true",
+                   help="do not remove the *.bak.* copies after verifying them")
     p.add_argument("--apply", action="store_true", help="write (default: preview)")
     p.add_argument("--in-place", action="store_true",
                    help="do NOT move the notes into kb/ (they stay loose in the "
