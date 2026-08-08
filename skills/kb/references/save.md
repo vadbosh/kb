@@ -9,7 +9,34 @@ the shared rules live there.
 No findings, no decisions, no traps, nothing that outlives the conversation →
 say `Nothing durable for kb.` Do NOT create empty notes.
 
-## Step 1 — append or new file
+## Step 1 — how many work streams did this session touch?
+
+**Do this before anything else, and never skip it.** A long session usually
+touches several: a tool being built, a bundle being fixed, a machine being
+configured. Each is its own work stream with its own directory, and therefore its
+own kb. `kb status` answers for ONE directory — reaching for it first quietly
+decides that the session had one subject.
+
+1. List the work streams this session actually touched. A stream is a body of
+   work with its own directory or repository — not a topic, not a task.
+2. Resolve a kb for each: `./kb` in its directory, or `kb list` if it already has
+   one elsewhere.
+3. Then run steps 2–5 **per stream**.
+
+**A stream may be skipped — silently dropping it may not.** Legitimate reasons to
+skip, each of which must be said out loud:
+
+- everything durable already lives somewhere better, and you can name where
+- nothing durable came out of it (the skip-if-trivial guard above)
+- it has no kb and creating one is the human's call — then say so and ask
+
+"It is in the git history" is the reason that deserves the most suspicion. A log
+records what changed and why it changed; it does not answer *what do I need*,
+which is the question the index column asks. Thirty commits are not a knowledge
+base. If the reasoning behind a design is worth finding later, it belongs in a
+`decision`, with the commit named as a pointer.
+
+## Step 2 — append or new file
 
 Run `kb status` first to see what already exists.
 
@@ -40,7 +67,7 @@ Read the heading map. Split only where one part describes **how things are**
 a `state`. Cut on that seam and keep each part whole. If every section answers
 the same question, leave the file alone however long it is — say so and move on.
 
-## Step 2 — write the title
+## Step 3 — write the title
 
 `--title` becomes the index row, and that column answers **"what do I need?"** —
 not "what is this document called". Write from the reader's side:
@@ -52,7 +79,7 @@ bad    State as of 2026-08-05      (repeats the filename)
 bad    Fluent-bit                  (a noun, answers nothing)
 ```
 
-## Step 3 — write the body
+## Step 4 — write the body
 
 `kb add` creates the file with front matter and an `# H1`; you fill the body.
 Lead with the concrete subject. Written text, not a transcript — the durable model of
@@ -66,7 +93,7 @@ deleted name in the replacing note's `supersedes:`, then say in the prose what
 went and why. `check` treats a name declared superseded as history rather than a
 broken link, so the record survives without turning into a warning every run.
 
-## Step 4 — finish with `kb check`, always
+## Step 5 — finish with `kb check`, always
 
 Exit 3 means something needs attention. Act on it in the same turn rather than
 leaving it for the user to notice:
@@ -118,12 +145,19 @@ or on another host. Two rules learned the hard way:
 ## Never
 
 - **Keep a diary.** A `state` file is a snapshot, not "what we did on Tuesday".
+- **Let a work stream vanish.** Writing one kb and saying nothing about the other
+  three reads as "everything is saved". Skipping is a decision; announce it.
 - Everything in the shared rules section of `SKILL.md`.
 
 ## Report
 
-Counts and paths, not content:
+Counts and paths, not content — **one line per work stream, including the ones
+skipped.** The skipped lines are the point: without them the reader cannot tell
+whether a subject was considered and rejected, or never noticed at all.
 
 ```
-kb: +1 decision (04-why-x-target.md), edited 03-traps-and-recipes.md, index synced.
+kb: /AI_P/Qdrant/kb  — created, +1 reference, +1 decision, index synced
+kb: /home/kb         — nothing written: the design decisions from today are in
+                       33 commits and nowhere findable; needs a kb, your call
+kb: gh-traffic       — skipped, already in MEMORY.md
 ```
