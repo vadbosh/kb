@@ -55,10 +55,10 @@ region, kb rebuilds from the front matter of every note:
 <!-- kb:begin -->                  <- everything down to kb:end is generated
 Current snapshot: `21-state-2026-08-07.md` (2026-08-07).
 
-| what you need | file | kind | updated |
-|---|---|---|---|
-| how the pipeline works | `02-pipeline.md` | reference | 2026-08-05 |
-| traps and check commands | `23-traps.md` | recipe | 2026-08-07 |
+| what you need            | file             | kind      | updated    |
+|--------------------------|------------------|-----------|------------|
+| how the pipeline works   | `02-pipeline.md` | reference | 2026-08-05 |
+| traps and check commands | `23-traps.md`    | recipe    | 2026-08-07 |
 <!-- kb:end -->
 
 Prose again: what the work is, what does NOT go here, where else to look.
