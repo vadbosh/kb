@@ -44,13 +44,13 @@ updated: 2026-08-05
 
 The index is `kb/00-overview.md`. The first `/kb save` creates it: headings, a
 rules section, a paragraph about what the work is. From then on that text is
-ordinary prose — the assistant extends it as the work goes, or you edit it by hand.
+ordinary text — the assistant extends it as the work goes, or you edit it by hand.
 
 Inside the index sits a region between two markers. That region, and only that
 region, kb rebuilds from the front matter of every note:
 
 ```markdown
-## Where to start reading          <- prose, kb never touches it
+## Where to start reading          <- your text, kb never touches it
 
 <!-- kb:begin -->                  <- everything down to kb:end is generated
 Current snapshot: `21-state-2026-08-07.md` (2026-08-07).
@@ -226,7 +226,7 @@ touched file is backed up first.
 - **No database, no server, no lock-in.** The notes are ordinary Markdown in your
   own repository. Delete the tool and they stay readable; only the table stops
   updating itself.
-- **No opinion about your prose.** Only the managed block is generated.
+- **No opinion about your writing.** Only the managed block is generated.
 
 ---
 

@@ -263,7 +263,8 @@ set `KB_LANG=en` for English. Adding a language means adding one key to the
 ## Do not
 
 - Edit the table between `kb:begin` / `kb:end` — the next `kb sync` overwrites it.
-- Rewrite prose outside the markers — it is the human's.
+- Rewrite text outside the markers without being asked — a human wrote that
+  wording.
 - Store credentials. Reference the mechanism (a secret in the cluster, an env
   var), never the value.
 - Duplicate documentation that lives next to the code — it is edited together

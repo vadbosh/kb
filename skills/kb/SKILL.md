@@ -73,7 +73,8 @@ needs six months later.
 
 - **Never edit between `<!-- kb:begin -->` and `<!-- kb:end -->`.** That table is
   generated; the next `kb sync` overwrites it. Change front matter instead.
-- **Never rewrite prose outside the markers** unless asked — it is the human's.
+- **Never rewrite text outside the markers** unless asked — a human wrote that
+  wording.
 - **Write in the language the notes are written in**, not the language of this
   skill. Titles and bodies go straight into a document a human reads.
 - **No credentials.** Reference the mechanism (a secret in the cluster, an env

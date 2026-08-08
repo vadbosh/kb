@@ -34,7 +34,7 @@ invent notes.
 
 ## Step 2 — read the index, then be selective
 
-Read `kb/00-overview.md` in full. It is small and it is the map: the prose says
+Read `kb/00-overview.md` in full. It is small and it is the map: the text says
 what the work stream is and what is deliberately NOT in it, and the generated
 table has one row per file with the question that file answers.
 
