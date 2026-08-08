@@ -65,8 +65,9 @@ $ claude --resume <ID>
 > kbrestore
 ```
 
-The skill runs `kb status` + `kb check`, reads the index and the current
-snapshot, and compares against what the restored conversation shows:
+The skill runs `kb status` + `kb check` + `kb verify`, reads the index and the
+current snapshot, then compares that against what the restored conversation
+shows:
 
 | What it finds | What it says |
 |---|---|
@@ -120,13 +121,13 @@ replaces this one:
 The index computes which snapshot is current and marks the earlier ones.
 
 Edited a file → bump `updated:` → `kb sync`. Deleted or renamed → `kb sync`.
-Before calling the work documented → `kb check` (exit 3 = drift).
+Before you call the work documented → `kb check` (exit 3 = drift).
 
 ---
 
 ## How the index updates
 
-Front matter is the source of truth; the table is a projection.
+Front matter is the source of truth; the table is derived from it.
 
 ```
 kb/01-pipeline.md              kb/00-overview.md
@@ -177,15 +178,16 @@ whether the notes are still true. That is a separate command:
 kb verify
 ```
 
-It reports **suspicions**, not errors, which is why it is not part of `check`:
-that one is binary and mechanical (exit 3 = go fix it), this one is
-probabilistic (exit 3 = go look). Merging them would drown an exact signal in
+`verify` reports **suspicions**, not defects, which is why it is not part of
+`check`. `check` is binary and mechanical: exit 3 means go fix it. `verify` works
+by heuristic: exit 3 means go look. Merging them would drown an exact signal in
 guesses.
 
-**Paths.** Only those inside backticks AND whose root exists (first two
-components). Measured on a real kb: without both conditions you get 271 flags
-out of 296 paths, roughly 2 of them real — URL paths (`/stats/prometheus`), API
-versions (`/v1alpha1`), fragments of longer paths. With them: 6 flags, 2 real.
+**Paths.** A path is checked only when both conditions hold: it is written in
+backticks, and its root — the first two components — exists on disk. Measured on
+a real kb: without them you get 271 flags out of 296 paths, roughly two of them
+real — URL paths (`/stats/prometheus`), API versions (`/v1alpha1`), fragments of
+longer paths. With them: 6 flags, 2 real.
 The trade-off is that a path inside a code block, without backticks, is not
 checked. Deliberate — otherwise the report teaches you to ignore it.
 
@@ -203,6 +205,8 @@ holds ("the NLB is called X", "there is no Gateway API CRD in AU"). That needs
 the cluster itself — credentials, cost, and nobody should run `terraform` or
 `kubectl` on a schedule against production. Reasoning ("why X-Target rather than
 Host") is not verifiable at all.
+
+---
 
 ## Registry
 

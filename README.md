@@ -285,16 +285,19 @@ Worth knowing before extending it:
   still be cited from a commit message or another note.
 - **Row order is by number**, so editing one file does not reshuffle the table and
   diffs stay small.
-- **`verify` only checks paths inside backticks whose root exists.** Measured on a
-  real 19-file kb: without both constraints you get 271 flags of which about 2 are
-  real — URL paths, API versions, fragments of longer paths. With them: 6 flags,
-  2 real. A report with the first ratio teaches you to ignore it within days. The
-  cost is that a path inside a fenced block is not checked.
+- **`verify` checks a path only when both conditions hold**: it is written in
+  backticks, and its root exists on disk. Measured on a real 19-file kb: without
+  them you get 271 flags of which about two are real — URL paths, API versions,
+  fragments of longer paths. With them: 6 flags, 2 real. At the first ratio the
+  report stops being read within days. The cost is that a path inside a fenced
+  block is not checked.
 - **Size thresholds are 400 and 1200 lines.** The familiar "keep it under 200
-  lines" rule is about instruction files that load into context on every turn.
-  These are read on demand, one at a time, so it does not transfer.
+  lines" rule is about instruction files, which load into context on every turn.
+  kb files are read on demand and one at a time, so that rule does not apply to
+  them.
 - **Front matter is parsed without a YAML dependency** — flat `key: value` pairs
-  between `---` fences, splitting on the first colon so titles may contain them.
+  between `---` fences, split on the first colon so that a title may contain a
+  colon of its own.
 
 ---
 
