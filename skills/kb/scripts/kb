@@ -600,6 +600,14 @@ def cmd_check(args) -> int:
     for ref in sorted(linked_files(text) - known):
         problems.append(f"overview links a missing file: {ref}")
 
+    # Notes cite each other, and those links break exactly when a file is
+    # renamed, superseded or split -- the moments the overview survives
+    # untouched because `sync` rewrites it from front matter either way.
+    for n in notes:
+        for ref in sorted(linked_files(n.path.read_text(encoding="utf-8")) - known):
+            if ref != n.name:
+                problems.append(f"{n.name} links a missing file: {ref}")
+
     for n in notes:
         if not n.has_fm:
             problems.append(f"{n.name}: no front matter (kind/title guessed)")
@@ -990,6 +998,11 @@ def cmd_adopt(args) -> int:
         overview.write_text("\n".join(lines), encoding="utf-8")
         print(f"  inserted managed block: {OVERVIEW}")
 
+    # The migration moved the overview into kb/, so the directory named on the
+    # command line no longer holds one. `sync` resolves the root from scratch --
+    # point it at where the notes ended up, or it fails on a migration that just
+    # succeeded and leaves the index stale.
+    args.dir = str(root)
     args.no_sync = False
     return cmd_sync(args)
 

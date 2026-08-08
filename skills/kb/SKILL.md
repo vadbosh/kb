@@ -1,7 +1,7 @@
 ---
 name: kb
 description: Read and write a project's kb/ work-notes — a Markdown knowledge base whose index is generated rather than maintained by hand. Handles phrases "kbsave", "kbrestore", "/kb", "запиши в kb", "запиши в заметки", "прочитай kb", "прочитай заметки", "восстанови контекст из kb", "save to kb", "read kb", "что в заметках", "задокументируй это", "оформи в kb". Use at the start of work to load the notes and see what changed, and at the end to persist findings, decisions, traps or a dated snapshot instead of leaving them in the conversation.
-version: "2.0.0"
+version: "2.1.0"
 ---
 
 # kb
@@ -10,14 +10,29 @@ A Markdown knowledge base per work stream: one `00-overview.md` acting as a map,
 plus numbered topic files. The index table is **generated** from each file's
 front matter, so it cannot drift from the files it describes.
 
-## Which half do you need
+## Which branch do you need
 
 | The user wants | Read |
 |---|---|
 | to load the notes, orient, see what changed — "kbrestore", "прочитай kb", start of a session | `references/restore.md` |
 | to write down what was learned — "kbsave", "запиши в kb", end of a task | `references/save.md` |
+| **one named command** — `/kb check`, `/kb status`, `/kb list`, `/kb verify`, `/kb outline`, `/kb sync` | neither; see below |
 
 Read only the one that applies. They share the rules below and nothing else.
+
+**A named command is a request for that command, not for a session ritual.** Run
+it, report what it said, stop. Do not load a reference file, do not read the
+notes, do not save anything. Two exceptions, because the exit code demands an
+answer:
+
+- **exit 4 from `check`** — a credential is in a note. Report the file and line;
+  do not edit it silently. `references/save.md` says why.
+- **exit 3 from `check`** — act on what it lists in the same turn: `kb sync` for a
+  stale index, fix or restore a missing link target, add front matter. A size
+  finding is an invitation to run `kb outline` and judge, not an order to split.
+
+With no directory named, run it for the current project; `kb list` covers every
+known one.
 
 ## Tool
 
@@ -69,7 +84,7 @@ A `decision` is never rewritten. Reversing one means a new `decision` that
 supersedes it; the reasoning behind the old choice is usually the thing someone
 needs six months later.
 
-## Rules for both halves
+## Rules for all three
 
 - **Never edit between `<!-- kb:begin -->` and `<!-- kb:end -->`.** That table is
   generated; the next `kb sync` overwrites it. Change front matter instead.
