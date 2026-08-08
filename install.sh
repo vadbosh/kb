@@ -107,8 +107,15 @@ remove_legacy() {
         if [ "$DRY_RUN" -eq 1 ]; then
             say "    would remove $(tilde "$dir/$name")  (replaced by kb/)"
         else
-            rm -rf -- "${dir:?}/${name:?}"
-            warn "    - $(tilde "$dir/$name")  (v1 layout, replaced by kb/)"
+            # Emptied with find, then rmdir -- no `rm -rf` in a script other
+            # people will run. rmdir also refuses a non-empty directory, so an
+            # unexpected leftover stops the removal instead of being destroyed.
+            find "${dir:?}/${name:?}" -mindepth 1 -delete 2>/dev/null || true
+            if rmdir "${dir:?}/${name:?}" 2>/dev/null; then
+                warn "    - $(tilde "$dir/$name")  (v1 layout, replaced by kb/)"
+            else
+                warn "    ? $(tilde "$dir/$name") not empty — left in place"
+            fi
         fi
     done
 }
