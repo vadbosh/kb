@@ -42,14 +42,17 @@ updated: 2026-08-05
 # the note itself follows
 ```
 
-The index is `kb/00-overview.md`. Its prose is yours, written however you like.
-Inside it sits a region between two markers, and that region kb rebuilds from
-the front matter of every note:
+The index is `kb/00-overview.md`. The first `/kb save` creates it: headings, a
+rules section, a paragraph about what the work is. From then on that text is
+ordinary prose — the assistant extends it as the work goes, or you edit it by hand.
+
+Inside the index sits a region between two markers. That region, and only that
+region, kb rebuilds from the front matter of every note:
 
 ```markdown
-## Where to start reading          <- your heading, your words
+## Where to start reading          <- prose, kb never touches it
 
-<!-- kb:begin -->
+<!-- kb:begin -->                  <- everything down to kb:end is generated
 Current snapshot: `21-state-2026-08-07.md` (2026-08-07).
 
 | what you need | file | kind | updated |
@@ -58,12 +61,13 @@ Current snapshot: `21-state-2026-08-07.md` (2026-08-07).
 | traps and check commands | `23-traps.md` | recipe | 2026-08-07 |
 <!-- kb:end -->
 
-Back to your own text: what the work is, what does NOT go here, where else to look.
+Prose again: what the work is, what does NOT go here, where else to look.
 ```
 
-You neither write nor edit the snapshot line and the table — both are assembled
-from the files on every `kb sync`. Such a table cannot disagree with the files: it
-came from them. Anything outside the markers kb never touches.
+Nobody edits the snapshot line or the table — not you, not the assistant. Both are
+assembled from the files on every `kb sync`, and an edit inside the markers is
+lost. Such a table cannot disagree with the files: it came from them. Anything
+outside the markers kb never touches.
 
 ### 2. Knowledge is typed by how it expires
 

@@ -97,11 +97,16 @@ up. `/kb save` and `/kb restore` are the explicit slash form and do the same.
 
 ## Writing
 
+This is what the skill runs for you when you say `/kb save`; the same commands
+work by hand if you prefer:
+
 ```bash
 kb add why-x-target --kind decision --title "why routing by X-Target, not Host"
 ```
 
-The file gets front matter; you write the body.
+`kb add` creates the file with its front matter and an `# H1`. The body is then
+written by whoever is driving — the assistant during `/kb save`, or you in an
+editor.
 
 **Number** — the next free one. Gaps are never reused: a number that once pointed
 at a file must not later point at a different one.
