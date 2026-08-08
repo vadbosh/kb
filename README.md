@@ -302,9 +302,17 @@ secrets: none found — checked with built-in patterns only
          install gitleaks or trufflehog for the full ruleset
 ```
 
-**Layer 1, always** — shapes with an unmistakable prefix or header: AWS access
-keys, GitHub and Slack tokens, Google and Stripe keys, PEM private keys, JWTs,
-passwords inside connection URLs. No install, works everywhere.
+**Layer 1, always** — fifteen patterns, no install, works everywhere. Twelve
+match a shape with an unmistakable prefix or header: AWS access keys, GitHub,
+Slack, Google, Stripe, OpenAI-family and Atlassian tokens, PEM private keys,
+JWTs, passwords inside connection URLs, `IDENTIFIED BY '…'` in SQL.
+
+Three more require **the variable name and the value shape together**, because
+the secret itself has no prefix — an AWS secret access key is forty characters of
+base64 and nothing else. `aws_secret_access_key = <40 base64>` has no innocent
+reading; a bare forty-character token has many. Each of these was measured
+against both live note directories before being added: zero matches, so they do
+not collide with ordinary text.
 
 **Layer 2, when present** — `gitleaks`, `trufflehog` or `detect-secrets`,
 whichever is found on PATH first, run over the same directory. Roughly 150 rules

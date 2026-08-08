@@ -178,6 +178,34 @@ SECRET_PATTERNS = [
     ("password in a URL",   re.compile(r"://[^/\s:@]+:[^/\s@]{3,}@")),
     ("Google API key",      re.compile(r"\bAIza[A-Za-z0-9_-]{35}\b")),
     ("Stripe key",          re.compile(r"\b(?:sk|rk)_live_[A-Za-z0-9]{20,}\b")),
+    ("OpenAI-family key",  re.compile(r"\bsk-(?:or-v1-|proj-|ant-)?[A-Za-z0-9-]{20,}")),
+    ("Atlassian token",    re.compile(r"\bat-[A-Za-z0-9]{30,}")),
+    ("SQL password",       re.compile(r"IDENTIFIED\s+BY\s+['\"][^'\"]{6,}['\"]", re.I)),
+]
+
+# Secrets with no distinctive prefix -- an AWS secret access key is forty
+# characters of base64 and nothing else. Shape alone would fire on every hash
+# in the notes, so these require the well-known variable name AND the value
+# shape together. That pairing is precise: `aws_secret_access_key = <40 base64>`
+# has no innocent reading, while a bare forty-character token has many.
+#
+# Found by testing against a real credential pair: the access key id was caught
+# and the secret sitting beside it was not. They usually appear together, so one
+# hit flags both -- but "usually" is not a control.
+SECRET_ASSIGNMENTS = [
+    ("AWS secret access key",
+     re.compile(r"""aws_secret_access_key\s*[=:]\s*['"]?[A-Za-z0-9/+=]{40}""", re.I)),
+    ("secret in an assignment",
+     re.compile(r"""\b(?:api[_-]?key|secret[_-]?key|access[_-]?token|auth[_-]?token"""
+                r"""|client[_-]?secret|password|passwd)\s*[=:]\s*['"][^'"]{8,}['"]""",
+                re.I)),
+    # Bare `key:`/`token:` with a long unbroken value. Measured on both live note
+    # directories before adding: zero matches, so the shape does not collide with
+    # ordinary YAML-ish prose. Requires the value to run to end of line, which is
+    # what separates a pasted token from a sentence.
+    ("token in a bare assignment",
+     re.compile(r"""\b(?:key|token|secret)\s*[:=]\s*['"]?[A-Za-z0-9/+=_-]{20,}['"]?\s*$""",
+                re.I)),
 ]
 
 EXTERNAL_SCANNERS = [
@@ -197,7 +225,8 @@ def scan_line(line: str) -> list[str]:
     ratio this project refuses to ship, so layer 1 stays precise and narrow, and
     entropy is left to the external scanners in layer 2, which tune it properly.
     """
-    return [name for name, rx in SECRET_PATTERNS if rx.search(line)]
+    return ([name for name, rx in SECRET_PATTERNS if rx.search(line)]
+            + [name for name, rx in SECRET_ASSIGNMENTS if rx.search(line)])
 
 
 def external_scanner() -> tuple[str, list[str]] | None:
