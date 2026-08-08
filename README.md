@@ -13,8 +13,6 @@ about it is specific to code.
 
 ---
 
----
-
 ## The idea
 
 Almost everyone eventually writes a wiki for their own work: one file listing the
