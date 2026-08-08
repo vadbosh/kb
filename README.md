@@ -13,6 +13,8 @@ about it is specific to code.
 
 ---
 
+---
+
 ## The idea
 
 Almost everyone eventually writes a wiki for their own work: one file listing the
@@ -94,43 +96,6 @@ in guesses.
 Neither claims to know whether a statement about the world is still true. A
 recipe can hold the command that would prove it; running that command against
 production on a schedule is not a note-taking tool's job.
-
----
-
-## What it deliberately does not do
-
-- **No auto-splitting of long files.** Size is reported, never enforced. A long
-  coherent reference is a good file; where to cut is a question of meaning.
-  `kb outline` prints a section map so the decision costs a dozen lines to read
-  instead of fifteen hundred.
-- **No database, no server, no lock-in.** The notes are ordinary Markdown in your
-  own repository. Delete the tool and they stay readable; only the table stops
-  updating itself.
-- **No opinion about your prose.** Only the managed block is generated.
-
----
-
-## Two layers
-
-| Layer | Owns | Lives in |
-|---|---|---|
-| CLI `kb` | everything **mechanical** — numbering, the table, drift detection, which snapshot is current | `<skill-dir>/scripts/kb` |
-| Skill `kb` | everything needing **judgement** — new file or existing one, which `kind`, when a file has grown two questions | your assistant's skills directory |
-
-The split is the design. Neither side does the other's job: the CLI never guesses
-what a note means, the assistant never hand-edits the table.
-
-The skill has two halves, each loaded only when needed:
-
-```
-kb/SKILL.md               routing + the rules both halves share
-kb/references/save.md     writing: append or new file, which kind, titles
-kb/references/restore.md  reading: orient, be selective, brief
-kb/scripts/kb             the CLI — one copy, no PATH dependency
-```
-
-Written for assistants that read `SKILL.md` — Claude Code, Opencode, Codex. The
-CLI also works on its own if you prefer driving it by hand.
 
 ---
 
@@ -227,6 +192,43 @@ builds the table. Titles are **harvested from your existing table**, not invente
 from each `# H1` — the phrasing a human wrote for a reader answers "what do I
 need", a document title does not, and losing it would defeat the point. Every
 touched file is backed up first.
+
+---
+
+## What it deliberately does not do
+
+- **No auto-splitting of long files.** Size is reported, never enforced. A long
+  coherent reference is a good file; where to cut is a question of meaning.
+  `kb outline` prints a section map so the decision costs a dozen lines to read
+  instead of fifteen hundred.
+- **No database, no server, no lock-in.** The notes are ordinary Markdown in your
+  own repository. Delete the tool and they stay readable; only the table stops
+  updating itself.
+- **No opinion about your prose.** Only the managed block is generated.
+
+---
+
+## Two layers
+
+| Layer | Owns | Lives in |
+|---|---|---|
+| CLI `kb` | everything **mechanical** — numbering, the table, drift detection, which snapshot is current | `<skill-dir>/scripts/kb` |
+| Skill `kb` | everything needing **judgement** — new file or existing one, which `kind`, when a file has grown two questions | your assistant's skills directory |
+
+The split is the design. Neither side does the other's job: the CLI never guesses
+what a note means, the assistant never hand-edits the table.
+
+The skill has two halves, each loaded only when needed:
+
+```
+kb/SKILL.md               routing + the rules both halves share
+kb/references/save.md     writing: append or new file, which kind, titles
+kb/references/restore.md  reading: orient, be selective, brief
+kb/scripts/kb             the CLI — one copy, no PATH dependency
+```
+
+Written for assistants that read `SKILL.md` — Claude Code, Opencode, Codex. The
+CLI also works on its own if you prefer driving it by hand.
 
 ---
 
