@@ -1,7 +1,7 @@
 ---
 name: kb
 description: Read and write a project's kb/ work-notes — a Markdown knowledge base whose index is generated rather than maintained by hand. Handles phrases "kbsave", "kbrestore", "/kb", "запиши в kb", "запиши в заметки", "прочитай kb", "прочитай заметки", "восстанови контекст из kb", "save to kb", "read kb", "что в заметках", "задокументируй это", "оформи в kb". Use at the start of work to load the notes and see what changed, and at the end to persist findings, decisions, traps or a dated snapshot instead of leaving them in the conversation.
-version: "2.7.0"
+version: "2.8.0"
 ---
 
 # kb
@@ -16,9 +16,10 @@ front matter, so it cannot drift from the files it describes.
 |---|---|
 | to load the notes, orient, see what changed — "kbrestore", "прочитай kb", start of a session | `references/restore.md` |
 | to write down what was learned — "kbsave", "запиши в kb", end of a task | `references/save.md` |
-| **one named command** — `/kb check`, `/kb status`, `/kb list`, `/kb verify`, `/kb outline`, `/kb sync` | neither; see below |
+| **one named command** — `/kb check`, `/kb status`, `/kb list`, `/kb verify`, `/kb outline`, `/kb sync`, `/kb streams` | neither; see below |
 
-Read only the one that applies. They share the rules below and nothing else.
+Read only the one that applies. Everything each half needs beyond this page is
+in that file — the kinds, the writing rules, the briefing format.
 
 **A named command is a request for that command, not for a session ritual.** Run
 it, report what it said, stop. Do not load a reference file, do not read the
@@ -68,47 +69,11 @@ Resolve the notes directory from cwd (`./kb`). Not the project dir →
 other command answers for a single directory, so running one and stopping
 silently decides the session had one subject. `kb streams` answers the other
 question — which directories came up — by reading the transcript rather than
-trusting recall. `references/save.md` step 1.
+trusting recall.
 
-## The five kinds
+## The one rule both halves share
 
-The distinction that earns its keep: does a newer file **replace** this one, or
-is the file **edited in place**?
-
-| kind | holds | ages by |
-|---|---|---|
-| `state` | a snapshot on a date: what is done, what is open | superseded by a later date |
-| `plan` | what is planned, in what order | superseded when executed |
-| `decision` | a choice and **why**; alternatives rejected | never expires — `--supersedes` only |
-| `reference` | how something works; durable | edited in place |
-| `recipe` | traps and ready-to-run checks | edited in place |
-
-`state` needs a date in its filename; `kb add state --kind state` adds today's.
-Which snapshot is current is **computed** — the tool marks the earlier ones
-rather than deleting them, because they still describe their own date truthfully.
-
-A `decision` is never rewritten. Reversing one means a new `decision` that
-supersedes it; the reasoning behind the old choice is usually the thing someone
-needs six months later.
-
-`supersedes:` carries the same weight when a note is **deleted** because a newer
-one covers it: name the deleted file there, and `check` reads a later mention of
-it as history instead of a broken link.
-
-Either way the field is what the index reads to mark both rows — `decision ⤺ 01`
-on the replacing note, `⤺ (reversed by 03)` on the replaced one. Leave it out and
-the two rows read as equals, which is how someone acts on a reversed decision.
-
-## Rules for all three
-
-- **Never edit between `<!-- kb:begin -->` and `<!-- kb:end -->`.** That table is
-  generated; the next `kb sync` overwrites it. Change front matter instead.
-- **Never rewrite text outside the markers** unless asked — a human wrote that
-  wording.
-- **Write in the language the notes are written in**, not the language of this
-  skill. Titles and bodies go straight into a document a human reads.
-- **No credentials.** Reference the mechanism (a secret in the cluster, an env
-  var), never the value.
-- **Nothing that lives elsewhere.** Reference it by path or URL — a copy goes
-  stale silently, a link does not. That includes documentation kept next to the
-  code, which must be edited together with the code.
+**Never edit between `<!-- kb:begin -->` and `<!-- kb:end -->`.** That table is
+generated; the next `kb sync` overwrites it. Change front matter instead.
+Everything outside the markers was written by a human — do not rewrite it unless
+asked.

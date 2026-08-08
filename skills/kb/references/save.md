@@ -1,47 +1,77 @@
 # Writing to the notes
 
 Triggered by "kbsave", "запиши в kb", "задокументируй это", or the end of a task
-worth remembering. Read `SKILL.md` first — the tool contract, the five kinds and
-the shared rules live there.
+worth remembering. `SKILL.md` has the tool contract; everything else is here.
 
 Nothing durable — no findings, no decisions, no traps → say
 `Nothing durable for kb.` Do NOT create empty notes.
 
+## The five kinds
+
+Does a newer file **replace** this one, or is it **edited in place**?
+
+| kind | holds | ages by |
+|---|---|---|
+| `state` | a snapshot on a date: what is done, what is open | superseded by a later date |
+| `plan` | what is planned, in what order | superseded when executed |
+| `decision` | a choice and **why**; alternatives rejected | never — `--supersedes` only |
+| `reference` | how something works; durable | edited in place |
+| `recipe` | traps and ready-to-run checks | edited in place |
+
+`state` needs a date in its filename; `kb add state --kind state` adds today's.
+Which one is current is **computed**, and earlier ones are marked rather than
+deleted — each still describes its own date truthfully.
+
+A `decision` is never rewritten. Reversing one means a new `decision` that
+supersedes it: the reasoning behind the old choice is usually what someone needs
+six months later. `supersedes:` covers deletion too — name the deleted file
+there and `check` reads a later mention of it as history, not a broken link.
+
+That field is what marks both index rows: `decision ⤺ 01` on the replacing note,
+`⤺ (reversed by 03)` on the replaced one. Leave it out and the two read as
+equals, which is how someone acts on a reversed decision.
+
+## Rules for everything below
+
+- **Write in the language the notes are written in**, not this file's. Titles and
+  bodies land in a document a human reads.
+- **No credentials.** Reference the mechanism (a secret in the cluster, an env
+  var), never the value.
+- **Nothing that lives elsewhere** — reference it by path or URL. A copy goes
+  stale silently, a link does not. Documentation next to code included: it is
+  edited together with the code.
+
 ## Step 1 — which work streams did this session touch?
 
-A stream is a body of work with its own directory or repository. A long session
-often has several, and every kb command answers for one directory only — so
-reaching for `kb status` first silently decides the session had one subject.
+A stream is a body of work with its own directory. A long session often has
+several, and every other kb command answers for one directory — so reaching for
+`kb status` first silently decides the session had one subject.
 
-**Do not enumerate them from memory.** Recall returns whatever is most recent
-and reads as complete either way, and after the conversation has been compacted
-it is provably not — you cannot tell "nothing else happened" from "I no longer
-have it". Ask the transcript instead:
+**Do not enumerate from memory.** Recall returns whatever is most recent and
+reads as complete either way; after a compaction it provably is not, and nothing
+from the inside tells the two apart. Ask the transcript:
 
 ```
-kb streams              directories this session mentioned, commonest first
-kb streams --sessions 3 when the work spans more than the current one
+kb streams                directories mentioned, commonest first
+kb streams --sessions 3   when the work spans more than the current one
 ```
 
-It reads the harness's own transcript and extracts **paths**, not prose — a
-tenth of the cost, and the question is which directories anyway. When it finds
-no transcript it says so; then the list is yours to give, and the fact that it
-came from memory is worth saying out loud.
+It extracts **paths**, not prose — a tenth of the cost, and the question is
+which directories anyway. No transcript found → it says so, and the list is
+yours to give, with the fact that it came from memory said out loud.
 
-Work with no directory at all — a web console, a mailbox rule, a remote host —
-leaves nothing to extract. `kb streams` shows a tail of messages that mention no
-path, but that is a hint, not a second list.
+Work with no directory — a web console, a mailbox rule, a remote host — leaves
+nothing to extract. The tail of pathless messages is a hint, not a second list.
 
-Best avoided altogether by **saving at the boundary** — one stream finished,
-one save, while the context is still whole. Then there is never more than one.
+Better than any of this: **save at the boundary**, one stream at a time, while
+the context is whole. Then there is never more than one.
 
 - **One stream** → write it. Do not turn a routine save into a questionnaire.
-- **Several** → list them and ask which to write. Enumerating is your job;
-  choosing is not.
+- **Several** → list and ask. Enumerating is your job; choosing is not.
 
 Use the harness's own multiple-choice prompt where there is one (`AskUserQuestion`
-with `multiSelect` in Claude Code); otherwise print a numbered list and wait.
-**One line per stream** — what came out of it, and whether its kb exists:
+with `multiSelect` in Claude Code), otherwise a numbered list. **One line per
+stream** — what came out of it, and whether its kb exists:
 
 ```
 1. ~/src/api      auth rewritten, two bugs fixed   → kb/ exists
@@ -49,45 +79,44 @@ with `multiSelect` in Claude Code); otherwise print a numbered list and wait.
 3. workstation    editor and shell config          → no home yet
 ```
 
-Do not argue the case for each one — a paragraph per stream turns a two-second
+Do not argue the case for each — a paragraph per stream turns a two-second
 choice into a wall of text. Save the reasoning for whichever they pick.
 
 A stream may be skipped; it may not vanish unmentioned. **"It is in the git
-history" is the excuse to distrust most** — a log says what changed, not *what do
-I need*. If the reasoning behind a design is worth finding later it belongs in a
-`decision`, with the commit named as a pointer.
+history" is the excuse to distrust most** — a log says what changed, not *what
+do I need*. Reasoning worth finding later belongs in a `decision`, with the
+commit named as a pointer.
 
 ## Step 2 — append or new file
 
-Run `kb status` to see what exists.
+`kb status` first, to see what exists.
 
 **Append** when the fact is one more instance of what a file already covers —
-another trap in a `recipe`, another component in a `reference`. Edit the file,
-bump `updated:`, `kb sync`.
+another trap in a `recipe`, another component in a `reference`. Edit it, bump
+`updated:`, `kb sync`.
 
 **New file** when any of these holds:
 
 - it answers a different question than every existing file — literally what the
   index column asks: *what do I need?*
 - it is a `state` or a `decision`; those are points in time, never appended to
-- putting it in the obvious host would make that file cover two `kind`s at once
+- the obvious host would end up covering two `kind`s at once
 
-**Splitting** — never by size alone. A long coherent `reference` is a good file.
-The real criterion is mixed kinds. Judge from the heading map, do not read the
-file:
+**Splitting** — never by size alone; a long coherent `reference` is a good file.
+The criterion is mixed kinds. Judge from the heading map, do not read the file:
 
 ```
 kb outline <file>     sections with weights; no argument = every file over 400 lines
 ```
 
-Split only where one part describes **how things are** and another **what to
-do**, or a `recipe` has grown inside a `state`. If every section answers the same
-question, leave it alone however long — say so and move on.
+Cut only where one part describes **how things are** and another **what to do**,
+or a `recipe` has grown inside a `state`. Every section answering the same
+question → leave it, however long, and say so.
 
 ## Step 3 — write the title
 
 `--title` becomes the index row, and that column answers **"what do I need?"**,
-not "what is this document called":
+not "what is this called":
 
 ```
 good   what is done and what is still open right now
@@ -101,83 +130,74 @@ bad    Fluent-bit                  (a noun, answers nothing)
 `kb add` creates the file with front matter and an `# H1`; you fill the body.
 Lead with the concrete subject. Written text, not a transcript.
 
-**Run a command before writing a claim about the system** — now, not from
-memory of a run earlier in the session. `check` and `verify` cannot help here:
-they prove the notes agree with each other, never that a sentence about the
-world is true. A false note is worse than no note, being read with the same
-confidence as the rest. Two things to watch:
+**Run a command before writing a claim about the system** — now, not from memory
+of a run earlier in the session. `check` and `verify` cannot help: they prove the
+notes agree with each other, never that a sentence about the world is true, and a
+false note is read with the same confidence as the rest. Two to watch:
 
 - a `grep` matching inside a comment reads as "the code uses it" — re-run against
   executable lines only
 - an assertion that happens to be true is still unverified; next time it is not
 
-Cannot be checked from here — a live cluster, another host, a stopped service?
-**Say so in the note.** "Probably X, not verifiable from this machine" is
-durable; a confident X is a trap.
+Not checkable from here — a live cluster, another host, a stopped service? **Say
+so in the note.** "Probably X, not verifiable from this machine" is durable; a
+confident X is a trap.
 
 **A `decision` needs one step more: search for an existing answer first.**
-Another tool or project may have solved the same problem already. A decision
-justified by "this is impossible" is worth exactly as much as the search behind
-it.
-
-Reversing an earlier decision → `kb add … --kind decision --supersedes <file>`.
-Do not rewrite the old one. **Deleting a note a newer one replaces** → same
-mechanism: put the deleted name in the replacing note's `supersedes:` and say in
-prose what went and why. `check` then reads a later mention of it as history
-rather than a broken link.
+Another tool or project may have solved it already. A decision justified by "this
+is impossible" is worth exactly what the search behind it was worth.
 
 ## Step 5 — finish with `kb check`, always
 
-Exit 3 means something needs attention — act in the same turn:
+Exit 3 means act in the same turn:
 
 | What `check` reported | What to do |
 |---|---|
 | stale index table | `kb sync` |
 | links a missing file | fix the link or restore the file |
 | no front matter / unknown kind | add the front matter |
+| `updated` is not a date | correct it — a non-date can win the current-snapshot contest |
+| whitespace in a filename | rename with hyphens; links to it cannot be verified |
+| `*.bak.*` left over | check them against the originals, then propose deleting |
 | **file over the size threshold** | `kb outline` → judge by kind-mixing → propose a seam OR say "no seam, leaving it" |
-| `*.bak.*` left over | verify against the originals, then propose deleting |
 
 Never stay silent about size and never defer it; never split silently either —
 propose the seam, the decision is the human's.
 
 **Exit 4 is different: a credential was found.** Do not quietly edit the file. If
 the notes are versioned the value is already in history, and a silent fix hides
-that from whoever has to rotate it. Say what was found and where, and note what
-the scan covered — a short generic password in a sentence is caught by nothing.
-
-Never write a sample credential into a note to test the scan. A correctly
-formatted key is a real finding to every tool that touches the repository
-afterwards, fake or not.
+that from whoever has to rotate it. Say what was found and where, and what the
+scan covered — a short generic password in a sentence is caught by nothing.
+Never write a sample credential into a note to test the scan: a correctly
+formatted key is a real finding to every tool that later touches the repository,
+fake or not.
 
 ## Run `kb verify` if this session moved or renamed anything
 
-`check` proves internal consistency and says nothing about whether the notes are
-still **true**. The restore half runs `verify` at session start, so the routine
-pass is covered.
+`check` proves internal consistency, not truth. The restore half runs `verify` at
+session start, so the routine pass is covered.
 
 ```
 kb verify     vanished paths, notes past their re-check age; exit 3 = look
 ```
 
-It reports **suspicions**: a flagged path may live in a container or on another
+It reports **suspicions** — a flagged path may live in a container or on another
 host. Two rules learned the hard way:
 
 - **Confirm the replacement exists before rewriting a path.** A breadcrumb left
   by a human can itself be wrong. Check first, in a step separate from the edit.
-- **`verify` only sees paths in backticks** — a stale path inside a fenced block
-  slips through, so grep for the old string too when fixing one.
+- **`verify` only sees paths in backticks** — one inside a fenced block slips
+  through, so grep for the old string too when fixing one.
 
 ## Never
 
-- **Keep a diary.** A `state` file is a snapshot, not "what we did on Tuesday".
+- **Keep a diary.** A `state` is a snapshot, not "what we did on Tuesday".
 - **Let a stream vanish.** Skipping is a decision; announce it.
-- Everything in the shared rules section of `SKILL.md`.
 
 ## Report
 
-Counts and paths, not content — one line per stream, including skipped ones.
-Without them the reader cannot tell whether a subject was considered and
+Counts and paths, not content — one line per stream, **including skipped ones**.
+Without those the reader cannot tell whether a subject was considered and
 rejected, or never noticed:
 
 ```

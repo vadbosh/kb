@@ -1,8 +1,12 @@
 # Loading the notes into the session
 
 Triggered by "kbrestore", "прочитай kb", "что в заметках", or the start of work
-in a project that has a `kb/`. Read `SKILL.md` first — the tool contract, the
-five kinds and the shared rules live there.
+in a project that has a `kb/`. `SKILL.md` has the tool contract.
+
+The index shows a `kind` per row. It says how that note ages, and reading only
+needs the consequence: a `state` is true for its date and the current one is
+computed for you; everything else is maintained in place. The full table lives
+in `references/save.md`, where the choice is actually made.
 
 Reading the files themselves is the Read tool, not the CLI.
 
@@ -12,21 +16,16 @@ Reading the files themselves is the Read tool, not the CLI.
 kb status && kb check && kb verify
 ```
 
-All three, always. This is the one moment in the workflow where they are cheap
-and where their answers matter. `verify` in particular has no other natural home:
-it must not run on every save (noise), and leaving it to "run it when it feels
-right" means it never runs at all.
+All three, always — this is the one moment where they are cheap and their answers
+matter. `verify` has no other natural home: on every save it is noise, and left
+to judgement it never runs.
 
-`kb status` names the current `state` file — the answer to "what is the situation
-now". Every older `state` describes its own date and is not cancelled.
-
-`kb check` exit 3 means the index disagrees with the files. Report it and say
-`kb sync` fixes it. Do not silently trust a stale index.
-
-`kb verify` exit 3 is different: suspicions, not errors. A flagged path may live
-inside a container or on another host. Surface what it found under Discrepancies
-in the briefing; fix nothing unasked, and never rewrite a path without first
-confirming the replacement exists.
+`kb status` names the current `state`; older ones describe their own date and are
+not cancelled. `kb check` exit 3 means the index disagrees with the files — say
+`kb sync` fixes it, never trust a stale index silently. `kb verify` exit 3 is
+suspicions, not errors: a flagged path may live in a container or on another
+host. Surface those under Discrepancies, fix nothing unasked, and never rewrite a
+path without first confirming the replacement exists.
 
 No `kb/` under cwd → run `kb list` before concluding there are no notes; the
 project's kb may be registered elsewhere. Still nothing → say so plainly, do not
@@ -34,27 +33,20 @@ invent notes.
 
 ## Step 2 — read the index, then be selective
 
-Read `kb/00-overview.md` in full. It is small and it is the map: the text says
-what the work stream is and what is deliberately NOT in it, and the generated
-table has one row per file with the question that file answers.
+Read `kb/00-overview.md` in full — it is small and it is the map: prose saying
+what the stream is and what is deliberately NOT in it, plus one table row per
+file with the question that file answers.
 
-Then read:
-
-- the **current `state`** file — always, that is the situation now
-- **only the files the task needs**, chosen by the index's "what do I need" column
-
-Do not read every file. That column exists precisely so you don't have to. A file
-marked `⚠ ~Nk tokens` in the index is expensive — open it only if the task
-actually needs it.
+Then the **current `state`** (always — that is the situation now) and **only the
+files the task needs**, chosen by the "what do I need" column. That column exists
+so you do not read everything. A row marked `⚠ ~Nk tokens` is expensive; open it
+only if the task needs it.
 
 ## Step 3 — resuming an old session
 
-On `--resume` / `--continue` the conversation comes back, but the files may have
-moved on: another session wrote to them, the human edited them, or compaction
-dropped the details.
-
-Compare what `kb status` reports **now** against what the restored conversation
-shows:
+On `--resume` the conversation comes back, but the files may have moved on:
+another session wrote, the human edited, or compaction dropped the details.
+Compare what `kb status` reports **now** against what the conversation shows:
 
 - **same current `state`, `check` clean** → the context is still valid, re-read
   nothing, say so.
