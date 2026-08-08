@@ -130,11 +130,11 @@ Before you call the work documented → `kb check` (exit 3 = drift).
 Front matter is the source of truth; the table is derived from it.
 
 ```
-kb/01-pipeline.md              kb/00-overview.md
+kb/02-pipeline.md              kb/00-overview.md
 ---                            <!-- kb:begin -->
 title: how the pipeline works ┐ | what you need | file | kind | updated |
-kind: reference               ├►| how the pipeline works | `01-pipeline.md` | reference | … |
-updated: 2026-09-01           ┘ <!-- kb:end -->
+kind: reference               ├►| how the pipeline works | `02-pipeline.md` | reference | … |
+updated: 2026-08-05           ┘ <!-- kb:end -->
 ---
 ```
 

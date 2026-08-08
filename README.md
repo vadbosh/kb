@@ -30,21 +30,24 @@ divergence has already happened.
 
 ### 1. The index is generated, not maintained
 
-Every note carries three lines of front matter:
+Every note opens with three front-matter fields. This is the top of
+`kb/02-pipeline.md`:
 
 ```yaml
 ---
-title: what the reader will find here
+title: how the pipeline works
 kind: reference
-updated: 2026-09-01
+updated: 2026-08-05
 ---
+# the note itself follows
 ```
 
-The index contains a **managed block**. Everything between the markers is rebuilt
-from those lines; everything outside them is yours and is never touched.
+The index is `kb/00-overview.md`. Its prose is yours, written however you like.
+Inside it sits a region between two markers, and that region kb rebuilds from
+the front matter of every note:
 
 ```markdown
-## Where to start reading
+## Where to start reading          <- your heading, your words
 
 <!-- kb:begin -->
 Current snapshot: `21-state-2026-08-07.md` (2026-08-07).
@@ -54,10 +57,13 @@ Current snapshot: `21-state-2026-08-07.md` (2026-08-07).
 | how the pipeline works | `02-pipeline.md` | reference | 2026-08-05 |
 | traps and check commands | `23-traps.md` | recipe | 2026-08-07 |
 <!-- kb:end -->
+
+Back to your own text: what the work is, what does NOT go here, where else to look.
 ```
 
-You never write that table. It cannot disagree with the files, because it is
-derived from them.
+You neither write nor edit the snapshot line and the table — both are assembled
+from the files on every `kb sync`. Such a table cannot disagree with the files: it
+came from them. Anything outside the markers kb never touches.
 
 ### 2. Knowledge is typed by how it expires
 

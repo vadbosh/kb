@@ -215,11 +215,11 @@ kbrestore
 Источник правды — **front matter файлов**; таблица — производная от него.
 
 ```
-kb/01-pipeline.md              kb/00-overview.md
+kb/02-pipeline.md              kb/00-overview.md
 ---                            <!-- kb:begin -->
 title: как устроен конвейер ─┐  | что нужно | файл | тип | обновлён |
-kind: reference              ├─►| как устроен конвейер | `01-pipeline.md` | reference | ... |
-updated: 2026-09-01         ─┘  <!-- kb:end -->
+kind: reference              ├─►| как устроен конвейер | `02-pipeline.md` | reference | ... |
+updated: 2026-08-05         ─┘  <!-- kb:end -->
 ---
 ```
 
