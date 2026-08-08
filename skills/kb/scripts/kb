@@ -709,7 +709,7 @@ def cmd_list(args) -> int:
 
     for path in dead:
         print(f"  {str(path):<40} ✗ no {OVERVIEW} — moved or deleted")
-    if dead:
+    if dead and not args.prune:
         print(f"\n{len(dead)} dead entries. Remove: kb list --prune")
     if args.prune and dead:
         alive = [p for p in known if p not in dead]
@@ -1003,6 +1003,9 @@ def cmd_adopt(args) -> int:
     # point it at where the notes ended up, or it fails on a migration that just
     # succeeded and leaves the index stale.
     args.dir = str(root)
+    # Only scaffolding an overview registers a directory, and adopt moves one
+    # that already exists -- so a retrofitted kb stayed invisible to `kb list`.
+    register(root)
     args.no_sync = False
     return cmd_sync(args)
 
