@@ -187,8 +187,10 @@ After that, two commands are the whole workflow:
 
 That is all. You never run `kb` in a shell; the assistant does it for you.
 
-Saying `kbrestore` or `kbsave` as plain words in a message works identically —
-use whichever you find easier to remember.
+There is no `/kbsave` or `/kbrestore` — the skill is named `kb`, so the command
+is `/kb` and the half is chosen by the first word. Saying "kbsave" or "kbrestore"
+inside a sentence usually works as well, since both are listed in the skill's
+description, but that is recognition rather than a command.
 
 <details>
 <summary>What those two actually run</summary>

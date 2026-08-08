@@ -101,5 +101,5 @@ don't pad.
 
 ## End with
 
-A one-line reminder, in the user's language, that saying `kbsave` at the end of
-the work records what was learned.
+A one-line reminder, in the user's language, that `/kb save` at the end of the
+work records what was learned.

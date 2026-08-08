@@ -19,8 +19,8 @@ to day and what each mechanism actually guarantees.
 | CLI `kb` | mechanics — numbering, the table, drift detection | `<skill-dir>/scripts/kb` |
 
 The skill loads one half on demand: `references/save.md` to write,
-`references/restore.md` to read. You address them by saying `kbsave` or
-`kbrestore`; the slash form is `/kb save` and `/kb restore`.
+`references/restore.md` to read. There is one command, `/kb`, and the half is
+chosen by the argument: `/kb save` and `/kb restore`.
 
 Normal work never touches the shell — the skill calls the CLI itself. The one
 routine exception is `kb adopt`, once per directory you are migrating.
@@ -35,14 +35,14 @@ Install, configuration and uninstall: [README.md](../README.md#install).
 
 Nothing to prepare in advance — and nothing appears by itself either.
 **Launching the assistant does not create `kb/`.** The directory comes into
-existence the first time you say `kbsave`, and until then the project has none.
+existence the first time you type `/kb save`. Until then the project has none.
 
 ```
 $ cd /path/to/project
 $ claude
 > figure out why fluent-bit is not reaching the database
 ...
-> kbsave
+> /kb save
 ```
 
 The skill does the rest: `kb status` (empty → creates `kb/`), picks the `kind`,
@@ -52,8 +52,8 @@ writes the `title`, creates the file, rebuilds the index. It reports counts:
 kb: created /path/to/project/kb, +1 reference (01-fluentbit-pipeline.md). Index rebuilt.
 ```
 
-Bare `kbsave` = "decide yourself what from this session is durable". Scope it
-explicitly with `kbsave about the fluent-bit pipeline`.
+`/kb save` with nothing after it means "decide yourself what from this session is
+worth keeping". Scope it explicitly with `/kb save about the fluent-bit pipeline`.
 
 A second trap later would be **appended to the same** `recipe` file rather than
 spawning a new one — that is the append-or-new decision.
@@ -62,7 +62,7 @@ spawning a new one — that is the append-or-new decision.
 
 ```
 $ claude --resume <ID>
-> kbrestore
+> /kb restore
 ```
 
 The skill runs `kb status` + `kb check` + `kb verify`, reads the index and the
@@ -77,21 +77,24 @@ shows:
 
 Then a briefing: state / what is open / which files this task needs.
 
-If you resumed immediately and nothing on disk moved, `kbrestore` is not needed —
+If you resumed immediately and nothing on disk moved, `/kb restore` is not needed —
 it earns its keep when **time has passed** or **another session wrote**.
 
 ### Cheat sheet
 
 | Moment | Type |
 |---|---|
-| record what was learned | `kbsave` |
-| record specifically about X | `kbsave about X` |
-| capture a dated snapshot | `kbsave state snapshot` |
-| resumed a session, need context | `kbrestore` |
-| what is in the notes at all | `kbrestore` |
+| record what was learned | `/kb save` |
+| record specifically about X | `/kb save about X` |
+| capture a dated snapshot | `/kb save state snapshot` |
+| resumed a session, need context | `/kb restore` |
+| what is in the notes at all | `/kb restore` |
 
-`kbsave` and `kbrestore` are ordinary words in a prompt — the skill picks them
-up. `/kb save` and `/kb restore` are the explicit slash form and do the same.
+The command is `/kb`, with the half chosen by the first word: `/kb save` and
+`/kb restore`. There is no `/kbsave` or `/kbrestore` — the skill is named `kb`.
+Saying "kbsave" or "kbrestore" inside a sentence usually works too, since both
+are listed in the skill's description, but that is recognition rather than a
+command.
 
 ---
 
@@ -169,7 +172,7 @@ file. The real criterion is mixed `kind`s in one file, because `kind` is exactly
 instead of reading fifteen hundred lines.
 
 There is no auto-splitting and there will not be: where to cut is a question of
-meaning. But no manual monitoring either — `kbsave` runs `kb check` at the end of
+meaning. But no manual monitoring either — `/kb save` runs `kb check` at the end of
 every write, and the skill must act on a size warning in the same turn.
 
 ---
