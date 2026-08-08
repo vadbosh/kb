@@ -180,22 +180,21 @@ whatever it replaces as `<file>.bak.<timestamp>`.
 
 ## Using it
 
-Two words to remember. Everything mechanical hangs off them.
+Two words, typed into your assistant like any other message:
 
-```
-kbrestore    at the start of work — loads the notes, says what changed
-kbsave       when there is something worth keeping
-```
+| You type | When | What runs underneath |
+|---|---|---|
+| `kbrestore` | starting work | `kb status` + `kb check` + `kb verify`, then the index and the current snapshot, then only the files the task needs |
+| `kbsave` | something is worth keeping | `kb status` → decides append-or-new → `kb add` → writes the body → `kb sync` → `kb check` |
 
-| You say | What runs underneath |
-|---|---|
-| `kbrestore` | `kb status` + `kb check` + `kb verify`, then the index and the current snapshot, then only the files the task needs |
-| `kbsave` | `kb status` → decides append-or-new → `kb add` → writes the body → `kb sync` → `kb check` |
+Both are ordinary words in a prompt — the skill picks them up. `/kb save` and
+`/kb restore` are the explicit slash form and do exactly the same thing; use
+whichever you prefer.
 
-Slash form: `/kb restore`, `/kb save`.
-
-On a fresh project there is nothing to set up — the first `kbsave` creates `kb/`
-and writes the first note.
+**`kb/` is not created by launching the assistant.** Nothing is set up in
+advance, but nothing appears on its own either: the directory and the first note
+are written the first time you say `kbsave`. Until then the project has no
+`kb/` at all, and that is the expected state.
 
 ### Adopting notes you already have
 

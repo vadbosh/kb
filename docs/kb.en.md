@@ -33,7 +33,9 @@ Install, configuration and uninstall: [README.md](../README.md#install).
 
 ### Session 1, new project
 
-Nothing to set up — `kb/` appears on the first write.
+Nothing to prepare in advance — and nothing appears by itself either.
+**Launching the assistant does not create `kb/`.** The directory comes into
+existence the first time you say `kbsave`, and until then the project has none.
 
 ```
 $ cd /path/to/project
@@ -87,7 +89,8 @@ it earns its keep when **time has passed** or **another session wrote**.
 | resumed a session, need context | `kbrestore` |
 | what is in the notes at all | `kbrestore` |
 
-Slash form works too: `/kb save`, `/kb restore`.
+`kbsave` and `kbrestore` are ordinary words in a prompt — the skill picks them
+up. `/kb save` and `/kb restore` are the explicit slash form and do the same.
 
 ---
 
