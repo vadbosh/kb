@@ -21,20 +21,34 @@ decides that the session had one subject.
    work with its own directory or repository — not a topic, not a task.
 2. Resolve a kb for each: `./kb` in its directory, or `kb list` if it already has
    one elsewhere.
-3. Then run steps 2–5 **per stream**.
 
-**A stream may be skipped — silently dropping it may not.** Legitimate reasons to
-skip, each of which must be said out loud:
+**One stream → just write it.** Do not turn a routine save into a questionnaire.
 
-- everything durable already lives somewhere better, and you can name where
-- nothing durable came out of it (the skip-if-trivial guard above)
-- it has no kb and creating one is the human's call — then say so and ask
+**Several streams → show the list and ask which ones to write.** Enumerating is
+your job; choosing is not. For each stream give the human what they need to
+decide in one line: what came out of it, where a note would go, and whether that
+kb exists yet.
 
-"It is in the git history" is the reason that deserves the most suspicion. A log
-records what changed and why it changed; it does not answer *what do I need*,
-which is the question the index column asks. Thirty commits are not a knowledge
-base. If the reasoning behind a design is worth finding later, it belongs in a
-`decision`, with the commit named as a pointer.
+```
+This session touched four. Which go into notes?
+
+  1. /AI_P/Qdrant        bundle was incomplete, now has a drift check   → kb/ (new)
+  2. /home/kb            6 defects fixed, docs reworked, 33 commits     → kb/ (new)
+  3. AI tooling          trigger rule added, dead command removed       → no home yet
+  4. gh-traffic          collector + cron                              → already in MEMORY.md
+```
+
+Then write the chosen ones, steps 2–5 per stream.
+
+**Never decide this alone, and never let a stream vanish unmentioned.** Writing
+one kb and staying quiet about the other three reads as "everything is saved".
+
+"It is in the git history" is the reason that deserves the most suspicion — both
+when you offer it and when you accept it. A log records what changed and why it
+changed; it does not answer *what do I need*, which is the question the index
+column asks. Thirty commits are not a knowledge base. If the reasoning behind a
+design is worth finding later, it belongs in a `decision`, with the commit named
+as a pointer.
 
 ## Step 2 — append or new file
 
