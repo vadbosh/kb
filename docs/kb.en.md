@@ -26,6 +26,7 @@ Normal work never touches the shell — the skill calls the CLI itself. The one
 routine exception is `kb adopt`, once per directory you are migrating.
 
 Install, configuration and uninstall: [README.md](../README.md#install).
+Using it from a terminal without an assistant: [cli.en.md](cli.en.md).
 
 ---
 
