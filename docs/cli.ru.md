@@ -232,8 +232,8 @@ current state: 03-state-2026-08-08.md (2026-08-08)
 
 ```console
 $ kb list
-  /AI_P/envoy-logs/kb                      3 files, snapshot 2026-08-05
-  /AI_P/NLM/kb                             19 files, snapshot 2026-08-07, ⚠ 1 heavy
+  /srv/logging/kb                          3 files, snapshot 2026-08-05
+  /srv/gateway/kb                          19 files, snapshot 2026-08-07, ⚠ 1 heavy
   /tmp/clidemo/kb                          3 files, snapshot 2026-08-08
 ```
 
@@ -333,10 +333,11 @@ kb list | awk '/^ *\// {print $1}' | while read -r d; do
 done
 ```
 
-На двух живых хранилищах это печатает:
+На двух живых хранилищах это напечатало (пути здесь и ниже заменены на
+условные — вывод настоящий, каталоги чужие):
 
 ```
-── /AI_P/NLM/kb
+── /srv/gateway/kb
     ✗ /etc/nginx/custom-conf-parts/
     ✗ /etc/nginx/custom-lua-scripts/
 ```
