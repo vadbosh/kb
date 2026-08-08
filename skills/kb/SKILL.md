@@ -1,7 +1,7 @@
 ---
 name: kb
 description: Read and write a project's kb/ work-notes — a Markdown knowledge base whose index is generated rather than maintained by hand. Handles phrases "kbsave", "kbrestore", "/kb", "запиши в kb", "запиши в заметки", "прочитай kb", "прочитай заметки", "восстанови контекст из kb", "save to kb", "read kb", "что в заметках", "задокументируй это", "оформи в kb". Use at the start of work to load the notes and see what changed, and at the end to persist findings, decisions, traps or a dated snapshot instead of leaving them in the conversation.
-version: "2.1.0"
+version: "2.2.0"
 ---
 
 # kb
@@ -87,6 +87,10 @@ needs six months later.
 `supersedes:` carries the same weight when a note is **deleted** because a newer
 one covers it: name the deleted file there, and `check` reads a later mention of
 it as history instead of a broken link.
+
+Either way the field is what the index reads to mark both rows — `decision ⤺ 01`
+on the replacing note, `⤺ (reversed by 03)` on the replaced one. Leave it out and
+the two rows read as equals, which is how someone acts on a reversed decision.
 
 ## Rules for all three
 

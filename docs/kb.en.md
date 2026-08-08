@@ -153,6 +153,12 @@ Computed automatically, never written by hand: the current snapshot (max date
 among `state` files), the marker on earlier ones, row order (by number, so
 editing one file does not reshuffle the table), and the next free number.
 
+`supersedes:` in a note's front matter marks both rows: the replacing note reads
+`decision ⤺ 01` in the kind column, the replaced one `⤺ (reversed by 03)` in its
+description. The replaced file stays where it is — the reasoning behind the old
+choice is usually what someone needs six months later. If it was deleted instead,
+there is no row to mark and its name stops counting as a broken link.
+
 ---
 
 ## File size

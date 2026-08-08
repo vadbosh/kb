@@ -59,6 +59,8 @@ STRINGS = {
                    "описывают своё число, не отменены.",
         "header": "| что нужно | файл | тип | обновлён |",
         "superseded": " ⏳ (прежний срез)",
+        "reversed": " ⤺ (отменён {num})",
+        "replaces": " ⤺ {nums}",
         "index_heading": "## Указатель",
         "heavy": " ⚠ ~{k}k токенов",
         "skeleton": """\
@@ -87,6 +89,8 @@ STRINGS = {
                    "describe their own date and are not cancelled.",
         "header": "| what you need | file | kind | updated |",
         "superseded": " ⏳ (earlier snapshot)",
+        "reversed": " ⤺ (reversed by {num})",
+        "replaces": " ⤺ {nums}",
         "index_heading": "## Index",
         "heavy": " ⚠ ~{k}k tokens",
         "skeleton": """\
@@ -407,19 +411,37 @@ def render_block(notes: list[Note]) -> str:
     instead of shuffling every row because one file changed kind.
     """
     cur = current_state(notes)
+
+    # A replaced note that still EXISTS keeps its own row, and unmarked the two
+    # read as equals. The older row is the trap: acting on a decision that has
+    # been reversed is the whole thing `supersedes:` exists to prevent, and the
+    # reader who stops at that row never reaches the one that overrules it.
+    by_name = {n.name: n for n in notes}
+    replaces: dict[str, list[str]] = {}
+    replaced_by: dict[str, str] = {}
+    for n in notes:
+        for ref in n.supersedes.replace(",", " ").split():
+            if ref in by_name and ref != n.name:
+                replaces.setdefault(n.name, []).append(f"{by_name[ref].num:02d}")
+                replaced_by[ref] = f"{n.num:02d}"
+
     lines = [MARK_BEGIN + S("block_note")]
     if cur:
         lines += ["", S("current").format(name=cur.name, date=cur.sort_date)]
     lines += ["", S("header"), "|---|---|---|---|"]
     for n in sorted(notes, key=lambda n: n.num):
-        title = n.title
+        title, kind = n.title, n.kind
         if n.kind == "state" and cur and n.name != cur.name:
             title += S("superseded")
+        if n.name in replaced_by:
+            title += S("reversed").format(num=replaced_by[n.name])
+        if n.name in replaces:
+            kind += S("replaces").format(nums=", ".join(replaces[n.name]))
         # Only past the HARD threshold: marking every long-ish file would turn
         # the column into noise and stop being a signal at all.
         if n.lines > HARD_LINES:
             title += S("heavy").format(k=n.ktokens)
-        lines.append(f"| {title} | `{n.name}` | {n.kind} | {n.updated} |")
+        lines.append(f"| {title} | `{n.name}` | {kind} | {n.updated} |")
     lines += ["", MARK_END]
     return "\n".join(lines)
 
