@@ -24,21 +24,26 @@ decides that the session had one subject.
 
 **One stream → just write it.** Do not turn a routine save into a questionnaire.
 
-**Several streams → show the list and ask which ones to write.** Enumerating is
-your job; choosing is not. For each stream give the human what they need to
-decide in one line: what came out of it, where a note would go, and whether that
-kb exists yet.
+**Several streams → ask which ones to write.** Enumerating is your job; choosing
+is not.
+
+Use the harness's own multiple-choice prompt if it has one — in Claude Code that
+is `AskUserQuestion` with `multiSelect`. Where there is none (opencode, Codex),
+print a numbered list and wait. Either way the shape is the same: **one line per
+stream**, carrying only what a person needs to choose — what came out of it, and
+whether a kb for it exists.
 
 ```
-This session touched four. Which go into notes?
-
-  1. /AI_P/Qdrant        bundle was incomplete, now has a drift check   → kb/ (new)
-  2. /home/kb            6 defects fixed, docs reworked, 33 commits     → kb/ (new)
-  3. AI tooling          trigger rule added, dead command removed       → no home yet
-  4. gh-traffic          collector + cron                              → already in MEMORY.md
+1. /AI_P/Qdrant   bundle now has a drift check      → kb/ exists
+2. /home/kb       6 defects, docs reworked          → kb/ (new)
+3. AI tooling     trigger rule, dead command gone   → no home yet
+4. gh-traffic     collector + cron                  → in MEMORY.md
 ```
 
-Then write the chosen ones, steps 2–5 per stream.
+**Do not argue the case for each stream.** A paragraph per stream turns a
+two-second choice into a wall of text; save the reasoning for whichever stream
+they pick, or for a question they ask. Then write the chosen ones, steps 2–5 per
+stream.
 
 **Never decide this alone, and never let a stream vanish unmentioned.** Writing
 one kb and staying quiet about the other three reads as "everything is saved".
@@ -98,6 +103,30 @@ bad    Fluent-bit                  (a noun, answers nothing)
 `kb add` creates the file with front matter and an `# H1`; you fill the body.
 Lead with the concrete subject. Written text, not a transcript — the durable model of
 how something works, not the tape of what was typed.
+
+**Every claim about the system gets a command before it gets written.** Not a
+recollection of one run earlier in the session — a command, now. `check` and
+`verify` cannot help here: they prove the notes are consistent with each other,
+never that a sentence about the world is true. A note asserting something false
+is worse than no note, because it is read with the same confidence as the rest.
+
+Two failures worth recognising, both real:
+
+- *An assertion nobody checked, which happened to be true.* "It was not in cron
+  either" — written without opening cron. Correct by luck. Next time it is not.
+- *A grep that matched a comment.* `grep output collect.sh` finds the word in
+  `# ships to $output` and reads as "the code uses it". Re-run against the
+  executable lines: `grep -v '^\s*#' <file> | grep <term>`.
+
+If a claim cannot be checked from here — a fact about a live cluster, another
+host, a service that is not running — **say that in the note**. "Probably X,
+could not verify from this machine" is durable. A confident X is a trap.
+
+**A `decision` needs one more step: look for an existing answer first.** This
+machine has other tools, other installers, other projects; one of them may have
+solved the same problem already. Search before you reason. A decision justified
+by "this is impossible" is only as good as the search behind it — and the search
+is usually the part that was skipped.
 
 Reversing an earlier decision → `kb add … --kind decision --supersedes <file>`.
 Do not rewrite the old one.
