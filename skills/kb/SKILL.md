@@ -84,6 +84,10 @@ A `decision` is never rewritten. Reversing one means a new `decision` that
 supersedes it; the reasoning behind the old choice is usually the thing someone
 needs six months later.
 
+`supersedes:` carries the same weight when a note is **deleted** because a newer
+one covers it: name the deleted file there, and `check` reads a later mention of
+it as history instead of a broken link.
+
 ## Rules for all three
 
 - **Never edit between `<!-- kb:begin -->` and `<!-- kb:end -->`.** That table is

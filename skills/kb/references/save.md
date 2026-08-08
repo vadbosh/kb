@@ -61,6 +61,11 @@ how something works, not the tape of what was typed.
 Reversing an earlier decision → `kb add … --kind decision --supersedes <file>`.
 Do not rewrite the old one.
 
+**Deleting a note that a newer one replaces → record it the same way.** Put the
+deleted name in the replacing note's `supersedes:`, then say in the prose what
+went and why. `check` treats a name declared superseded as history rather than a
+broken link, so the record survives without turning into a warning every run.
+
 ## Step 4 — finish with `kb check`, always
 
 Exit 3 means something needs attention. Act on it in the same turn rather than

@@ -597,14 +597,22 @@ def cmd_check(args) -> int:
             problems.append("index table is stale — run `kb sync`")
 
     known = {n.name for n in notes}
-    for ref in sorted(linked_files(text) - known):
+
+    # A file named in `supersedes:` is SUPPOSED to be gone -- the note that
+    # replaced it says so. Naming it afterwards is how the record of a
+    # replacement is kept readable, so it is history, not a broken link.
+    retired = {r.strip() for n in notes
+               for r in n.supersedes.replace(",", " ").split() if r.strip()}
+
+    for ref in sorted(linked_files(text) - known - retired):
         problems.append(f"overview links a missing file: {ref}")
 
     # Notes cite each other, and those links break exactly when a file is
     # renamed, superseded or split -- the moments the overview survives
     # untouched because `sync` rewrites it from front matter either way.
     for n in notes:
-        for ref in sorted(linked_files(n.path.read_text(encoding="utf-8")) - known):
+        body = n.path.read_text(encoding="utf-8")
+        for ref in sorted(linked_files(body) - known - retired):
             if ref != n.name:
                 problems.append(f"{n.name} links a missing file: {ref}")
 
