@@ -220,11 +220,11 @@ Shell руками не нужен — скилл зовёт `kb` сам. Иск
 Источник правды — **front matter файлов**; таблица — производная от него.
 
 ```
-kb/02-pipeline.md              kb/00-overview.md
----                            <!-- kb:begin -->
-title: как устроен конвейер ─┐  | что нужно | файл | тип | обновлён |
-kind: reference              ├─►| как устроен конвейер | `02-pipeline.md` | reference | ... |
-updated: 2026-08-05         ─┘  <!-- kb:end -->
+kb/02-pipeline.md            kb/00-overview.md
+---                          <!-- kb:begin -->
+title: как устроен ...  ──┐  | что нужно | файл | тип | обновлён |
+kind: reference           ├─►| как устроен ... | `02-pipeline.md` | reference | … |
+updated: 2026-08-05     ──┘  <!-- kb:end -->
 ---
 ```
 
