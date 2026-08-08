@@ -24,7 +24,9 @@ files that moved. The usual archaeological evidence is a stack of
 `00-overview.md.bak.*` beside the real directory, one per attempt to keep the
 thing honest.
 
-kb removes two of those causes mechanically and makes the third visible.
+Three mechanisms below work against that. The first two remove the source of the
+divergence automatically. The third fixes nothing — it shows you where the
+divergence has already happened.
 
 ### 1. The index is generated, not maintained
 
