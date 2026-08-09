@@ -261,8 +261,8 @@ transcript it says so, and the list is yours to give.
 
 ## Working from somewhere else
 
-`--dir` points at the notes from any working directory, which is what makes kb
-usable from a script or a cron job:
+`--dir` points at **existing** notes from any working directory, which is what
+makes kb usable from a script or a cron job:
 
 ```console
 $ cd /
@@ -284,6 +284,12 @@ $ kb list
 kb list --scan ~/projects   # adopt kbs created before the registry existed
 kb list --prune             # forget entries whose directory is gone
 ```
+
+**A new kb is created only under the directory you are in.** `--dir` reaches an
+existing one anywhere; it will not scaffold one somewhere else, and `$HOME`, any
+directory on `PATH` and the system roots are refused outright. Wanting notes
+elsewhere is one `cd` away — and the `cd` states the intent, which picking a path
+silently does not.
 
 ---
 

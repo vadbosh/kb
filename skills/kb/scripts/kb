@@ -549,9 +549,28 @@ def refuse_bad_root(root: Path) -> None:
         return
     home = Path.home().resolve()
 
-    if target == home:
-        die(f"{target} is your home directory, not a work stream — notes there "
-            "have nothing to be about. Make a directory for the subject first")
+    # A NEW kb may only appear under the directory you are standing in. The
+    # incident this closes: a session whose cwd was an empty project directory
+    # created its notes in $HOME instead, because the assistant reasoned about
+    # the subject and forgot the location was a decision at all. Reading and
+    # writing an EXISTING kb elsewhere stays open -- that is how cron and
+    # wrapper scripts use --dir, and passing a path to one is a human's choice.
+    # Wanting a kb somewhere else is one `cd` away, and the cd says so out loud.
+    cwd = Path.cwd().resolve()
+    # Standing at the filesystem root would otherwise authorise every path on
+    # the machine, since everything is "under" it.
+    if cwd == Path("/"):
+        die("cwd is / — that authorises nothing. `cd` to the directory the "
+            "notes are about")
+    if not (target == cwd or cwd in target.parents):
+        die(f"{target} is outside {cwd} — a new kb is created only under the "
+            "directory you are in. `cd` there first, or point --dir at a kb "
+            "that already exists")
+
+    if target == home or target.parent == home:
+        die(f"{target} sits directly in your home directory, which is not a "
+            "work stream — notes there have nothing to be about. Make a "
+            "directory for the subject first")
 
     path_dirs = {Path(d).resolve() for d in
                  os.environ.get("PATH", "").split(os.pathsep) if d}
