@@ -18,6 +18,20 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.14.0
+
+- `restore` begins with `kb brief` and nothing else. It used to open with three
+  commands whose answers had to be held together, then a choice of which files
+  to read — four chances to skip one, and the one skipped was `verify`, the only
+  one that knows whether the notes still describe the work. `brief` does all of
+  it deterministically and costs what reading the index and the snapshot costs
+  anyway.
+- The two halves are named as belonging to different parties: the tool shows the
+  notes, the reader already has them, and the assistant's only job is saying
+  what follows. Both failures seen this week come from doing one half — a
+  retelling with an error in it, or a sentence confirming the output was
+  verbatim and nothing more.
+
 ## 4.13.0
 
 - `brief` runs `check` and `verify` itself and prints their verdict above the

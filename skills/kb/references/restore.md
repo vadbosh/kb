@@ -13,43 +13,50 @@ Reading the files themselves is the Read tool, not the CLI.
 **Run only the commands a step names** — nothing extra, however informative. A
 briefing padded with output nobody asked for costs tokens and hides the answer.
 
-## Step 1 — orient before reading
+## Step 1 — one command
 
 ```
-kb status && kb check && kb verify
+kb brief
 ```
 
-All three, always — this is the one moment where they are cheap and their answers
-matter. `verify` has no other natural home: on every save it is noise, and left
-to judgement it never runs.
+That is the read. It prints the verdict of `check` and `verify`, the index in
+full, the current `state` in full, the plans as their own group, and every other
+note as one line saying what it answers. Deterministic — the same files give the
+same bytes — and it costs what reading the index and the snapshot costs anyway,
+which is what any orientation does first.
 
-`kb status` names the current `state`; older ones describe their own date and are
-not cancelled. `kb check` exit 3 means the index disagrees with the files — say
-`kb sync` fixes it, never trust a stale index silently. `kb verify` exit 3 is
-suspicions, not errors: a flagged path may live in a container or on another
-host. Surface those under Discrepancies, fix nothing unasked, and never rewrite a
-path without first confirming the replacement exists.
+Four steps used to stand here: three commands whose answers had to be held
+together, then a choice of which files to open. Each was a chance to skip one,
+and the one skipped was `verify` — the only one that knows whether these notes
+still describe the work.
 
-No `kb/` under cwd → run `kb list` before concluding there are no notes; the
-project's kb may be registered elsewhere. Still nothing → say so plainly, do not
-invent notes.
+What its verdict lines mean:
 
-## Step 2 — read the index, then be selective
+- **check: clean** → the notes agree with each other. Not that they are true.
+- **check: disagree** → the detail follows; `kb sync` fixes a stale index. Never
+  trust a stale table silently.
+- **check: A CREDENTIAL** → report the file and line, edit nothing.
+- **verify: suspicions** → the detail follows. A flagged path may live in a
+  container or on another host; files newer than the snapshot mean the work
+  moved on and the snapshot may be behind. Surface these under Discrepancies,
+  fix nothing unasked, and never rewrite a path without confirming the
+  replacement exists.
 
-Read `kb/00-overview.md` in full — it is small and it is the map: prose saying
-what the stream is and what is deliberately NOT in it, plus one table row per
-file with the question that file answers.
+No `kb/` under cwd → `kb brief` says so. Run `kb list` before concluding there
+are no notes; the project's kb may be registered elsewhere. Still nothing → say
+so plainly, do not invent notes.
 
-Then the **current `state`** (always — that is the situation now) and **only the
-files the task needs**, chosen by the "what do I need" column. That column exists
-so you do not read everything. A row marked `⚠ ~Nk tokens` is expensive; open it
-only if the task needs it.
+## Step 2 — open only what the task needs
+
+`brief` listed every other note with the question it answers. Open the ones this
+task needs and no others — that column exists so you do not read everything. A
+row marked `⚠ ~Nk tokens` is expensive; open it only if the task needs it.
 
 ## Step 3 — resuming an old session
 
 On `--resume` the conversation comes back, but the files may have moved on:
 another session wrote, the human edited, or compaction dropped the details.
-Compare what `kb status` reports **now** against what the conversation shows:
+Compare what `kb brief` reports **now** against what the conversation shows:
 
 - **same current `state`, `check` clean** → the context is still valid, re-read
   nothing, say so.
@@ -61,7 +68,7 @@ Compare what `kb status` reports **now** against what the conversation shows:
 State this comparison explicitly. That is the whole value of running this on
 resume rather than assuming the context is fresh.
 
-## Step 4 — brief
+## Step 4 — say what it means
 
 ```
 ## kb: <path>   (<N> files, snapshot <NN-state-YYYY-MM-DD>)
@@ -85,23 +92,20 @@ human, not to the tool.
 Skip any section with nothing in it. Everything empty → say the kb is empty,
 don't pad.
 
-## When the briefing is the wrong shape
+## The two halves belong to different parties
 
-This half is selective and phrased by whoever writes it, so two runs differ in
-wording and in which files were opened. That is right for "what should I read
-for this task" and wrong for "show me what the notes say" — the question asked
-when work resumes after days away, where a paraphrase is exactly what the reader
-does not want.
+`kb brief` shows the notes; it is already in front of the reader and does not
+need repeating. What it cannot do is say what any of it means for the work in
+front of you — that is the only part this half exists for.
 
-`kb brief` answers that one: the overview and the current snapshot printed
-verbatim, why that snapshot is the current one, and a list of everything else by
-the question it answers. Same files in, same bytes out. Run it and show the
-output; do not summarise what it printed.
+So neither half alone is the answer. Retelling the output wastes the reader's
+attention on something they can see; saying "the output above is verbatim" and
+stopping leaves them with the same files they had and no orientation. Show
+nothing twice, and answer the four questions in Step 4.
 
 ## Never
 
-- **Dump the files raw** — synthesize. The user can open them. Asked for the
-  files themselves, run `kb brief`, which is that request answered exactly.
+- **Retell what `brief` printed** — the reader has it. Say what follows from it.
 - **Read every file "just in case"** — the index column tells you which one.
 - **Treat an older `state` as current** — `kb status` already computed which one
   is current; use its answer.
