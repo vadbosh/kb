@@ -9,12 +9,17 @@ file does not accept, in any wording — "nothing new", "nothing changed since l
 time", "already saved above" all mean the same thing and all mean it was decided
 without looking.
 
-Two facts settle it, and both are on disk, not in the conversation:
+Two facts settle it, both on disk and both **inside the stream's own
+directory** — nowhere else:
 
 - **does the stream have a kb at all** — `ls -d <dir>/kb`
-- **is the note it supposedly already holds still there** — files get moved,
-  renamed and deleted between one save and the next, and the conversation never
-  finds out
+- **if it does, is the note still in it** — `ls <dir>/kb`
+
+**Do not go looking for it anywhere else.** No `find /`, no hunting through
+`/tmp`, no chasing a copy someone left behind. A note that is not in this
+stream's `kb/` is not this stream's record, whatever it is and wherever it sits;
+finding it changes nothing and reading it wastes the turn. Two `ls` in one
+directory answer the question completely.
 
 **No kb, and the session did work → there is nothing written down anywhere.**
 That cannot be "nothing durable"; it is the opposite. Write it.
