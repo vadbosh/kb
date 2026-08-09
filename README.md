@@ -7,7 +7,7 @@ Point it at anything you would otherwise keep as a growing pile of `.md` files �
 a migration, an incident, a research thread, a renovation, a legal case. Nothing
 about it is specific to code.
 
-[Русская версия](README.RU.md) · Full manual: [English](docs/kb.en.md) · [Русский](docs/kb.ru.md)
+[Русская версия](README.RU.md) · Full manual: [English](docs/kb.en.md) · [Русский](docs/kb.ru.md) · [Changelog](CHANGELOG.md)
 Using it from a terminal, without an assistant: [CLI guide](docs/cli.en.md) · [по-русски](docs/cli.ru.md)
 
 **Just want to start?** → [Install](#install), then [Usage](#usage). Three steps.
