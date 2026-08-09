@@ -90,6 +90,10 @@ stream** — what came out of it, and whether its kb exists:
 3. workstation    editor and shell config          → no home yet
 ```
 
+Whether a stream has a kb is `ls -d <dir>/kb` per stream — do not reach for
+`kb list`, which dumps every notes directory on the machine and buries the three
+that matter.
+
 Do not argue the case for each — a paragraph per stream turns a two-second
 choice into a wall of text. Save the reasoning for whichever they pick.
 
