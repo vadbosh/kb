@@ -18,6 +18,12 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.8.1
+
+- With no assistant installed, `check` said "installed copies: 0, all at 4.8.0"
+  — a check that compared nothing, worded as one that passed. It now says
+  nothing was there to compare. A fresh clone is the normal case for that.
+
 ## 4.8.0
 
 - `release.sh check` compares every installed copy on the machine against the

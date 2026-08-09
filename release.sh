@@ -13,6 +13,7 @@ set -euo pipefail
 SRC="$(cd "$(dirname "$0")" && pwd)"
 SKILL="$SRC/skills/kb/SKILL.md"
 LOG="$SRC/CHANGELOG.md"
+COPIES=0
 
 # Machine-specific paths belong to the machine, not to a public repository.
 # KB_MIRRORS is a colon-separated list of directories that hold a COPY of the
@@ -69,6 +70,14 @@ copies() {
 		echo "                    a mirror is refreshed by whatever owns it"
 		return 1
 	fi
+	# "0, all at 4.8.0" reads as a check that passed. Nothing was checked --
+	# a fresh clone on a machine with no assistant installed is the normal
+	# case, and saying so is the difference between a fact and a formality.
+	if [ "$n" -eq 0 ]; then
+		echo "  installed copies:  none on this machine — nothing to compare"
+		return 0
+	fi
+	COPIES=$n
 	echo "  installed copies:  $n, all at $v"
 }
 
@@ -123,7 +132,11 @@ check() {
 		echo "  the three records agree; the tag is behind HEAD"
 		return 0
 	fi
-	echo "  agreed and released, and every copy on this machine matches"
+	if [ "${COPIES:-0}" -gt 0 ]; then
+		echo "  agreed and released, and all $COPIES copies here match"
+	else
+		echo "  agreed and released"
+	fi
 }
 
 tag() {
