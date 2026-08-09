@@ -23,6 +23,13 @@ memory, and memory does not know a note was deleted an hour ago. A directory
 with no `kb/` and a session that did work has nothing written down anywhere —
 the opposite of nothing to save.
 
+Your own earlier output being gone is a fact to act on, **not a phenomenon to
+explain**. Write the note again and say it was missing. Do not theorise about
+what removed it, and never offer a guess as a pattern — "it keeps happening",
+"something cleans these up between turns" are claims about the machine, and
+they are made in the one place where checking is nobody's job. Files go missing
+because people delete them.
+
 Step 2 is two `ls` in the stream's own directory. **Not a search.** No `find /`,
 no looking through `/tmp`, no chasing a copy someone left behind: a note outside
 this stream's `kb/` is not this stream's record, wherever it sits.
