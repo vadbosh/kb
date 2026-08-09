@@ -18,6 +18,14 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.13.0
+
+- `brief` runs `check` and `verify` itself and prints their verdict above the
+  notes. Three commands to answer one question is three chances to skip the
+  third, and the third is the one that knows whether the notes still describe
+  the work — a stale kb must not read like a current one because nobody typed
+  the last command.
+
 ## 4.12.0
 
 - `verify` reports files in the work stream that are newer than the current

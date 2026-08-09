@@ -34,6 +34,8 @@ Exit codes:
     3 — drift found (`kb check` only)
 """
 import argparse
+import contextlib
+import io
 import json
 import os
 import re
@@ -1424,6 +1426,30 @@ def cmd_brief(args) -> int:
     print("# open or planned next, and which of the notes you would open for "
           "the task at hand.")
     print(f"# kb {root} — {len(notes)} notes")
+
+    # One command has to cover it. Three -- brief, then check, then verify --
+    # is three chances to skip the third, and the third is the one that knows
+    # whether these notes still describe the work. Their verdict goes above the
+    # notes, the detail only when there is any: a stale kb must never read like
+    # a current one just because nobody typed the last command.
+    checks = io.StringIO()
+    with contextlib.redirect_stdout(checks):
+        rc_check = cmd_check(args)
+        rc_verify = cmd_verify(args)
+    detail = checks.getvalue().strip()
+    if rc_check == 4:
+        print("# check: A CREDENTIAL IS IN THE NOTES — see below; do not edit "
+              "the file silently")
+    elif rc_check == 3:
+        print("# check: the notes disagree with themselves — see below")
+    else:
+        print("# check: clean")
+    print("# verify: " + ("suspicions — see below, the notes may have gone "
+                          "stale" if rc_verify == 3 else "nothing suspicious"))
+    if rc_check != 0 or rc_verify != 0:
+        print()
+        for line in detail.split("\n"):
+            print(f"  {line}" if line.strip() else "")
     if cur:
         print(f"# current snapshot: {cur.name}")
         print(f"#   chosen by: {why_current(notes, cur)}")
