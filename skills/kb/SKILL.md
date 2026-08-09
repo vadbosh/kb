@@ -1,7 +1,7 @@
 ---
 name: kb
 description: Read and write a project's kb/ work-notes — a Markdown knowledge base whose index is generated rather than maintained by hand. Handles phrases "kbsave", "kbrestore", "/kb", "запиши в kb", "запиши в заметки", "прочитай kb", "прочитай заметки", "восстанови контекст из kb", "save to kb", "read kb", "что в заметках", "задокументируй это", "оформи в kb". Use at the start of work to load the notes and see what changed, and at the end to persist findings, decisions, traps or a dated snapshot instead of leaving them in the conversation.
-version: "4.11.2"
+version: "4.11.3"
 ---
 
 # kb
@@ -67,7 +67,7 @@ kb verify                                     advisory: dead paths, stale notes
 kb sync                                       rebuild the index table
 kb add <slug> --kind <kind> --title "<...>"   new note + front matter + reindex
 kb brief                                      overview + current snapshot, verbatim
-                                              show its output as it is, never summarised
+                                              output speaks for itself; you say what it means
 kb outline [file]                             section map — where the seams are
 kb list                                       every kb known on this machine
 kb streams                                    directories this session touched

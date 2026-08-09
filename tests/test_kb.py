@@ -560,8 +560,10 @@ class Commands(Base):
         self.fill_overview(root)
         self.write_note(root, "01-state-2026-06-01.md", kind="state")
         self.kb("sync", expect=0)
-        first_line = self.kb("brief", expect=0).stdout.split("\n")[0]
-        self.assertIn("Do not summarise", first_line)
+        head = "\n".join(self.kb("brief", expect=0).stdout.split("\n")[:3])
+        self.assertIn("Do not retell", head)
+        self.assertIn("what the work is", head)
+        self.assertIn("would open", head)
 
     def test_brief_is_byte_identical_between_runs(self):
         """The point of the command: no model, no phrasing, no variation."""

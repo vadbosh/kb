@@ -1361,13 +1361,19 @@ def cmd_brief(args) -> int:
     notes = load_notes(root)
     cur = current_state(notes)
 
-    # Addressed to whoever is relaying this. The skill file already says to
-    # show a named command's output and stop, and an assistant summarised it
-    # anyway -- turning four releases into "four releases (4.7.1, 4.7.2, 4.8.0,
-    # 4.8.1, 4.9.0)", five numbers under the word four. A rule in a file that
-    # may not be loaded is weaker than a line in the output that certainly is.
-    print("# Show this output as it is. Do not summarise it: the summary is a "
-          "different command (restore).")
+    # Addressed to whoever is relaying this, and it took two tries to word.
+    # "Report what it said and stop" produced a paraphrase with an error in it
+    # -- four releases rendered as five numbers. "Do not summarise it" produced
+    # the opposite failure: the tool output sat in a collapsed block and the
+    # assistant added the single sentence "the output above is verbatim",
+    # having read nothing. Both halves have to be asked for, because the
+    # display and the understanding are done by different parties.
+    print("# The lines below ARE the notes, and the reader can see them. Do not "
+          "retell them.")
+    print("# After them, say in the reader's language what the work is, where "
+          "it stands, what is")
+    print("# open or planned next, and which of the notes you would open for "
+          "the task at hand.")
     print(f"# kb {root} — {len(notes)} notes")
     if cur:
         print(f"# current snapshot: {cur.name}")

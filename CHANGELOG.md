@@ -18,6 +18,17 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.11.3
+
+- The line at the top of `brief` asks for both halves. "Report what it said"
+  produced a paraphrase with an error in it — four releases rendered as five
+  numbers. "Do not summarise it" produced the opposite failure: the output sat
+  in a collapsed block and the assistant answered with one sentence saying the
+  output above was verbatim, having read nothing. The display and the
+  understanding are done by different parties, so both have to be asked for:
+  the notes are shown by the tool, and what they mean for the work now is said
+  after them.
+
 ## 4.11.2
 
 - `brief` opens by telling whoever relays it not to summarise. `SKILL.md`
