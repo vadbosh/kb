@@ -18,6 +18,17 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.15.0
+
+- The rule from 4.7.0 — notes numbered above the current snapshot — is gone. It
+  fired on all three real kbs that have a snapshot, because an ordinary save
+  writes a note and is not required to write a new `state`: the flag lit after
+  every save. One true finding in its life, a snapshot claiming there were no
+  tests with `07-tests.md` beside it, against a permanent glow.
+- What remains says the same thing more directly: work went on and no note was
+  written. It looks at the work rather than at the numbering of notes, and it
+  measured quiet on the kbs where the notes are current.
+
 ## 4.14.2
 
 - `save` requires the "what would they run" block to hold read-only commands
