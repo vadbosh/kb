@@ -216,7 +216,3 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
-
-# Notes about developing kb itself. They live beside the code and stay out
-# of it: a public repository is not where a working record belongs.
-kb/
