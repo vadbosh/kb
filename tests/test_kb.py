@@ -499,16 +499,22 @@ class Commands(Base):
     def test_verify_sees_the_work_moving_past_the_snapshot(self):
         """The one drift every other check is blind to: notes consistent with
         each other and seven releases behind the thing they describe."""
-        import time
+        import os, time
         root = self.make_kb()
         self.write_note(root, "01-state-2026-06-01.md", kind="state")
         self.kb("sync", expect=0)
+
+        # Work minutes after a note is the normal shape of an active day and
+        # must stay quiet; the first version of this rule fired on it every time.
+        (self.proj / "app.py").write_text("changed right after the note\n")
         res = self.kb("verify", expect=0)
         self.assertIn("nothing suspicious", res.stdout)
-        time.sleep(0.01)
-        (self.proj / "app.py").write_text("changed after the snapshot\n")
+
+        # Hours of work with nothing written down is the case worth reporting.
+        later = time.time() + 3 * 3600
+        os.utime(self.proj / "app.py", (later, later))
         res = self.kb("verify", expect=3)
-        self.assertIn("the work moved after the snapshot", res.stdout)
+        self.assertIn("work went on for 3h", res.stdout)
         self.assertIn("app.py", res.stdout)
 
     def test_verify_ignores_the_notes_themselves(self):
@@ -519,7 +525,7 @@ class Commands(Base):
         self.write_note(root, "02-a.md", kind="reference", title="written later")
         self.kb("sync", expect=0)
         res = self.kb("verify", expect=3)
-        self.assertNotIn("the work moved after the snapshot", res.stdout)
+        self.assertNotIn("work went on for", res.stdout)
 
     def test_verify_is_quiet_when_paths_resolve(self):
         root = self.make_kb()

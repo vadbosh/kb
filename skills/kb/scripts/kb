@@ -963,6 +963,10 @@ def cmd_list(args) -> int:
 # it records why a choice was made, which stays true however old it gets.
 # `state` and `plan` are absent too — supersession already handles them.
 STALE_DAYS = {"reference": 180, "recipe": 120}
+# Work continuing this long after the last note was written is worth a look.
+# Below it the answer is always yes on any active day -- a note, then a commit
+# ten minutes later -- and a suspicion nobody can act on is one nobody reads.
+UNWRITTEN_HOURS = 1
 
 
 def checkable_paths(text: str) -> set[str]:
@@ -1035,22 +1039,29 @@ def cmd_verify(args) -> int:
     cur = current_state(notes)
     later = [n for n in notes if cur and n.num > cur.num and n.kind != "state"]
 
-    # The one drift kb could not see at all: the WORK moved and the notes did
-    # not. Every other check compares notes with notes -- index against front
-    # matter, links against files, snapshots against each other -- so a kb can
-    # be spotlessly consistent and describe a state seven releases old. Found
-    # by a reader who went and read the log himself, which nothing asked him to.
+    # The one drift kb could not see at all: the WORK moved and nothing was
+    # written down. Every other check compares notes with notes -- index
+    # against front matter, links against files, snapshots against each other
+    # -- so a kb can be spotless and describe a state the work left long ago.
     #
-    # Not git: four of six real work streams here are not repositories at all,
-    # and "cannot check" reads as "fine". Modification times need nothing.
-    # They are also not history -- a checkout or a `touch` moves them -- which
-    # is why this is a suspicion and lives here rather than in `check`.
+    # Compared against the newest NOTE, not the newest snapshot, and only past
+    # a threshold. The first version compared with the snapshot and fired on an
+    # active day every time: notes written, then a release shipped ten minutes
+    # later, and every session after that opened with a suspicion nobody could
+    # act on. A report at that ratio stops being read. What is worth saying is
+    # narrower and survives measurement: work went on for hours and produced no
+    # note at all.
+    #
+    # Not git: four of six real work streams here are not repositories, and
+    # "cannot check" reads as "fine". Times are not history either -- a
+    # checkout moves them -- so this stays a suspicion and never a `check`.
     moved: list[Path] = []
+    gap_hours = 0.0
     stream = root.parent if root.name == "kb" else None
-    if cur and stream and stream.is_dir():
+    if stream and stream.is_dir():
         try:
-            since = cur.path.stat().st_mtime
-        except OSError:
+            since = max(f.stat().st_mtime for f in root.glob("*.md"))
+        except (OSError, ValueError):
             since = None
         seen = 0
         if since:
@@ -1064,12 +1075,15 @@ def cmd_verify(args) -> int:
                         break
                     p = Path(dirpath) / name
                     try:
-                        if p.stat().st_mtime > since:
+                        if p.stat().st_mtime > since + UNWRITTEN_HOURS * 3600:
                             moved.append(p)
                     except OSError:
                         pass
                 if seen > 20000 or len(moved) > 200:
                     break
+        if moved:
+            newest = max(p.stat().st_mtime for p in moved)
+            gap_hours = (newest - since) / 3600
 
     if dead:
         print(f"paths that do not resolve ({len(dead)}) — some may live in a "
@@ -1092,20 +1106,20 @@ def cmd_verify(args) -> int:
               "rather than patching the old one.")
     if moved:
         newest = sorted(moved, key=lambda p: -p.stat().st_mtime)[:5]
-        print(f"\nthe work moved after the snapshot was written ({len(moved)} "
-              f"file(s) newer than {cur.name}):")
+        print(f"\nwork went on for {gap_hours:.0f}h after the last note was "
+              f"written ({len(moved)} file(s)):")
         for p in newest:
             print(f"  {p}")
         if len(moved) > len(newest):
             print(f"  … and {len(moved) - len(newest)} more")
         print("  Every other check compares the notes with each other, so they "
-              "stay clean while\n  the snapshot describes a state the work has "
-              "left. Read what changed, then\n  write a new `state` if it did.")
+              "stay clean while\n  describing a state the work has left. Read "
+              "what changed; if it matters, it\n  belongs in a note.")
 
     if not dead and not aging and not later and not moved:
         print("nothing suspicious: every checkable path resolves, no note is "
-              "past its re-check age, the snapshot is the newest note and "
-              "nothing in the stream is newer than it")
+              "past its re-check age, the snapshot is the newest note and no "
+              "work has outrun the notes")
         return 0
     print("\nAdvisory only. Whether a fact about a live cluster still holds "
           "cannot be answered here — only by a human or a command.")

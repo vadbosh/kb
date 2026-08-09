@@ -18,6 +18,15 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.14.1
+
+- The drift rule added in 4.12.0 fired on every active day: notes written, a
+  release shipped ten minutes later, and the next session opened with a
+  suspicion nobody could act on — the false-positive ratio this project refuses
+  to ship, found by a reader who said as much. It now compares the newest work
+  against the newest *note* rather than the snapshot, and only past an hour. The
+  claim narrows to what is worth saying: work went on and produced no note.
+
 ## 4.14.0
 
 - `restore` begins with `kb brief` and nothing else. It used to open with three
