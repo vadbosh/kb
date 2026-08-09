@@ -1,7 +1,7 @@
 ---
 name: kb
 description: Read and write a project's kb/ work-notes — a Markdown knowledge base whose index is generated rather than maintained by hand. Handles phrases "kbsave", "kbrestore", "/kb", "запиши в kb", "запиши в заметки", "прочитай kb", "прочитай заметки", "восстанови контекст из kb", "save to kb", "read kb", "что в заметках", "задокументируй это", "оформи в kb". Use at the start of work to load the notes and see what changed, and at the end to persist findings, decisions, traps or a dated snapshot instead of leaving them in the conversation.
-version: "3.0.0"
+version: "3.0.1"
 ---
 
 # kb
@@ -20,6 +20,13 @@ front matter, so it cannot drift from the files it describes.
 
 Read only the one that applies. Everything each half needs beyond this page is
 in that file — the kinds, the writing rules, the briefing format.
+
+**Saving has one rule that holds even if that file never loads: never conclude
+there is nothing to save without looking on disk first.** "Nothing new",
+"nothing changed since last time", "already saved above" are the same judgement
+made from memory, and memory does not know that a note was deleted an hour ago.
+A stream with no `kb/` and a session that did work has nothing written down
+anywhere — that is the opposite of nothing to save.
 
 **A named command is a request for that command, not for a session ritual.** Run
 it, report what it said, stop. Do not load a reference file, do not read the
