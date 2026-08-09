@@ -285,12 +285,22 @@ kb list --scan ~/projects   # adopt kbs created before the registry existed
 kb list --prune             # forget entries whose directory is gone
 ```
 
-**Writing is confined to the directory you are in.** `add`, `sync`, `adopt` and
-`hook` refuse a `--dir` outside it; `status`, `check`, `verify` and `outline`
-reach anywhere, which is what makes a cron sweep over every kb possible.
-`$HOME`, any directory on `PATH` and the system roots are refused outright even
-for creation. Writing elsewhere is one `cd` away — and the `cd` states where the
-work is happening, which a path in an argument does not.
+**kb does not touch a directory you are not standing in.** Every command that
+takes `--dir` refuses a path outside the current one, reading included; `$HOME`,
+any directory on `PATH` and the system roots are refused outright even for
+creation. `cd` is the way, and it states where the work is happening in a way an
+argument does not.
+
+A script that genuinely sweeps across directories — a cron `check` over every kb
+— sets `KB_ALLOW_OUTSIDE=1`. It is deliberately an environment variable and not
+a flag: it belongs to the job, is visible in the job, and nothing acquires it by
+wandering.
+
+```bash
+KB_ALLOW_OUTSIDE=1 kb list | awk '/^ *\// {print $1}' | while read -r d; do
+  KB_ALLOW_OUTSIDE=1 kb --dir "$d" verify
+done
+```
 
 ---
 

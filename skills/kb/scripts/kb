@@ -530,8 +530,13 @@ def read_registry() -> list[Path]:
         return []
 
 
-def refuse_write_outside(root: Path) -> None:
-    """Writing is confined to the directory the session runs in; reading is not.
+def refuse_outside(root: Path) -> None:
+    """kb does not touch a directory the session is not standing in.
+
+    Writing was confined first; reading followed, because an assistant handed a
+    tool that reaches anywhere will use it to go looking. Nothing here can stop
+    it running `find /` on its own -- but kb refuses to be the thing that does
+    it.
 
     Creation was confined first, which stopped a new kb appearing in $HOME and
     left the wider hole open: `kb add --dir /elsewhere/kb` still wrote into
@@ -542,15 +547,16 @@ def refuse_write_outside(root: Path) -> None:
     No override, on purpose. A script that must write elsewhere does `cd` first,
     which states where it works instead of hiding it in an argument.
     """
+    if os.environ.get("KB_ALLOW_OUTSIDE") == "1":
+        return
     try:
         target, cwd = root.resolve(), Path.cwd().resolve()
     except OSError:
         return
     if target == cwd or cwd in target.parents:
         return
-    die(f"{target} is outside {cwd} — writing is confined to the directory you "
-        "are in. `cd` there first; reading (status, check, verify, outline) "
-        "works anywhere")
+    die(f"{target} is outside {cwd}. `cd` there first. A script that must reach "
+        "across directories sets KB_ALLOW_OUTSIDE=1, which says so out loud")
 
 
 def refuse_bad_root(root: Path) -> None:
@@ -629,7 +635,7 @@ def ensure_root(args) -> Path:
     for it rather than being written into directly.
     """
     if args.dir:
-        refuse_write_outside(Path(args.dir))
+        refuse_outside(Path(args.dir))
         return Path(args.dir)
     cwd = Path.cwd()
     if (cwd / "kb" / OVERVIEW).exists():
@@ -693,7 +699,7 @@ def cmd_add(args) -> int:
 
 def cmd_sync(args) -> int:
     root = find_root(args.dir)
-    refuse_write_outside(root)
+    refuse_outside(root)
     overview = root / OVERVIEW
     text = overview.read_text(encoding="utf-8")
     notes = load_notes(root)
@@ -713,6 +719,7 @@ def cmd_sync(args) -> int:
 
 def cmd_check(args) -> int:
     root = find_root(args.dir)
+    refuse_outside(root)
     overview = root / OVERVIEW
     text = overview.read_text(encoding="utf-8")
     notes = load_notes(root)
@@ -912,6 +919,7 @@ def cmd_verify(args) -> int:
     or be an illustration. Merging the two would drown an exact signal in guesses.
     """
     root = find_root(args.dir)
+    refuse_outside(root)
     notes = load_notes(root)
     today = date.today()
 
@@ -975,7 +983,7 @@ def cmd_hook(args) -> int:
     save, which happens regardless.
     """
     root = find_root(args.dir)
-    refuse_write_outside(root)
+    refuse_outside(root)
     git_dir = None
     p = root.resolve()
     while p != p.parent:
@@ -1019,6 +1027,7 @@ def cmd_outline(args) -> int:
     different KINDS, and this is what makes that visible for a few tokens.
     """
     root = find_root(args.dir)
+    refuse_outside(root)
     targets = ([root / args.file] if args.file
                else [n.path for n in sorted(load_notes(root), key=lambda n: -n.lines)
                      if n.lines > SOFT_LINES])
@@ -1225,6 +1234,7 @@ def cmd_streams(args) -> int:
 
 def cmd_status(args) -> int:
     root = find_root(args.dir)
+    refuse_outside(root)
     notes = load_notes(root)
     cur = current_state(notes)
     print(f"kb root: {root}   files: {len(notes)}")
@@ -1274,7 +1284,7 @@ def cmd_adopt(args) -> int:
     starting point for the human to correct, not a claim to be right.
     """
     root = find_root(args.dir)
-    refuse_write_outside(root)
+    refuse_outside(root)
 
     # A hand-made directory rarely uses NN- names -- that convention is what
     # adopt is supposed to INTRODUCE. Numbering them is therefore part of the
