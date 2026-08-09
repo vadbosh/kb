@@ -66,8 +66,19 @@ nothing to extract. The tail of pathless messages is a hint, not a second list.
 Better than any of this: **save at the boundary**, one stream at a time, while
 the context is whole. Then there is never more than one.
 
-- **One stream** → write it. Do not turn a routine save into a questionnaire.
+- **One stream with a kb already** → write it. Do not turn a routine save into a
+  questionnaire.
 - **Several** → list and ask. Enumerating is your job; choosing is not.
+- **No kb yet, anywhere** → **ask before creating one.** Where notes live is the
+  human's call, not a detail to settle silently. Name the directory you would
+  use and why, and wait.
+
+That last one is not politeness. A stream whose work happened on a remote host,
+in a web console, or across the machine itself has no obvious home, and picking
+one alone lands notes somewhere nobody will look — or somewhere they do not
+belong. `kb` now refuses `$HOME`, a directory on `PATH` and system directories
+outright, which only narrows the field; the choice among what remains is still
+the human's.
 
 Use the harness's own multiple-choice prompt where there is one (`AskUserQuestion`
 with `multiSelect` in Claude Code), otherwise a numbered list. **One line per

@@ -530,7 +530,44 @@ def read_registry() -> list[Path]:
         return []
 
 
+def refuse_bad_root(root: Path) -> None:
+    """Stop before scaffolding notes somewhere that is not a work stream.
+
+    Real incident: an assistant decided the work was machine-level, ran kb with
+    cwd set to ~/.local/bin -- where the script it had just written lived -- and
+    kb dutifully created a knowledge base among sixty executables. Moving it out
+    by hand then cost a symlink to an `rm -rf`. Nothing in the tool objected,
+    because nothing was asked to.
+
+    The test is the containing directory, since the layout puts notes in
+    `<dir>/kb`. Refusing is cheap; the fix is one `mkdir` away.
+    """
+    target = root.parent if root.name == "kb" else root
+    try:
+        target = target.resolve()
+    except OSError:
+        return
+    home = Path.home().resolve()
+
+    if target == home:
+        die(f"{target} is your home directory, not a work stream — notes there "
+            "have nothing to be about. Make a directory for the subject first")
+
+    path_dirs = {Path(d).resolve() for d in
+                 os.environ.get("PATH", "").split(os.pathsep) if d}
+    if target in path_dirs:
+        die(f"{target} is on your PATH — it holds programs, not a work stream. "
+            "Notes about the machine belong in a directory of their own")
+
+    system = {Path(d) for d in ("/", "/etc", "/usr", "/var", "/opt", "/tmp",
+                                "/bin", "/sbin", "/lib", "/root")}
+    if target in {d.resolve() for d in system if d.exists()}:
+        die(f"{target} is a system directory, not a work stream — "
+            "make a directory for the subject first")
+
+
 def write_skeleton(root: Path, title: str | None) -> Path:
+    refuse_bad_root(root)
     root.mkdir(parents=True, exist_ok=True)
     overview = root / OVERVIEW
     overview.write_text(S("skeleton").format(
