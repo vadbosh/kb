@@ -187,7 +187,7 @@ history" is the excuse to distrust most** — a log says what changed, not *what
 do I need*. Reasoning worth finding later belongs in a `decision`, with the
 commit named as a pointer.
 
-## Step 2 — append or new file
+## Inside step 3 — append, or a new file
 
 `kb status` first, to see what exists.
 
@@ -213,7 +213,7 @@ Cut only where one part describes **how things are** and another **what to do**,
 or a `recipe` has grown inside a `state`. Every section answering the same
 question → leave it, however long, and say so.
 
-## Step 3 — write the title
+## Inside step 3 — the title is the index row
 
 `--title` becomes the index row, and that column answers **"what do I need?"**,
 not "what is this called":

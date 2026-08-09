@@ -18,6 +18,13 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.6.1
+
+- Two sections in `save.md` were numbered as steps they were not: "Step 2 —
+  append or new file" and "Step 3 — write the title" both explain how to carry
+  out step 3. They are now "Inside step 3 — …". A pointer that misroutes is the
+  defect this project exists to prevent; it had one of its own.
+
 ## 4.6.0
 
 - `save` gets a fifth step: grep the subject of what changed across the whole kb
