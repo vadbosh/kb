@@ -78,16 +78,17 @@ the context is whole. Then there is never more than one.
 - **One stream with a kb already** → write it. Do not turn a routine save into a
   questionnaire.
 - **Several** → list and ask. Enumerating is your job; choosing is not.
-- **No kb yet, anywhere** → **ask before creating one.** Where notes live is the
-  human's call, not a detail to settle silently. Name the directory you would
-  use and why, and wait.
+- **No kb yet** → create it **where the session is running**, and say so in the
+  report. `./kb` is the answer; the directory was chosen when the session was
+  started there.
 
-That last one is not politeness. A stream whose work happened on a remote host,
-in a web console, or across the machine itself has no obvious home, and picking
-one alone lands notes somewhere nobody will look — or somewhere they do not
-belong. `kb` now refuses `$HOME`, a directory on `PATH` and system directories
-outright, which only narrows the field; the choice among what remains is still
-the human's.
+Do not deliberate about this. The subject of the work does not decide where its
+notes live — the working directory does, and reasoning past that is how notes
+end up somewhere nobody will look. `kb` will not create one outside cwd anyway.
+
+The one case that needs a question: **cwd itself is refused** — `$HOME`, a
+directory on `PATH`, a system root. Then there is genuinely nowhere, and the
+human picks. Name what you would use and wait.
 
 Use the harness's own multiple-choice prompt where there is one (`AskUserQuestion`
 with `multiSelect` in Claude Code), otherwise a numbered list. **One line per
