@@ -496,6 +496,31 @@ class Commands(Base):
         res = self.kb("verify", expect=3)
         self.assertIn("/usr/share/kb-test-not-here/conf.yml", res.stdout)
 
+    def test_verify_sees_the_work_moving_past_the_snapshot(self):
+        """The one drift every other check is blind to: notes consistent with
+        each other and seven releases behind the thing they describe."""
+        import time
+        root = self.make_kb()
+        self.write_note(root, "01-state-2026-06-01.md", kind="state")
+        self.kb("sync", expect=0)
+        res = self.kb("verify", expect=0)
+        self.assertIn("nothing suspicious", res.stdout)
+        time.sleep(0.01)
+        (self.proj / "app.py").write_text("changed after the snapshot\n")
+        res = self.kb("verify", expect=3)
+        self.assertIn("the work moved after the snapshot", res.stdout)
+        self.assertIn("app.py", res.stdout)
+
+    def test_verify_ignores_the_notes_themselves(self):
+        """Writing a note is not the work moving on."""
+        root = self.make_kb()
+        self.write_note(root, "01-state-2026-06-01.md", kind="state")
+        self.kb("sync", expect=0)
+        self.write_note(root, "02-a.md", kind="reference", title="written later")
+        self.kb("sync", expect=0)
+        res = self.kb("verify", expect=3)
+        self.assertNotIn("the work moved after the snapshot", res.stdout)
+
     def test_verify_is_quiet_when_paths_resolve(self):
         root = self.make_kb()
         self.write_note(root, "01-a.md", body="Python lives at `/usr/bin/python3`.")

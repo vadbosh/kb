@@ -1033,6 +1033,42 @@ def cmd_verify(args) -> int:
     cur = current_state(notes)
     later = [n for n in notes if cur and n.num > cur.num and n.kind != "state"]
 
+    # The one drift kb could not see at all: the WORK moved and the notes did
+    # not. Every other check compares notes with notes -- index against front
+    # matter, links against files, snapshots against each other -- so a kb can
+    # be spotlessly consistent and describe a state seven releases old. Found
+    # by a reader who went and read the log himself, which nothing asked him to.
+    #
+    # Not git: four of six real work streams here are not repositories at all,
+    # and "cannot check" reads as "fine". Modification times need nothing.
+    # They are also not history -- a checkout or a `touch` moves them -- which
+    # is why this is a suspicion and lives here rather than in `check`.
+    moved: list[Path] = []
+    stream = root.parent if root.name == "kb" else None
+    if cur and stream and stream.is_dir():
+        try:
+            since = cur.path.stat().st_mtime
+        except OSError:
+            since = None
+        seen = 0
+        if since:
+            for dirpath, dirnames, filenames in os.walk(stream, onerror=lambda e: None):
+                dirnames[:] = [d for d in dirnames
+                               if d not in SCAN_SKIP and not d.startswith(".")
+                               and Path(dirpath) / d != root]
+                for name in filenames:
+                    seen += 1
+                    if seen > 20000 or len(moved) > 200:
+                        break
+                    p = Path(dirpath) / name
+                    try:
+                        if p.stat().st_mtime > since:
+                            moved.append(p)
+                    except OSError:
+                        pass
+                if seen > 20000 or len(moved) > 200:
+                    break
+
     if dead:
         print(f"paths that do not resolve ({len(dead)}) — some may live in a "
               "container or on another host, check by hand:")
@@ -1052,9 +1088,22 @@ def cmd_verify(args) -> int:
         print("  If it does, nothing to do. If it does not, the snapshot is what "
               "`restore` reads\n  as 'the situation now' — write a new `state` "
               "rather than patching the old one.")
-    if not dead and not aging and not later:
+    if moved:
+        newest = sorted(moved, key=lambda p: -p.stat().st_mtime)[:5]
+        print(f"\nthe work moved after the snapshot was written ({len(moved)} "
+              f"file(s) newer than {cur.name}):")
+        for p in newest:
+            print(f"  {p}")
+        if len(moved) > len(newest):
+            print(f"  … and {len(moved) - len(newest)} more")
+        print("  Every other check compares the notes with each other, so they "
+              "stay clean while\n  the snapshot describes a state the work has "
+              "left. Read what changed, then\n  write a new `state` if it did.")
+
+    if not dead and not aging and not later and not moved:
         print("nothing suspicious: every checkable path resolves, no note is "
-              "past its re-check age, the snapshot is the newest note")
+              "past its re-check age, the snapshot is the newest note and "
+              "nothing in the stream is newer than it")
         return 0
     print("\nAdvisory only. Whether a fact about a live cluster still holds "
           "cannot be answered here — only by a human or a command.")

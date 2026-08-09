@@ -18,6 +18,20 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.12.0
+
+- `verify` reports files in the work stream that are newer than the current
+  snapshot. Every other check compares notes with notes — index against front
+  matter, links against files, snapshots against each other — so a kb stays
+  spotless while describing a state the work left seven releases ago. That is
+  the most common drift there is and the only one nothing could see. Found by a
+  reader who went and read the log, which nothing had asked him to do.
+- Modification times, not git: four of six real work streams here are not
+  repositories, and "cannot check" reads as "fine". Measured on the three that
+  have a snapshot — one flagged, and it was the real one; the other two, where
+  the work stopped before the snapshot was written, stayed quiet. Times are not
+  history, a checkout moves them, so this is a suspicion and never a `check`.
+
 ## 4.11.3
 
 - The line at the top of `brief` asks for both halves. "Report what it said"
