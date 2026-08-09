@@ -3,13 +3,25 @@
 Triggered by "kbsave", "запиши в kb", "задокументируй это", or the end of a task
 worth remembering. `SKILL.md` has the tool contract; everything else is here.
 
-Nothing durable — no findings, no decisions, no traps → say
-`Nothing durable for kb.` Do NOT create empty notes.
+**Step 1 comes first. There is no path to "nothing to save" that skips it.**
+Deciding from the conversation that nothing happened is the one judgement this
+file does not accept, in any wording — "nothing new", "nothing changed since last
+time", "already saved above" all mean the same thing and all mean it was decided
+without looking.
 
-**"Already saved earlier in this session" is not that case until you have looked.**
-A note written an hour ago may have been moved, renamed or deleted since, and the
-conversation will not know. Check the file is still there before skipping on those
-grounds — and if it is gone, this save is not a repeat, it is the only copy.
+Two facts settle it, and both are on disk, not in the conversation:
+
+- **does the stream have a kb at all** — `ls -d <dir>/kb`
+- **is the note it supposedly already holds still there** — files get moved,
+  renamed and deleted between one save and the next, and the conversation never
+  finds out
+
+**No kb, and the session did work → there is nothing written down anywhere.**
+That cannot be "nothing durable"; it is the opposite. Write it.
+
+Only after those two answers: no findings, no decisions, no traps, nothing that
+outlives the conversation → say `Nothing durable for kb.` Do NOT create empty
+notes.
 
 ## The five kinds
 
