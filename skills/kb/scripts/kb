@@ -1058,15 +1058,50 @@ OC_DB = Path.home() / ".local/share/opencode/opencode.db"
 PATH_RE = re.compile(r"(?:/[A-Za-z0-9._-]+){2,}|~/[A-Za-z0-9._/-]+")
 
 
-def _newest_transcripts(limit: int) -> list[tuple[str, Path]]:
+def _transcript_cwd(path: Path) -> str | None:
+    """The directory a transcript belongs to, from the transcript itself.
+
+    Claude Code stamps `cwd` on its entries; Codex carries it in the opening
+    `session_meta`. Without this the newest file on the machine wins, and a
+    session in one directory happily reports another's work -- which is exactly
+    what happened: opencode in /1 was handed a Claude session's directories.
+    """
+    try:
+        with path.open(encoding="utf-8", errors="replace") as fh:
+            for i, line in enumerate(fh):
+                if i > 40:
+                    break
+                try:
+                    d = json.loads(line)
+                except (json.JSONDecodeError, ValueError):
+                    continue
+                if isinstance(d.get("cwd"), str):
+                    return d["cwd"]
+                if d.get("type") == "session_meta":
+                    c = (d.get("payload") or {}).get("cwd")
+                    if isinstance(c, str):
+                        return c
+    except OSError:
+        pass
+    return None
+
+
+def _newest_transcripts(limit: int, only_cwd: bool = True) -> list[tuple[str, Path]]:
+    cwd = str(Path.cwd().resolve())
     found = []
     for harness, root, pattern in TRANSCRIPTS:
-        if root.is_dir():
-            for f in root.rglob(pattern):
-                try:
-                    found.append((f.stat().st_mtime, harness, f))
-                except OSError:
-                    pass
+        if not root.is_dir():
+            continue
+        for f in root.rglob(pattern):
+            try:
+                mtime = f.stat().st_mtime
+            except OSError:
+                continue
+            if only_cwd:
+                owner = _transcript_cwd(f)
+                if owner is None or str(Path(owner).resolve()) != cwd:
+                    continue
+            found.append((mtime, harness, f))
     found.sort(reverse=True)
     return [(h, f) for _, h, f in found[:limit]]
 
@@ -1116,9 +1151,11 @@ def _opencode_sessions(limit: int):
     out = []
     try:
         con = sqlite3.connect(f"file:{OC_DB}?mode=ro", uri=True)
-        sessions = con.execute(
+        cwd = str(Path.cwd().resolve())
+        sessions = [(sid, d) for sid, d in con.execute(
             "SELECT id, directory FROM session "
-            "ORDER BY time_updated DESC LIMIT ?", (limit,)).fetchall()
+            "ORDER BY time_updated DESC LIMIT 200").fetchall()
+            if d and str(Path(d).resolve()) == cwd][:limit]
         for sid, directory in sessions:
             texts = []
             for (blob,) in con.execute(
@@ -1152,8 +1189,10 @@ def cmd_streams(args) -> int:
         texts.extend(got)
 
     if not texts:
-        print("no transcript found — this harness may not keep one, or it keeps "
-              "it somewhere this does not know about.\nEnumerate the streams by "
+        print(f"no transcript for {Path.cwd()} — this session may be too new to "
+              "have one, or the harness keeps it somewhere this does not know "
+              "about.\nOther sessions' transcripts are deliberately NOT read: "
+              "they describe someone else's work.\nEnumerate the streams by "
               "hand, and say the list is from memory.")
         return 1
 
@@ -1407,8 +1446,9 @@ def main() -> int:
     p.set_defaults(fn=cmd_list)
 
     p = sub.add_parser("streams", help="which directories this session touched")
-    p.add_argument("--sessions", type=int, default=1,
-                   help="how many recent transcripts to read (default 1)")
+    p.add_argument("--sessions", type=int, default=5,
+                   help="recent sessions per source to read (default 5). Only "
+                        "sessions bound to the current directory are ever read")
     p.add_argument("--top", type=int, default=12, help="directories to show")
     p.set_defaults(fn=cmd_streams)
 
