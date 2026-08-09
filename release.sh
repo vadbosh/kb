@@ -81,6 +81,46 @@ copies() {
 	echo "  installed copies:  $n, all at $v"
 }
 
+# What ships is read by people who have this skill and nothing else of ours.
+# Three kinds of local detail have reached those files -- a path into this
+# checkout, a tool that lives only in this repository, a version from this
+# changelog -- and each was found by a reader, never by the release. The test
+# is not a word list: it asks whether the thing named exists HERE and is not
+# part of what gets installed.
+shipped_leaks() {
+	local f found=0 tok base
+	for f in "$SRC"/skills/kb/SKILL.md "$SRC"/skills/kb/references/*.md; do
+		# A path into this checkout. Invented examples do not resolve here,
+		# which is exactly what makes them safe to print.
+		while read -r tok; do
+			[ -n "$tok" ] || continue
+			echo "    ${f#"$SRC"/}: $tok — a path into this checkout"
+			found=1
+		done < <(grep -oE "$SRC[A-Za-z0-9._/-]*" "$f" || true)
+
+		# A file of ours that is NOT installed: the reader cannot run it.
+		# Written with the suffix or the slash it always carries -- a bare
+		# `tests` matched the English word in ordinary prose, and a pattern
+		# anchored on a word boundary missed `./release.sh`, which is how the
+		# leak was actually written.
+		while read -r tok; do
+			[ -n "$tok" ] || continue
+			echo "    ${f#"$SRC"/}: $tok — exists here, never installed"
+			found=1
+		done < <(grep -oE '(\./)?(release\.sh|install\.sh|install\.ps1|CHANGELOG\.md|tests/)' "$f" | sort -u || true)
+
+		# A version out of our changelog. The `version:` field is the one
+		# legitimate mention: it is what ships, not an illustration.
+		while read -r tok; do
+			[ -n "$tok" ] || continue
+			grep -q "^## ${tok}\( \|$\)" "$LOG" || continue
+			echo "    ${f#"$SRC"/}: $tok — a version from our changelog"
+			found=1
+		done < <(grep -v '^version:' "$f" | grep -oE '\b[0-9]+\.[0-9]+\.[0-9]+\b' || true)
+	done
+	return $found
+}
+
 check() {
 	local v problems=0
 	v="$(version)"
@@ -124,6 +164,14 @@ check() {
 	else
 		echo "  HEAD:             at v$v"
 	fi
+
+	local leaks
+	leaks="$(shipped_leaks)" || {
+		echo "  what ships mentions what only exists here:"
+		echo "$leaks"
+		problems=1
+	}
+	[ -n "$leaks" ] || echo "  shipped files:    nothing local named in them"
 
 	copies "$v" || problems=1
 

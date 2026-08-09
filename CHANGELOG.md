@@ -18,6 +18,19 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.10.0
+
+- `release.sh check` refuses to call a release ready when a shipped file names
+  something that exists only here: a path into this checkout, a script of ours
+  that is never installed, a version out of this changelog. Four times a local
+  detail has reached a file written for other people, and every one was found by
+  a reader rather than by the release.
+- Not a word list — the test is whether the thing named exists here and ships.
+  Verified against the text that leaked: two findings, and the current files
+  come back clean. Two rules of its own were wrong on the first run: a bare
+  `tests` matched the English word in prose, and a word-boundary pattern missed
+  `./release.sh`, which is how the leak was actually written.
+
 ## 4.9.2
 
 - The rule added in 4.9.1 illustrated itself with this repository's own release
