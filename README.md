@@ -387,6 +387,26 @@ Worth knowing before extending it:
 
 ---
 
+## Tests
+
+```bash
+python3 tests/test_kb.py          # a few seconds, standard library only
+python3 tests/test_kb.py -v       # one line per test
+python3 tests/test_kb.py Guards   # one group
+```
+
+Each run gets a temporary directory with its own `HOME` and its own
+`KB_REGISTRY`, so real notes and the real registry are never touched.
+
+What is covered is either a guard the tool exists to enforce — writing outside
+the current directory, into `$HOME`, into a directory on `PATH` — or a bug that
+shipped once, with its version named in the test. What is deliberately **not**
+covered is whether a note is *useful*: that was attempted, measured against
+nineteen real notes, and abandoned, because no mechanical signal separated the
+adequate ones from the inadequate.
+
+---
+
 ## Uninstall
 
 ```bash

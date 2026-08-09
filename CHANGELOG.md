@@ -18,6 +18,17 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.5.0
+
+- `tests/test_kb.py` — 59 tests, standard library only, each run in a temporary
+  directory with its own `HOME` and `KB_REGISTRY`. They cover the guards and the
+  bugs that shipped once; each regression names its version. Whether a note is
+  *useful* stays unchecked, deliberately.
+- `--dir` is accepted after the subcommand as well as before it. `kb check --dir
+  X` used to exit 2 with `unrecognized arguments` — including the order the
+  tool's own error message recommends, `kb init --dir <path>`. Found by the
+  tests on their first run.
+
 ## 4.4.0
 
 - `kb add` writes headings for the kind: a `decision` gets "what was rejected"

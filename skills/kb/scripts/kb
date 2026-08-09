@@ -1483,11 +1483,23 @@ def main() -> int:
                                   f"{OVERVIEW})")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
-    p = sub.add_parser("init", help="scaffold a new kb directory")
+    def with_dir(p):
+        """`--dir` after the subcommand as well as before it.
+
+        Both orders read naturally and one of them used to exit 2 with
+        `unrecognized arguments` -- including the order this tool's own error
+        message recommends (`kb init --dir <path>`). SUPPRESS is what keeps the
+        two from fighting: without it the subparser would set `dir` to None and
+        overwrite a value given before the subcommand.
+        """
+        p.add_argument("--dir", default=argparse.SUPPRESS, help=argparse.SUPPRESS)
+        return p
+
+    p = with_dir(sub.add_parser("init", help="scaffold a new kb directory"))
     p.add_argument("--title", help="heading for the overview")
     p.set_defaults(fn=cmd_init)
 
-    p = sub.add_parser("add", help="create the next numbered note")
+    p = with_dir(sub.add_parser("add", help="create the next numbered note"))
     p.add_argument("slug", help="short kebab-case name, no number")
     p.add_argument("--kind", default="reference", choices=list(KINDS))
     p.add_argument("--title", help="what the reader finds here (index row text)")
@@ -1495,41 +1507,41 @@ def main() -> int:
     p.add_argument("--no-sync", action="store_true", help="skip the index rewrite")
     p.set_defaults(fn=cmd_add)
 
-    p = sub.add_parser("sync", help="regenerate the index table")
+    p = with_dir(sub.add_parser("sync", help="regenerate the index table"))
     p.set_defaults(fn=cmd_sync, no_sync=False)
 
-    p = sub.add_parser("check", help="report drift, exit 3 if any")
+    p = with_dir(sub.add_parser("check", help="report drift, exit 3 if any"))
     p.set_defaults(fn=cmd_check)
 
-    p = sub.add_parser("status", help="human summary")
+    p = with_dir(sub.add_parser("status", help="human summary"))
     p.set_defaults(fn=cmd_status)
 
-    p = sub.add_parser("list", help="every known kb: where it lives, what is inside")
+    p = with_dir(sub.add_parser("list", help="every known kb: where it lives, what is inside"))
     p.add_argument("--scan", metavar="DIR", help="pick up existing kbs under DIR")
     p.add_argument("--prune", action="store_true", help="drop dead entries")
     p.set_defaults(fn=cmd_list)
 
-    p = sub.add_parser("streams", help="which directories this session touched")
+    p = with_dir(sub.add_parser("streams", help="which directories this session touched"))
     p.add_argument("--sessions", type=int, default=5,
                    help="recent sessions per source to read (default 5). Only "
                         "sessions bound to the current directory are ever read")
     p.add_argument("--top", type=int, default=12, help="directories to show")
     p.set_defaults(fn=cmd_streams)
 
-    p = sub.add_parser("verify", help="advisory: paths that vanished, notes gone stale")
+    p = with_dir(sub.add_parser("verify", help="advisory: paths that vanished, notes gone stale"))
     p.set_defaults(fn=cmd_verify)
 
-    p = sub.add_parser("hook", help="git pre-commit that blocks on a found credential")
+    p = with_dir(sub.add_parser("hook", help="git pre-commit that blocks on a found credential"))
     p.add_argument("--install", action="store_true", help="write the hook")
     p.add_argument("--dry-run", action="store_true", help="print what would happen")
     p.set_defaults(fn=cmd_hook)
 
-    p = sub.add_parser("outline", help="section map with weights — where the seams are")
+    p = with_dir(sub.add_parser("outline", help="section map with weights — where the seams are"))
     p.add_argument("file", nargs="?", help="file; omitted = every file over "
                                            f"{SOFT_LINES} lines")
     p.set_defaults(fn=cmd_outline)
 
-    p = sub.add_parser("adopt", help="retrofit an existing hand-made directory")
+    p = with_dir(sub.add_parser("adopt", help="retrofit an existing hand-made directory"))
     p.add_argument("--keep-backups", action="store_true",
                    help="do not remove the *.bak.* copies after verifying them")
     p.add_argument("--apply", action="store_true", help="write (default: preview)")
