@@ -10,8 +10,10 @@
 #   ./install.sh --with-path     also place a copy on PATH for manual use
 #   ./install.sh --skills-dir D  install into D instead of auto-detecting
 #
-# Idempotent: re-running replaces only what changed and backs up what it
-# overwrites as <file>.bak.<timestamp>. Nothing outside $HOME is touched.
+# Idempotent: re-running replaces only what changed. A file it overwrites is
+# copied to <file>.bak.<timestamp> ONLY when that content is not already in the
+# source repository — a hand edit is the one thing git cannot give back.
+# Nothing outside $HOME is touched.
 set -euo pipefail
 
 SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -46,6 +48,19 @@ warn() { printf '%s%s%s\n' "$C_WARN" "$*" "$C_OFF"; }
 bad()  { printf '%s%s%s\n' "$C_BAD"  "$*" "$C_OFF"; }
 tilde() { printf '%s' "${1/#$HOME/\~}"; }
 
+# Is this exact content already in the source repository's object database?
+# Then it is one `git checkout` away and a copy of it is worth nothing. Two
+# days of releases left 172 such copies across three assistants -- every one
+# byte-identical to a tagged version -- and they buried the four files that
+# are actually installed.
+in_git_history() {
+    local sha
+    command -v git >/dev/null 2>&1 || return 1
+    git -C "$SRC" rev-parse --git-dir >/dev/null 2>&1 || return 1
+    sha="$(git -C "$SRC" hash-object "$1" 2>/dev/null)" || return 1
+    [ -n "$sha" ] && git -C "$SRC" cat-file -e "$sha" 2>/dev/null
+}
+
 # Copy with a timestamped backup. Returns early when the content already
 # matches, so a re-run is a genuine no-op instead of a pile of identical .bak.
 install_file() {
@@ -60,8 +75,13 @@ install_file() {
     fi
     mkdir -p "$(dirname "$dst")"
     if [ -f "$dst" ]; then
-        cp -p "$dst" "$dst.bak.$STAMP"
-        say "    ~ $(tilde "$dst")  (backup .bak.$STAMP)"
+        # A backup is for a HAND EDIT -- the one thing git cannot give back.
+        if in_git_history "$dst"; then
+            say "    ~ $(tilde "$dst")"
+        else
+            cp -p "$dst" "$dst.bak.$STAMP"
+            say "    ~ $(tilde "$dst")  (backup .bak.$STAMP — edited by hand, not in git)"
+        fi
     else
         say "    + $(tilde "$dst")"
     fi

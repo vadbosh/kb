@@ -18,6 +18,15 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.7.1
+
+- `install.sh` backs up an overwritten file only when its content is NOT in the
+  source repository. A backup of something `git checkout` can produce is worth
+  nothing: two days of releases left 172 of them across three assistants, every
+  one byte-identical to a tagged version, burying the four files actually
+  installed. A hand edit — the one thing git cannot give back — is still copied
+  aside, and the message says which case it was.
+
 ## 4.7.0
 
 - `verify` reports the topics written after the current `state`. The snapshot
