@@ -553,6 +553,16 @@ class Commands(Base):
         self.assertIn("01-a.md", res.stdout)                  # listed, not printed
         self.assertNotIn("a line only this file has", res.stdout)
 
+    def test_brief_tells_the_relayer_not_to_summarise(self):
+        """The skill file says it; an assistant summarised anyway, turning four
+        releases into a list of five. The output is read for certain."""
+        root = self.make_kb()
+        self.fill_overview(root)
+        self.write_note(root, "01-state-2026-06-01.md", kind="state")
+        self.kb("sync", expect=0)
+        first_line = self.kb("brief", expect=0).stdout.split("\n")[0]
+        self.assertIn("Do not summarise", first_line)
+
     def test_brief_is_byte_identical_between_runs(self):
         """The point of the command: no model, no phrasing, no variation."""
         root = self.make_kb()

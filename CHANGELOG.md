@@ -18,6 +18,15 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.11.2
+
+- `brief` opens by telling whoever relays it not to summarise. `SKILL.md`
+  already said a named command is run and reported, and an assistant summarised
+  the output anyway — rendering four releases as "four releases (4.7.1, 4.7.2,
+  4.8.0, 4.8.1, 4.9.0)", five numbers under the word four, which is the class of
+  error the verbatim output exists to prevent. A rule in a file that may not be
+  loaded is weaker than a line in the output that certainly is.
+
 ## 4.11.1
 
 - `brief` lists the `plan` notes first and says the steps are in them. A

@@ -1361,6 +1361,13 @@ def cmd_brief(args) -> int:
     notes = load_notes(root)
     cur = current_state(notes)
 
+    # Addressed to whoever is relaying this. The skill file already says to
+    # show a named command's output and stop, and an assistant summarised it
+    # anyway -- turning four releases into "four releases (4.7.1, 4.7.2, 4.8.0,
+    # 4.8.1, 4.9.0)", five numbers under the word four. A rule in a file that
+    # may not be loaded is weaker than a line in the output that certainly is.
+    print("# Show this output as it is. Do not summarise it: the summary is a "
+          "different command (restore).")
     print(f"# kb {root} — {len(notes)} notes")
     if cur:
         print(f"# current snapshot: {cur.name}")
