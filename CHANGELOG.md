@@ -18,6 +18,19 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.7.0
+
+- `verify` reports the topics written after the current `state`. The snapshot
+  never saw them, and it is what `restore` reads as "the situation now" — a
+  briefing built from a file that predates the work reads as current and is not.
+  Numbers are exact where dates are not: this happens inside one day and
+  `updated` counts days, so every date variant of the rule was measured and
+  found nothing.
+- In `verify` and never in `check`: the snapshot may well still hold, and only
+  the reader can say. Measured over the three real kbs that have a `state`: 3
+  flags, one of them a snapshot that claimed there were no tests while
+  `07-tests.md` sat next to it.
+
 ## 4.6.1
 
 - Two sections in `save.md` were numbered as steps they were not: "Step 2 —

@@ -996,6 +996,18 @@ def cmd_verify(args) -> int:
         if age > limit:
             aging.append((age, n))
 
+    # A topic added after the current snapshot is a topic the snapshot never
+    # saw. Numbers only ever grow, so this is exact where dates are not: all of
+    # it happens inside one day, and `updated` has day granularity -- measured,
+    # the date variants of this rule find nothing at all.
+    #
+    # Reported here and never in `check`: the note may well still be current,
+    # and the reader is the only one who can say. It belongs at restore, which
+    # is when a stale snapshot does its damage -- the briefing says "the
+    # situation now" and takes it from a file that predates the work.
+    cur = current_state(notes)
+    later = [n for n in notes if cur and n.num > cur.num and n.kind != "state"]
+
     if dead:
         print(f"paths that do not resolve ({len(dead)}) — some may live in a "
               "container or on another host, check by hand:")
@@ -1007,9 +1019,17 @@ def cmd_verify(args) -> int:
               "wrong, just unverified:")
         for age, n in sorted(aging, reverse=True):
             print(f"  {age:>4}d  {n.name}  ({n.kind}, updated {n.updated})")
-    if not dead and not aging:
+    if later:
+        print(f"\nwritten after the current snapshot {cur.name} ({len(later)}) "
+              "— does it still describe the situation?")
+        for n in later:
+            print(f"  {n.name}  ({n.kind})")
+        print("  If it does, nothing to do. If it does not, the snapshot is what "
+              "`restore` reads\n  as 'the situation now' — write a new `state` "
+              "rather than patching the old one.")
+    if not dead and not aging and not later:
         print("nothing suspicious: every checkable path resolves, no note is "
-              "past its re-check age")
+              "past its re-check age, the snapshot is the newest note")
         return 0
     print("\nAdvisory only. Whether a fact about a live cluster still holds "
           "cannot be answered here — only by a human or a command.")

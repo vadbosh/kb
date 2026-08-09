@@ -480,6 +480,34 @@ class Commands(Base):
         res = self.kb("verify", expect=3)
         self.assertIn("not revisited", res.stdout)
 
+    def test_verify_flags_a_topic_written_after_the_snapshot(self):
+        """The snapshot never saw it. Numbers are exact where dates are not:
+        all of this happens inside one day and `updated` counts days."""
+        root = self.make_kb()
+        self.write_note(root, "01-state-2026-01-01.md", kind="state")
+        self.write_note(root, "02-later.md", kind="reference")
+        self.kb("sync", expect=0)
+        res = self.kb("verify", expect=3)
+        self.assertIn("after the current snapshot 01-state-2026-01-01.md",
+                      res.stdout)
+        self.assertIn("02-later.md", res.stdout)
+
+    def test_verify_is_quiet_when_the_snapshot_is_the_newest_note(self):
+        root = self.make_kb()
+        self.write_note(root, "01-a.md", kind="reference")
+        self.write_note(root, "02-state-2026-01-01.md", kind="state")
+        self.kb("sync", expect=0)
+        res = self.kb("verify", expect=0)
+        self.assertIn("nothing suspicious", res.stdout)
+
+    def test_an_earlier_snapshot_is_not_a_topic(self):
+        """Two snapshots in order are the normal case, not a finding."""
+        root = self.make_kb()
+        self.write_note(root, "01-state-2026-01-01.md", kind="state")
+        self.write_note(root, "02-state-2026-06-01.md", kind="state")
+        self.kb("sync", expect=0)
+        self.kb("verify", expect=0)
+
     def test_outline_maps_the_sections(self):
         root = self.make_kb()
         self.write_note(root, "01-a.md",
