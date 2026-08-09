@@ -6,6 +6,11 @@ worth remembering. `SKILL.md` has the tool contract; everything else is here.
 Nothing durable — no findings, no decisions, no traps → say
 `Nothing durable for kb.` Do NOT create empty notes.
 
+**"Already saved earlier in this session" is not that case until you have looked.**
+A note written an hour ago may have been moved, renamed or deleted since, and the
+conversation will not know. Check the file is still there before skipping on those
+grounds — and if it is gone, this save is not a repeat, it is the only copy.
+
 ## The five kinds
 
 Does a newer file **replace** this one, or is it **edited in place**?
