@@ -253,13 +253,14 @@ so in the note.** "Probably X, not verifiable from this machine" is durable; a
 confident X is a trap.
 
 **A number a command can print goes stale the next time it runs. Write the
-command beside it.** A version, a file count, a line count, a replica count: the
+command beside it.** A version, a file count, a replica count, a line count: the
 value was true when it was typed and nothing will ever tell the reader it is not.
-"Released 4.8.1" was wrong twenty minutes later and read as current for as long
-as anyone would have believed it; `./release.sh check` is right forever. Name the
-value if the moment matters — a snapshot is entitled to say what was true on its
-date — but name the command in the same breath, and never in a title, which is
-what the index shows to someone who opens nothing.
+One written into a note was wrong twenty minutes later and went on reading as
+current for as long as anyone would believe it; the command that prints it is
+right every time it runs. Name the value if the moment matters — a snapshot is
+entitled to say what was true on its date — but name the command in the same
+breath, and never in a title, which is what the index shows to someone who opens
+nothing.
 
 **A `decision` needs one step more: search for an existing answer first.**
 Another tool or project may have solved it already. A decision justified by "this

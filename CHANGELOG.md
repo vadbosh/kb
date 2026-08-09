@@ -18,6 +18,13 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.9.2
+
+- The rule added in 4.9.1 illustrated itself with this repository's own release
+  script and a version number from its changelog. `references/save.md` ships to
+  every user in three assistants; none of them has that script. The rule stands,
+  the example no longer names anything that exists only here.
+
 ## 4.9.1
 
 - `save` says a number a command can print belongs beside that command, and
