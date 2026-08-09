@@ -4,6 +4,14 @@ Versions are the `version:` field in `skills/kb/SKILL.md`, and each is tagged at
 the commit that introduced it. Breaking means a command that used to work now
 refuses.
 
+Releasing, in one commit: bump `version:`, add the section here, commit, then
+`./release.sh tag` and `git push --tags origin`.
+
+`./release.sh check` verifies the three agree — the field that ships, the section
+a reader looks at, and the tag `git checkout` needs. They drift independently,
+and a release where they disagree is worse than an untagged one: each source
+looks authoritative, and nothing says which is right.
+
 ## 4.0.2
 
 - A save that finds its earlier note missing writes it again and says so, rather
