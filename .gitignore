@@ -216,3 +216,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Session memory written by the assistant tooling. Local, and none of a
+# public repository’s business.
+.memsearch/
