@@ -310,6 +310,7 @@ done
 |---|---|
 | `kb add <slug> --kind <k> --title "..."` | new note + front matter + reindex; creates `kb/` if absent |
 | `kb status` | where the kb is, how many files, which snapshot is current, the largest files |
+| `kb brief` | the overview and the current snapshot verbatim, and why that snapshot is the current one |
 | `kb check` | mechanical drift and credentials |
 | `kb verify` | advisory: vanished paths, notes nobody has revisited |
 | `kb sync` | rebuild the index table from front matter |

@@ -266,6 +266,7 @@ CLI also works on its own if you prefer driving it by hand.
 | Command | What |
 |---|---|
 | `kb status` | where the kb is, file count, current snapshot, largest files |
+| `kb brief` | the overview and the current snapshot printed verbatim — the same bytes every run |
 | `kb check` | mechanical drift; exit 3 = go fix it |
 | `kb verify` | suspicions: vanished paths, notes past their re-check age |
 | `kb sync` | rebuild the index table from front matter |

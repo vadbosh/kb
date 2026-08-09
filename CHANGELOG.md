@@ -18,6 +18,19 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.11.0
+
+- `kb brief` — the overview and the current snapshot printed verbatim, plus why
+  that snapshot is the current one and a list of every other note by the question
+  it answers. No model in the loop: the same files produce the same bytes.
+  `restore` is a briefing — selective by design, phrased by whoever writes it —
+  which is the wrong shape for "show me what the notes say", the question asked
+  when work resumes after days away.
+- `status` and `brief` say why a snapshot is current instead of only naming it.
+  The rule is the latest date in a filename, ties broken by note number; with
+  three snapshots on one day the date column shows the same value three times
+  and the answer reads as arbitrary unless the tie-break is printed with it.
+
 ## 4.10.1
 
 - The rule about stale numbers did not cover the place they do most harm: the

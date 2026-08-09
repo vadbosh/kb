@@ -1331,6 +1331,65 @@ def cmd_streams(args) -> int:
     return 0
 
 
+def why_current(notes: list[Note], cur: Note) -> str:
+    """Say out loud why THIS snapshot won.
+
+    The rule is `max(date in the name, then number)`. On a day with one
+    snapshot the date explains it. On a day with three the date column shows
+    the same value three times and the tie is broken by a number that means
+    nothing to a reader -- so the answer reads as arbitrary unless the reason
+    is printed with it.
+    """
+    same = [n for n in notes if n.kind == "state" and n.sort_date == cur.sort_date]
+    if len(same) > 1:
+        return (f"latest date in a filename ({cur.sort_date}); "
+                f"{len(same)} snapshots carry that date, the highest number wins")
+    return f"latest date in a filename ({cur.sort_date})"
+
+
+def cmd_brief(args) -> int:
+    """The notes as they are written, not as anyone would summarise them.
+
+    `restore` is a briefing: it reads what the task needs and phrases it, so
+    two runs never match word for word and the choice of files depends on the
+    task. That is right for "what should I read now" and wrong for "show me
+    what is written" -- and the second question is the one asked when work
+    resumes after two days. Same files in, same bytes out, no model involved.
+    """
+    root = find_root(args.dir)
+    refuse_outside(root)
+    notes = load_notes(root)
+    cur = current_state(notes)
+
+    print(f"# kb {root} — {len(notes)} notes")
+    if cur:
+        print(f"# current snapshot: {cur.name}")
+        print(f"#   chosen by: {why_current(notes, cur)}")
+    else:
+        print("# current snapshot: none — no state note in this kb")
+    print()
+
+    # The overview whole: the prose saying what the stream is, and the table
+    # saying which file answers what. Printed rather than described -- the
+    # description is what varies.
+    print(f"───── {OVERVIEW} " + "─" * max(0, 60 - len(OVERVIEW)))
+    print((root / OVERVIEW).read_text(encoding="utf-8").rstrip())
+    print()
+
+    if cur:
+        print(f"───── {cur.name} " + "─" * max(0, 60 - len(cur.name)))
+        print(cur.path.read_text(encoding="utf-8").rstrip())
+        print()
+
+    rest = [n for n in notes if not cur or n.name != cur.name]
+    if rest:
+        print("───── not printed here, open by the question it answers " + "─" * 6)
+        for n in sorted(rest, key=lambda n: n.num):
+            mark = " ⚠" if n.lines > HARD_LINES else ""
+            print(f"  {n.name:<34} {n.kind:<10} {n.title}{mark}")
+    return 0
+
+
 def cmd_status(args) -> int:
     root = find_root(args.dir)
     refuse_outside(root)
@@ -1338,7 +1397,7 @@ def cmd_status(args) -> int:
     cur = current_state(notes)
     print(f"kb root: {root}   files: {len(notes)}")
     if cur:
-        print(f"current state: {cur.name} ({cur.sort_date})")
+        print(f"current state: {cur.name} — {why_current(notes, cur)}")
     by_kind: dict[str, int] = {}
     for n in notes:
         by_kind[n.kind] = by_kind.get(n.kind, 0) + 1
@@ -1557,6 +1616,9 @@ def main() -> int:
 
     p = with_dir(sub.add_parser("check", help="report drift, exit 3 if any"))
     p.set_defaults(fn=cmd_check)
+
+    p = with_dir(sub.add_parser("brief", help="the notes verbatim: overview + current snapshot, no summarising"))
+    p.set_defaults(fn=cmd_brief)
 
     p = with_dir(sub.add_parser("status", help="human summary"))
     p.set_defaults(fn=cmd_status)

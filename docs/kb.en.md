@@ -272,6 +272,7 @@ what `kb check` catches (`index table is stale`, exit 3). Inside `/kb save` both
 | Command | What |
 |---|---|
 | `kb status` | where the kb is, file count, current snapshot, largest files |
+| `kb brief` | the overview and the current snapshot printed verbatim — same bytes every run |
 | `kb check` | mechanical drift; exit 3 if any |
 | `kb verify` | suspicions: vanished paths, notes gone stale; exit 3 |
 | `kb sync` | rebuild the index table from front matter |

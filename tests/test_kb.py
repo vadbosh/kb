@@ -539,6 +539,50 @@ class Commands(Base):
         self.kb("sync", expect=0)
         self.kb("verify", expect=0)
 
+    def test_brief_prints_the_overview_and_the_snapshot_verbatim(self):
+        root = self.make_kb()
+        self.fill_overview(root)
+        self.write_note(root, "01-a.md", kind="reference", title="how it works",
+                        body="a line only this file has")
+        self.write_note(root, "02-state-2026-06-01.md", kind="state",
+                        title="where things stand", body="the situation now")
+        self.kb("sync", expect=0)
+        res = self.kb("brief", expect=0)
+        self.assertIn("The logging pipeline", res.stdout)     # overview prose
+        self.assertIn("the situation now", res.stdout)        # snapshot body
+        self.assertIn("01-a.md", res.stdout)                  # listed, not printed
+        self.assertNotIn("a line only this file has", res.stdout)
+
+    def test_brief_is_byte_identical_between_runs(self):
+        """The point of the command: no model, no phrasing, no variation."""
+        root = self.make_kb()
+        self.fill_overview(root)
+        self.write_note(root, "01-state-2026-06-01.md", kind="state")
+        self.kb("sync", expect=0)
+        first = self.kb("brief", expect=0).stdout
+        second = self.kb("brief", expect=0).stdout
+        self.assertEqual(first, second)
+
+    def test_brief_says_why_this_snapshot_is_current(self):
+        """Three snapshots on one date show the same date three times; the tie
+        is broken by a number, which reads as arbitrary unless it is said."""
+        root = self.make_kb()
+        self.fill_overview(root)
+        self.write_note(root, "01-state-2026-06-01.md", kind="state", title="one")
+        self.write_note(root, "02-state-2026-06-01.md", kind="state", title="two")
+        self.kb("sync", expect=0)
+        res = self.kb("brief", expect=0)
+        self.assertIn("02-state-2026-06-01.md", res.stdout)
+        self.assertIn("highest number wins", res.stdout)
+
+    def test_brief_on_a_kb_with_no_snapshot_says_so(self):
+        root = self.make_kb()
+        self.fill_overview(root)
+        self.write_note(root, "01-a.md", kind="reference")
+        self.kb("sync", expect=0)
+        res = self.kb("brief", expect=0)
+        self.assertIn("no state note", res.stdout)
+
     def test_outline_maps_the_sections(self):
         root = self.make_kb()
         self.write_note(root, "01-a.md",

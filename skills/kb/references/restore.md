@@ -85,9 +85,23 @@ human, not to the tool.
 Skip any section with nothing in it. Everything empty → say the kb is empty,
 don't pad.
 
+## When the briefing is the wrong shape
+
+This half is selective and phrased by whoever writes it, so two runs differ in
+wording and in which files were opened. That is right for "what should I read
+for this task" and wrong for "show me what the notes say" — the question asked
+when work resumes after days away, where a paraphrase is exactly what the reader
+does not want.
+
+`kb brief` answers that one: the overview and the current snapshot printed
+verbatim, why that snapshot is the current one, and a list of everything else by
+the question it answers. Same files in, same bytes out. Run it and show the
+output; do not summarise what it printed.
+
 ## Never
 
-- **Dump the files raw** — synthesize. The user can open them.
+- **Dump the files raw** — synthesize. The user can open them. Asked for the
+  files themselves, run `kb brief`, which is that request answered exactly.
 - **Read every file "just in case"** — the index column tells you which one.
 - **Treat an older `state` as current** — `kb status` already computed which one
   is current; use its answer.
