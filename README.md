@@ -163,8 +163,11 @@ Only assistant directories that already exist are written to; `--skills-dir
 <path>` / `-SkillsDir <path>` overrides the detection. Manual install is just
 `cp -r skills/kb <skills-dir>/` — the skill is self-contained.
 
-Re-running an installer is a genuine no-op for unchanged files and backs up
-whatever it replaces as `<file>.bak.<timestamp>`.
+Re-running an installer is a genuine no-op for unchanged files. A file it does
+replace is copied aside as `<file>.bak.<timestamp>` **only when that content is
+not already in the repository** — a hand edit is the one thing `git checkout`
+cannot give back, and a copy of anything else is a copy of something already
+recoverable.
 
 ---
 
@@ -268,7 +271,7 @@ CLI also works on its own if you prefer driving it by hand.
 | `kb status` | where the kb is, file count, current snapshot, largest files |
 | `kb brief` | the overview and the current snapshot printed verbatim — the same bytes every run |
 | `kb check` | mechanical drift; exit 3 = go fix it |
-| `kb verify` | suspicions: vanished paths, notes past their re-check age |
+| `kb verify` | suspicions: vanished paths, notes past their re-check age, work that outran the notes |
 | `kb sync` | rebuild the index table from front matter |
 | `kb add <slug> --kind <k> --title "…"` | next numbered note + front matter + rebuild |
 | `kb outline [file]` | section map with weights — where the seams for a split are |

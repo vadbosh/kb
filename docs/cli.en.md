@@ -312,7 +312,7 @@ done
 | `kb status` | where the kb is, how many files, which snapshot is current, the largest files |
 | `kb brief` | the overview and the current snapshot verbatim, and why that snapshot is the current one |
 | `kb check` | mechanical drift and credentials |
-| `kb verify` | advisory: vanished paths, notes nobody has revisited |
+| `kb verify` | advisory: vanished paths, notes nobody has revisited, work that outran the notes |
 | `kb sync` | rebuild the index table from front matter |
 | `kb outline [file]` | section map with weights; no argument means every file over 400 lines |
 | `kb list [--scan DIR] [--prune]` | every kb known on this machine |

@@ -274,7 +274,7 @@ what `kb check` catches (`index table is stale`, exit 3). Inside `/kb save` both
 | `kb status` | where the kb is, file count, current snapshot, largest files |
 | `kb brief` | the overview and the current snapshot printed verbatim — same bytes every run |
 | `kb check` | mechanical drift; exit 3 if any |
-| `kb verify` | suspicions: vanished paths, notes gone stale; exit 3 |
+| `kb verify` | suspicions: vanished paths, notes gone stale, work that outran the notes; exit 3 |
 | `kb sync` | rebuild the index table from front matter |
 | `kb add <slug> --kind <k> --title "..."` | new file + front matter + rebuild |
 | `kb list [--scan DIR] [--prune]` | every known kb: where it lives, what is inside |

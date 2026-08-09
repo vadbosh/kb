@@ -18,6 +18,14 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.15.2
+
+- Two facts in the documentation had gone stale over a day of releases, in all
+  six files at once. The installer no longer copies aside every file it
+  replaces — only content the repository does not already hold — and `verify`
+  has a third finding, work that outran the notes. Both now say so, in both
+  languages.
+
 ## 4.15.1
 
 - Removing the note-numbering rule left `current_state` computed in `verify` and
