@@ -18,6 +18,14 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.9.1
+
+- `save` says a number a command can print belongs beside that command, and
+  never in a title. A version, a file count, a replica count: true when typed,
+  and nothing tells the reader when it stops being true. "Released 4.8.1" was
+  wrong twenty minutes later — found by a reader in another harness, from a
+  title the index shows to someone who opens nothing.
+
 ## 4.9.0
 
 - `kb add` refuses a title another note already carries, and `check` reports the
