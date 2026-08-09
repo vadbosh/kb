@@ -530,6 +530,29 @@ def read_registry() -> list[Path]:
         return []
 
 
+def refuse_write_outside(root: Path) -> None:
+    """Writing is confined to the directory the session runs in; reading is not.
+
+    Creation was confined first, which stopped a new kb appearing in $HOME and
+    left the wider hole open: `kb add --dir /elsewhere/kb` still wrote into
+    someone else's notes from anywhere. Reading elsewhere is harmless and useful
+    -- a cron `check` across every kb -- but writing elsewhere is the same
+    wander with the same silence.
+
+    No override, on purpose. A script that must write elsewhere does `cd` first,
+    which states where it works instead of hiding it in an argument.
+    """
+    try:
+        target, cwd = root.resolve(), Path.cwd().resolve()
+    except OSError:
+        return
+    if target == cwd or cwd in target.parents:
+        return
+    die(f"{target} is outside {cwd} — writing is confined to the directory you "
+        "are in. `cd` there first; reading (status, check, verify, outline) "
+        "works anywhere")
+
+
 def refuse_bad_root(root: Path) -> None:
     """Stop before scaffolding notes somewhere that is not a work stream.
 
@@ -606,6 +629,7 @@ def ensure_root(args) -> Path:
     for it rather than being written into directly.
     """
     if args.dir:
+        refuse_write_outside(Path(args.dir))
         return Path(args.dir)
     cwd = Path.cwd()
     if (cwd / "kb" / OVERVIEW).exists():
@@ -669,6 +693,7 @@ def cmd_add(args) -> int:
 
 def cmd_sync(args) -> int:
     root = find_root(args.dir)
+    refuse_write_outside(root)
     overview = root / OVERVIEW
     text = overview.read_text(encoding="utf-8")
     notes = load_notes(root)
@@ -950,6 +975,7 @@ def cmd_hook(args) -> int:
     save, which happens regardless.
     """
     root = find_root(args.dir)
+    refuse_write_outside(root)
     git_dir = None
     p = root.resolve()
     while p != p.parent:
@@ -1209,6 +1235,7 @@ def cmd_adopt(args) -> int:
     starting point for the human to correct, not a claim to be right.
     """
     root = find_root(args.dir)
+    refuse_write_outside(root)
 
     # A hand-made directory rarely uses NN- names -- that convention is what
     # adopt is supposed to INTRODUCE. Numbering them is therefore part of the

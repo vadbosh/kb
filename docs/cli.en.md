@@ -285,11 +285,12 @@ kb list --scan ~/projects   # adopt kbs created before the registry existed
 kb list --prune             # forget entries whose directory is gone
 ```
 
-**A new kb is created only under the directory you are in.** `--dir` reaches an
-existing one anywhere; it will not scaffold one somewhere else, and `$HOME`, any
-directory on `PATH` and the system roots are refused outright. Wanting notes
-elsewhere is one `cd` away — and the `cd` states the intent, which picking a path
-silently does not.
+**Writing is confined to the directory you are in.** `add`, `sync`, `adopt` and
+`hook` refuse a `--dir` outside it; `status`, `check`, `verify` and `outline`
+reach anywhere, which is what makes a cron sweep over every kb possible.
+`$HOME`, any directory on `PATH` and the system roots are refused outright even
+for creation. Writing elsewhere is one `cd` away — and the `cd` states where the
+work is happening, which a path in an argument does not.
 
 ---
 
