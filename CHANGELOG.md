@@ -18,6 +18,16 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.8.0
+
+- `release.sh check` compares every installed copy on the machine against the
+  source — the three assistant directories, plus anything named in `KB_MIRRORS`.
+  A copy that is behind is a copy that will be read: a config canon holding its
+  own mirror of the skill sat two releases behind twice in one evening, and both
+  times a reader found it a day later, not the release.
+- Machine-specific paths go in `.release.local`, which is not tracked. A public
+  repository has no business knowing where anyone keeps their config.
+
 ## 4.7.2
 
 - `*.bak.*` is ignored. `install.sh` and any hand edit of a live file leave

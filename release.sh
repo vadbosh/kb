@@ -14,8 +14,62 @@ SRC="$(cd "$(dirname "$0")" && pwd)"
 SKILL="$SRC/skills/kb/SKILL.md"
 LOG="$SRC/CHANGELOG.md"
 
+# Machine-specific paths belong to the machine, not to a public repository.
+# KB_MIRRORS is a colon-separated list of directories that hold a COPY of the
+# skill and are not written by install.sh -- a config canon that redistributes
+# it, a second checkout, a container mount. Set it in .release.local, which is
+# not tracked.
+[ -f "$SRC/.release.local" ] && . "$SRC/.release.local"
+
 version() {
 	grep -m1 '^version:' "$SKILL" | sed 's/version: *"//; s/"//'
+}
+
+# Everywhere on this machine that holds an installed copy: the three assistant
+# directories install.sh writes to, plus whatever KB_MIRRORS names.
+installed_dirs() {
+	local d
+	for d in "$HOME/.claude/skills/kb" \
+	         "$HOME/.config/opencode/skills/kb" \
+	         "$HOME/.codex/skills/kb"; do
+		[ -f "$d/SKILL.md" ] && printf '%s\n' "$d"
+	done
+	# printf WITH the newline: `read` drops a final line that has none, which
+	# is every single-entry KB_MIRRORS -- the common case, silently ignored.
+	printf '%s\n' "${KB_MIRRORS:-}" | tr ':' '\n' | while read -r d; do
+		[ -n "$d" ] && [ -f "$d/SKILL.md" ] && printf '%s\n' "$d"
+	done
+}
+
+# A copy that is behind is a copy that will be read. The assistant directories
+# are refreshed by install.sh at release time; a mirror is refreshed by whatever
+# owns it, which is exactly why it gets forgotten -- twice in one evening here,
+# and each time the stale copy was found a day later by someone reading it.
+copies() {
+	local v="$1" d behind=0 n=0 iv same
+	while read -r d; do
+		[ -n "$d" ] || continue
+		n=$((n + 1))
+		iv="$(grep -m1 '^version:' "$d/SKILL.md" | sed 's/version: *"//; s/"//')"
+		same=1
+		for f in SKILL.md references/save.md references/restore.md scripts/kb; do
+			cmp -s "$SRC/skills/kb/$f" "$d/$f" || same=0
+		done
+		if [ "$iv" = "$v" ] && [ "$same" -eq 1 ]; then
+			continue
+		fi
+		[ "$behind" -eq 0 ] && echo "  installed copies behind the source:"
+		behind=$((behind + 1))
+		echo "    ${d/#$HOME/\~}  version $iv$([ "$same" -eq 0 ] && echo ", content differs")"
+	done <<-EOF
+	$(installed_dirs)
+	EOF
+	if [ "$behind" -gt 0 ]; then
+		echo "                    ./install.sh refreshes the assistant directories;"
+		echo "                    a mirror is refreshed by whatever owns it"
+		return 1
+	fi
+	echo "  installed copies:  $n, all at $v"
 }
 
 check() {
@@ -62,12 +116,14 @@ check() {
 		echo "  HEAD:             at v$v"
 	fi
 
+	copies "$v" || problems=1
+
 	[ "$problems" -eq 0 ] || return 3
 	if [ "$ahead" -gt 0 ]; then
 		echo "  the three records agree; the tag is behind HEAD"
 		return 0
 	fi
-	echo "  agreed and released"
+	echo "  agreed and released, and every copy on this machine matches"
 }
 
 tag() {
