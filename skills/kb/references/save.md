@@ -15,7 +15,30 @@ when a step is genuinely ambiguous.
    has kb  → kb status, then append or new file
 4. write the body
 5. kb sync && kb check
+6. could someone WORK from this, or only understand it?
 ```
+
+## Step 6 — understanding is not enough
+
+Notes drift towards *why* and away from *where*. Everyone writing them already
+knows the layout, so the layout never gets written; six months later that is the
+one thing missing. An outside reader put it exactly: enough to understand and
+decide, not enough to change anything.
+
+Ask it about a stranger, not about yourself, and answer with the subject in
+hand:
+
+- **where does the work happen** — which file, host, console, directory; and for
+  anything over a few hundred lines, *where in it*
+- **what would they run** to see the current state, and what says it is right
+- **what breaks silently** — the invariant nobody would guess from reading
+
+If an answer is missing, either write it now or **name it in the report as
+missing**. Not naming it is the failure: notes that quietly cover half the
+question read as complete, and the reader finds out only when the work stops.
+
+Some of these live elsewhere and should stay there — a README, a changelog, a
+runbook. Then the note names the path. A pointer is an answer; silence is not.
 
 **Never conclude "nothing to save" before step 2.** "Nothing new", "nothing
 changed since last time", "already saved above" are one judgement made from

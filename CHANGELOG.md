@@ -18,6 +18,13 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.3.0
+
+- `save` ends by asking whether someone could *work* from the notes or only
+  understand them, and requires anything missing to be named rather than quietly
+  left out. Twice an outside reader found the same shape of gap: plenty of
+  *why*, nothing about *where*.
+
 ## 4.2.0
 
 - `check` reports two things `restore` reads and nothing made `save` write: an
