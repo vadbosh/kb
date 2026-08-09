@@ -5,7 +5,13 @@ the commit that introduced it. Breaking means a command that used to work now
 refuses.
 
 Releasing, in one commit: bump `version:`, add the section here, commit, then
-`./release.sh tag` and `git push --tags origin`.
+`./release.sh tag` and `git push --tags origin`. The tag carries this file's
+section for that version, so `git tag -n99 v4.1.0` answers "what changed"
+without leaving git.
+
+A tag is not edited afterwards: `git tag -f` recreates it, and for one already
+pushed that means a force-push while anyone who fetched keeps the old. Anything
+that needs correcting later belongs here, where it can be.
 
 `./release.sh check` verifies the three agree — the field that ships, the section
 a reader looks at, and the tag `git checkout` needs. They drift independently,

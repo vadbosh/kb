@@ -69,7 +69,17 @@ tag() {
 		echo "  v$v already tagged"
 		return 0
 	fi
-	git -C "$SRC" tag -a "v$v" -m "$(git -C "$SRC" log -1 --format=%s)"
+	# The changelog section goes into the tag, so `git show v4.1.0` answers
+	# "what changed" without leaving git. Copied rather than written again:
+	# a tag is immutable once pushed, and a second wording would be the one
+	# nobody could correct.
+	local notes
+	notes="$(awk -v v="## $v" '
+		$0 == v || index($0, v " ") == 1 { on = 1; next }
+		on && /^## / { exit }
+		on { print }' "$LOG")"
+	printf '%s\n%s\n' "$(git -C "$SRC" log -1 --format=%s)" "$notes" \
+		| git -C "$SRC" tag -a "v$v" -F -
 	echo "  tagged v$v at $(git -C "$SRC" rev-parse --short HEAD)"
 	echo "  push it: git push --tags origin"
 }
