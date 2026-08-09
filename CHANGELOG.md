@@ -18,6 +18,15 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.14.2
+
+- `save` requires the "what would they run" block to hold read-only commands
+  only. An assistant told to brief and not to act read one and ran it — harmless
+  there, because those commands only read. Somewhere else the same block would
+  hold a `terraform apply`. The rule is not "write no commands": the block is
+  what makes a note usable. Destructive steps are described in prose, never
+  written as a line someone can lift and run.
+
 ## 4.14.1
 
 - The drift rule added in 4.12.0 fired on every active day: notes written, a

@@ -60,7 +60,12 @@ hand:
 
 - **where does the work happen** — which file, host, console, directory; and for
   anything over a few hundred lines, *where in it*
-- **what would they run** to see the current state, and what says it is right
+- **what would they run** to see the current state, and what says it is right.
+  **Assume it will be run.** An assistant told to brief and not to act read a
+  note's check block and executed it anyway — harmless there, because the
+  commands only read. So the block holds read-only commands and nothing else:
+  a `terraform apply`, a `kubectl delete`, a migration, a deploy is *described*
+  in prose and never written as a line someone can lift and run
 - **what breaks silently** — the invariant nobody would guess from reading
 
 If an answer is missing, either write it now or **name it in the report as
