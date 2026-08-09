@@ -10,6 +10,9 @@ in `references/save.md`, where the choice is actually made.
 
 Reading the files themselves is the Read tool, not the CLI.
 
+**Run only the commands a step names** — nothing extra, however informative. A
+briefing padded with output nobody asked for costs tokens and hides the answer.
+
 ## Step 1 — orient before reading
 
 ```

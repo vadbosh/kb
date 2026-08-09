@@ -33,6 +33,10 @@ equals, which is how someone acts on a reversed decision.
 
 ## Rules for everything below
 
+- **Run only the commands a step names.** Nothing extra, however informative it
+  might be. `kb list` prints every notes directory on the machine; called during
+  a save it buries the two or three the question is about under everything else.
+  Whether a stream has a kb is `ls -d <dir>/kb`, per stream, and nothing wider.
 - **Write in the language the notes are written in**, not this file's. Titles and
   bodies land in a document a human reads.
 - **No credentials.** Reference the mechanism (a secret in the cluster, an env
@@ -89,10 +93,6 @@ stream** — what came out of it, and whether its kb exists:
 2. ~/src/deploy   rollout script + smoke test      → kb/ (new)
 3. workstation    editor and shell config          → no home yet
 ```
-
-Whether a stream has a kb is `ls -d <dir>/kb` per stream — do not reach for
-`kb list`, which dumps every notes directory on the machine and buries the three
-that matter.
 
 Do not argue the case for each — a paragraph per stream turns a two-second
 choice into a wall of text. Save the reasoning for whichever they pick.
