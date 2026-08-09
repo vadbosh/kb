@@ -50,8 +50,24 @@ check() {
 		problems=1
 	fi
 
+	# The three records can agree perfectly while the tag sits behind HEAD.
+	# "agreed" then reads as "released", and the work since is invisible --
+	# five commits of release machinery once sat unreleased under that word.
+	local ahead
+	ahead="$(git -C "$SRC" rev-list --count "v$v..HEAD" 2>/dev/null || echo 0)"
+	if [ "$ahead" -gt 0 ]; then
+		echo "  HEAD:             $ahead commit(s) after v$v — unreleased"
+		echo "                    bump version:, add a section, then ./release.sh tag"
+	else
+		echo "  HEAD:             at v$v"
+	fi
+
 	[ "$problems" -eq 0 ] || return 3
-	echo "  agreed"
+	if [ "$ahead" -gt 0 ]; then
+		echo "  the three records agree; the tag is behind HEAD"
+		return 0
+	fi
+	echo "  agreed and released"
 }
 
 tag() {

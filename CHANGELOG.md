@@ -18,6 +18,13 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.1.0
+
+- `release.sh check` compares HEAD against the tag. The three records could
+  agree while the tag sat behind, and "agreed" read as "released" — five commits
+  of release machinery once sat unreleased under that word.
+- Tags carry their changelog section, so `git tag -n99` answers what changed.
+
 ## 4.0.2
 
 - A save that finds its earlier note missing writes it again and says so, rather
