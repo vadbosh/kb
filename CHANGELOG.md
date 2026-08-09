@@ -18,6 +18,17 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.9.0
+
+- `kb add` refuses a title another note already carries, and `check` reports the
+  ones written before that. The title IS the index row and that column answers
+  "what do I need?" — answered twice identically it answers nothing. Three
+  snapshots taken in one day looked exactly like that: same title, same date in
+  the name, told apart only by a number that means nothing to a reader.
+- Refused at creation rather than reported later: at that moment the writer
+  knows what distinguishes the two, and ten notes later nobody does. Measured
+  over 43 real notes in six directories — one group flagged, and it was real.
+
 ## 4.8.1
 
 - With no assistant installed, `check` said "installed copies: 0, all at 4.8.0"

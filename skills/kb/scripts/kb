@@ -713,6 +713,18 @@ def cmd_add(args) -> int:
     if path.exists():
         die(f"{path} already exists")
     title = args.title or slug.replace("-", " ")
+    # The title IS the index row, and that column answers "what do I need?".
+    # Answered twice identically it answers nothing -- which is what three
+    # snapshots taken in one day looked like: same title, same date in the
+    # name, told apart only by a number that means nothing to a reader.
+    # Refused here rather than reported later: at this moment the writer knows
+    # what distinguishes the two, and ten notes later nobody does.
+    twin = next((n for n in notes if n.title.strip() == title.strip()), None)
+    if twin:
+        die(f"{twin.name} already promises the reader {title!r}. The index column "
+            "answers 'what do I need?' — two rows saying the same thing answer "
+            "nothing.\n  Name what makes THIS one different: for a snapshot the "
+            "moment it describes, for a reference the part it covers")
     fm = [FM_FENCE, f"title: {title}", f"kind: {args.kind}",
           f"updated: {date.today().isoformat()}"]
     if args.supersedes:
@@ -827,6 +839,19 @@ def cmd_check(args) -> int:
             problems.append(
                 f"{n.name}: whitespace in the filename — a link to it can never "
                 "be verified; rename with hyphens")
+
+    # `add` refuses a duplicate title now, which leaves the ones written before
+    # that and the ones edited by hand afterwards. Measured over 43 real notes
+    # in six directories: one group, and it was the real thing.
+    by_title: dict[str, list[str]] = {}
+    for n in notes:
+        by_title.setdefault(n.title.strip(), []).append(n.name)
+    for title, names in by_title.items():
+        if len(names) > 1:
+            problems.append(
+                f"{len(names)} notes promise the reader {title!r} "
+                f"({', '.join(names)}) — the index column answers 'what do I "
+                "need?' and answers it identically; retitle all but one")
 
     strays = [p.name for p in sorted(root.glob("*.md"))
               if p.name != OVERVIEW and not NAME_RE.match(p.name)]

@@ -88,8 +88,11 @@ class Base(unittest.TestCase):
         self.kb("init", cwd=cwd, expect=0)
         return (cwd or self.proj) / "kb"
 
-    def write_note(self, root, name, kind="reference", title="t",
+    def write_note(self, root, name, kind="reference", title=None,
                    updated=None, body="text", supersedes=None):
+        # Derived from the filename, because two notes promising the reader the
+        # same thing is now a finding of its own.
+        title = title or name.removesuffix(".md")
         fm = ["---", f"title: {title}", f"kind: {kind}",
               f"updated: {updated or date.today().isoformat()}"]
         if supersedes:
@@ -231,6 +234,22 @@ class Add(Base):
         self.assertIn("## Where it lives", reference)
         self.assertNotIn("When to revisit", reference)
         self.assertIn("kb:fill", decision)
+
+    def test_a_title_already_taken_is_refused(self):
+        """The index column answers "what do I need?" — twice identically it
+        answers nothing. Three snapshots in one day looked exactly like that."""
+        self.make_kb()
+        self.kb("add", "a", "--title", "what is done and what is open", expect=0)
+        res = self.kb("add", "b", "--title", "what is done and what is open")
+        self.assertNotEqual(res.returncode, 0)
+        self.assertIn("already promises the reader", res.stderr)
+        self.assertFalse((self.proj / "kb" / "02-b.md").exists(),
+                         "refused but created the file anyway")
+
+    def test_a_different_title_is_fine(self):
+        self.make_kb()
+        self.kb("add", "a", "--title", "morning: before the tests", expect=0)
+        self.kb("add", "b", "--title", "evening: after the release", expect=0)
 
     def test_both_languages_carry_the_same_headings(self):
         for lang in ("ru", "en"):
@@ -398,6 +417,18 @@ class Check(Base):
         (root / "notes.md").write_text("# loose\n", encoding="utf-8")
         res = self.kb("check", expect=3)
         self.assertIn("not in the NN-slug.md scheme", res.stdout)
+
+    def test_duplicate_titles_reported(self):
+        """`add` refuses them now; these are the ones written earlier or
+        edited by hand afterwards."""
+        root = self.clean_kb()
+        self.write_note(root, "03-b.md", title="the same promise")
+        self.write_note(root, "04-c.md", title="the same promise")
+        self.kb("sync", expect=0)
+        res = self.kb("check", expect=3)
+        self.assertIn("promise the reader 'the same promise'", res.stdout)
+        self.assertIn("03-b.md", res.stdout)
+        self.assertIn("04-c.md", res.stdout)
 
     def test_whitespace_in_a_filename_reported(self):
         root = self.clean_kb()
