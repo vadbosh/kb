@@ -1027,8 +1027,6 @@ def cmd_verify(args) -> int:
         if age > limit:
             aging.append((age, n))
 
-    cur = current_state(notes)
-
     # The one drift kb could not see at all: the WORK moved and nothing was
     # written down. Every other check compares notes with notes -- index
     # against front matter, links against files, snapshots against each other
@@ -1047,6 +1045,8 @@ def cmd_verify(args) -> int:
     # checkout moves them -- so this stays a suspicion and never a `check`.
     moved: list[Path] = []
     gap_hours = 0.0
+    # Flat layout -- the directory IS the work stream -- has nothing to compare:
+    # the notes and the work are the same files. Skipped, not silently passed.
     stream = root.parent if root.name == "kb" else None
     if stream and stream.is_dir():
         try:

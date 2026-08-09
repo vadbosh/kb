@@ -18,6 +18,14 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.15.1
+
+- Removing the note-numbering rule left `current_state` computed in `verify` and
+  never used — the kind of leftover that has the next reader looking for the
+  purpose of a line that has none. Gone, and the one case the drift check cannot
+  answer is now named where it is skipped: a flat layout, where the notes and
+  the work are the same files.
+
 ## 4.15.0
 
 - The rule from 4.7.0 — notes numbered above the current snapshot — is gone. It
