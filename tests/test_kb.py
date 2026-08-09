@@ -575,6 +575,23 @@ class Commands(Base):
         self.assertIn("02-state-2026-06-01.md", res.stdout)
         self.assertIn("highest number wins", res.stdout)
 
+    def test_brief_separates_the_plans(self):
+        """A snapshot says where things stand; the sequenced work not yet done
+        lives in a `plan`, and among twenty references nobody opens it."""
+        root = self.make_kb()
+        self.fill_overview(root)
+        self.write_note(root, "01-how.md", kind="reference", title="how it works")
+        self.write_note(root, "02-next.md", kind="plan", title="the migration steps")
+        self.write_note(root, "03-state-2026-06-01.md", kind="state", title="now")
+        self.kb("sync", expect=0)
+        out = self.kb("brief", expect=0).stdout
+        self.assertIn("planned work", out)
+        # Every filename also appears in the index table printed above, so the
+        # order is only meaningful inside the trailer.
+        tail = out[out.index("planned work"):]
+        self.assertLess(tail.index("planned work"), tail.index("the rest"))
+        self.assertLess(tail.index("02-next.md"), tail.index("01-how.md"))
+
     def test_brief_on_a_kb_with_no_snapshot_says_so(self):
         root = self.make_kb()
         self.fill_overview(root)

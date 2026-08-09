@@ -18,6 +18,17 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.11.1
+
+- `brief` lists the `plan` notes first and says the steps are in them. A
+  snapshot answers where things stand; work that is sequenced but not yet done
+  lives in a plan, and in a kb of twenty notes a plan listed among the
+  references is a plan nobody opens. Tried on a real one: the two plans, one of
+  them the working plan for the whole migration, sat eleventh and fourteenth in
+  an undifferentiated list.
+- They are named, not printed: one of those files is nineteen thousand tokens,
+  several times the whole briefing.
+
 ## 4.11.0
 
 - `kb brief` — the overview and the current snapshot printed verbatim, plus why

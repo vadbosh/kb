@@ -1382,11 +1382,27 @@ def cmd_brief(args) -> int:
         print()
 
     rest = [n for n in notes if not cur or n.name != cur.name]
-    if rest:
-        print("───── not printed here, open by the question it answers " + "─" * 6)
-        for n in sorted(rest, key=lambda n: n.num):
-            mark = " ⚠" if n.lines > HARD_LINES else ""
-            print(f"  {n.name:<34} {n.kind:<10} {n.title}{mark}")
+    def row(n: Note) -> str:
+        mark = " ⚠" if n.lines > HARD_LINES else ""
+        return f"  {n.name:<34} {n.kind:<10} {n.title}{mark}"
+
+    # Plans first, and named as such. A snapshot answers where things stand;
+    # work that is sequenced but not yet done lives in a `plan`, and in a kb of
+    # twenty notes a plan listed among the references is a plan nobody opens.
+    # Not printed in full on purpose -- one of them runs to nineteen thousand
+    # tokens, which is the whole budget of the briefing several times over.
+    plans = [n for n in rest if n.kind == "plan"]
+    if plans:
+        print("───── planned work — the steps are in these, not above " + "─" * 7)
+        for n in sorted(plans, key=lambda n: n.num):
+            print(row(n))
+        print()
+
+    others = [n for n in rest if n.kind != "plan"]
+    if others:
+        print("───── the rest, open by the question it answers " + "─" * 14)
+        for n in sorted(others, key=lambda n: n.num):
+            print(row(n))
     return 0
 
 
