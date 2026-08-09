@@ -18,6 +18,13 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.2.0
+
+- `check` reports two things `restore` reads and nothing made `save` write: an
+  overview still holding its placeholder, and a kb of three or more notes with
+  no `state`. The halves disagreed in silence — a briefing said "the situation
+  now" with nothing to take it from.
+
 ## 4.1.0
 
 - `release.sh check` compares HEAD against the tag. The three records could

@@ -206,6 +206,8 @@ Exit 3 means act in the same turn:
 | `updated` is not a date | correct it — a non-date can win the current-snapshot contest |
 | whitespace in a filename | rename with hyphens; links to it cannot be verified |
 | `*.bak.*` left over | check them against the originals, then propose deleting |
+| overview still has its placeholder | write the paragraph — `restore` reads it as what the stream is |
+| notes but no `state` | `kb add state --kind state` — `restore` takes "the situation now" from it |
 | **file over the size threshold** | `kb outline` → judge by kind-mixing → propose a seam OR say "no seam, leaving it" |
 
 Never stay silent about size and never defer it; never split silently either —

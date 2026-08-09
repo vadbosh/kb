@@ -1,11 +1,11 @@
 {
   "collection": "ms_kb_3fc3357c",
   "failed_files": [],
-  "last_completed_at": "2026-08-09T17:43:29.113205Z",
+  "last_completed_at": "2026-08-09T17:49:37.439435Z",
   "last_error": "BrokenPipeError: [Errno 32] Broken pipe",
-  "last_failed_at": "2026-08-09T17:43:29.113205Z",
-  "last_started_at": "2026-08-09T17:43:23.506528Z",
-  "last_success_at": "2026-08-09T17:43:29.112573Z",
+  "last_failed_at": "2026-08-09T17:49:37.439435Z",
+  "last_started_at": "2026-08-09T17:49:28.136972Z",
+  "last_success_at": "2026-08-09T17:49:37.438629Z",
   "milvus_uri": "~/.memsearch/milvus.db",
   "operation": "index",
   "paths": [
@@ -13,5 +13,5 @@
   ],
   "schema_version": 1,
   "status": "error",
-  "updated_at": "2026-08-09T17:43:29.113205Z"
+  "updated_at": "2026-08-09T17:49:37.439435Z"
 }

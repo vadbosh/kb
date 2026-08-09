@@ -776,6 +776,20 @@ def cmd_check(args) -> int:
                 f"{n.name}: a state with no date in its name and no usable "
                 "`updated` — it can never be the current snapshot")
 
+    # Two things `restore` reads that nothing ever made `save` write. The halves
+    # disagreed in silence: a briefing said "the situation now" and had no state
+    # to take it from, and "what this stream is" resolved to a TODO comment.
+    # Reported here rather than asked for in prose -- prose was asked four times.
+    placeholders = ("<!-- одним абзацем", "<!-- one paragraph")
+    if any(ph in text for ph in placeholders):
+        problems.append(
+            f"{OVERVIEW}: still has its placeholder — say in a line or two what "
+            "this work stream is and what does NOT go in it")
+    if len(notes) >= 3 and not any(n.kind == "state" for n in notes):
+        problems.append(
+            f"{len(notes)} notes and no `state` — nothing answers 'what is the "
+            "situation now'; `kb add state --kind state` writes one")
+
     for n in notes:
         if any(c.isspace() for c in n.name):
             problems.append(
