@@ -18,6 +18,17 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.6.0
+
+- `save` gets a fifth step: grep the subject of what changed across the whole kb
+  before `check`. A note is written true and goes false when the world moves, and
+  nothing in the tool can see that — `check` compares notes with each other,
+  never a sentence with the world. The case: tests were added, a note about them
+  written, the `state` updated, and a third note kept saying "there are no tests"
+  — in the file the index recommends for "I am about to change the code".
+- Automating the judgement was measured and refused: an absence-phrase check
+  fired 20 times over 34 real notes, effectively none of them stale prose.
+
 ## 4.5.0
 
 - `tests/test_kb.py` — 59 tests, standard library only, each run in a temporary

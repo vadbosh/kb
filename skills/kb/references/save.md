@@ -14,11 +14,41 @@ when a step is genuinely ambiguous.
 3. no kb   → kb add … in that directory, creating it
    has kb  → kb status, then append or new file
 4. write the body
-5. kb sync && kb check
-6. could someone WORK from this, or only understand it?
+5. grep -rin "<subject>" <dir>/kb   what the OLDER notes say about it
+6. kb sync && kb check
+7. could someone WORK from this, or only understand it?
 ```
 
-## Step 6 — understanding is not enough
+## Step 5 — the note you did not open is the one that lies
+
+A note is written true and goes false when the world moves. Writing today's fact
+somewhere new does not retract yesterday's claim about it, and nothing in the
+tool can: `check` compares notes with each other — the index, front matter,
+links, dates, secrets — never a sentence with the world.
+
+The real case: tests were added, a note describing them was written, the `state`
+was updated, and a third note kept saying "there are no tests — see the state".
+That note is the one the index recommends for "I am about to change the code",
+so the stale line went straight to the reader who would act on it.
+
+**Grep the subject of what you just changed, across the whole kb, before
+`check`.** One command, a handful of lines to read:
+
+```
+grep -rin "test" /srv/api/kb        # the thing whose truth just changed
+```
+
+Read the hits and correct the ones that are now wrong. A claim of ABSENCE is the
+one that rots fastest — "there is no X", "nothing does Y", "not decided yet" —
+because adding X is exactly the work that makes it false.
+
+Do not try to automate the judgement: an absence-phrase check was measured over
+34 real notes and fired 20 times, of which effectively none were stale prose —
+they were ordinary facts about infrastructure ("no HTTPRoute at all", "absent
+from DNS"). At that ratio the report is ignored within days, which is why this is
+a step for the writer and not a rule in `check`.
+
+## Step 7 — understanding is not enough
 
 Notes drift towards *why* and away from *where*. Everyone writing them already
 knows the layout, so the layout never gets written; six months later that is the
@@ -226,7 +256,7 @@ confident X is a trap.
 Another tool or project may have solved it already. A decision justified by "this
 is impossible" is worth exactly what the search behind it was worth.
 
-## Step 5 — finish with `kb check`, always
+## Step 6 — finish with `kb check`, always
 
 Exit 3 means act in the same turn:
 
