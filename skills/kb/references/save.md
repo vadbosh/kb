@@ -262,6 +262,13 @@ entitled to say what was true on its date — but name the command in the same
 breath, and never in a title, which is what the index shows to someone who opens
 nothing.
 
+**Naming the command is not enough where the note says what to expect from it.**
+"Run this, expect 62 tests" invalidates itself on the next test written, and it
+is read as the current count by whoever ran the command and got 65 — the one
+place a reader is looking at the number and the claim together. Describe the
+shape of a good result, not its size: `OK`, `clean`, `no drift`, an empty
+output. That sentence stays true through every release; a count survives one.
+
 **A `decision` needs one step more: search for an existing answer first.**
 Another tool or project may have solved it already. A decision justified by "this
 is impossible" is worth exactly what the search behind it was worth.

@@ -18,6 +18,14 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.10.1
+
+- The rule about stale numbers did not cover the place they do most harm: the
+  block that says what to expect from a command. "Run this, expect 62 tests"
+  invalidates itself on the next test written, and it is read as current by the
+  one person looking at the number and the command together. `save` now asks for
+  the shape of a good result — `OK`, `clean`, an empty output — not its size.
+
 ## 4.10.0
 
 - `release.sh check` refuses to call a release ready when a shipped file names
