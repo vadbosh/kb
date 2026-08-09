@@ -635,8 +635,16 @@ def ensure_root(args) -> Path:
     for it rather than being written into directly.
     """
     if args.dir:
-        refuse_outside(Path(args.dir))
-        return Path(args.dir)
+        root = Path(args.dir)
+        refuse_outside(root)
+        if (root / OVERVIEW).exists():
+            return root
+        # An explicit --dir with no notes in it is the same situation as an
+        # empty cwd and must behave the same: scaffold. It used to be returned
+        # unexamined, so the note was written into a directory that did not
+        # exist and `kb add` ended in a traceback.
+        print(f"created {write_skeleton(root, None)}")
+        return root
     cwd = Path.cwd()
     if (cwd / "kb" / OVERVIEW).exists():
         return cwd / "kb"
