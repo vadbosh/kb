@@ -18,6 +18,15 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.4.0
+
+- `kb add` writes headings for the kind: a `decision` gets "what was rejected"
+  and "when to revisit", a `reference` gets "where it lives" and "what breaks
+  silently". `kind` said when a note expires and never what belongs in it, so
+  bodies filled with reasoning and skipped location.
+- `check` reports a heading left unanswered. Deleting one is a decision;
+  leaving it blank is not.
+
 ## 4.3.0
 
 - `save` ends by asking whether someone could *work* from the notes or only

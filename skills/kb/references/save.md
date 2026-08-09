@@ -197,7 +197,16 @@ bad    Fluent-bit                  (a noun, answers nothing)
 
 ## Step 4 — write the body
 
-`kb add` creates the file with front matter and an `# H1`; you fill the body.
+`kb add` creates the file with front matter, an `# H1` and **headings for the
+kind you chose** — fill them, or delete the ones that do not apply. Deleting is a
+decision and fine; leaving one unanswered is not, and `check` says so.
+
+The headings exist because `kind` used to say only when a note expires, never
+what belongs in it. The body then filled with whatever was freshest, which is
+always the reasoning and never the location — a `decision` with no "when to
+revisit", a `reference` with no "where it lives". The writer knows those, which
+is exactly why they went unwritten.
+
 Lead with the concrete subject. Written text, not a transcript.
 
 **Run a command before writing a claim about the system** — now, not from memory

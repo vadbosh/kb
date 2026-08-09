@@ -62,6 +62,16 @@ STRINGS = {
         "superseded": " ⏳ (прежний срез)",
         "reversed": " ⤺ (отменён {num})",
         "replaces": " ⤺ {nums}",
+        "shape": {
+            "decision": ["Что выбрали", "Что отвергли и почему",
+                         "Чем платим", "При каком условии пересмотреть"],
+            "reference": ["Где это лежит", "Как устроено",
+                          "Что ломается молча"],
+            "recipe": ["<грабля: признак, причина, команда>"],
+            "state": ["Что сделано", "Что открыто", "Чем проверить состояние"],
+            "plan": ["Порядок", "Зависимости", "Как понять, что выполнено"],
+        },
+        "fill": "<!-- kb:fill — заполни или убери раздел -->",
         "index_heading": "## Указатель",
         "heavy": " ⚠ ~{k}k токенов",
         "skeleton": """\
@@ -92,6 +102,16 @@ STRINGS = {
         "superseded": " ⏳ (earlier snapshot)",
         "reversed": " ⤺ (reversed by {num})",
         "replaces": " ⤺ {nums}",
+        "shape": {
+            "decision": ["What was chosen", "What was rejected and why",
+                         "What it costs", "When to revisit"],
+            "reference": ["Where it lives", "How it behaves",
+                          "What breaks silently"],
+            "recipe": ["<trap: symptom, cause, command>"],
+            "state": ["Done", "Open", "How to check the state"],
+            "plan": ["Order", "Dependencies", "Done when"],
+        },
+        "fill": "<!-- kb:fill — fill this in or delete the section -->",
         "index_heading": "## Index",
         "heavy": " ⚠ ~{k}k tokens",
         "skeleton": """\
@@ -698,6 +718,12 @@ def cmd_add(args) -> int:
     if args.supersedes:
         fm.append(f"supersedes: {args.supersedes}")
     fm += [FM_FENCE, "", f"# {title}", ""]
+    # A kind says when a note expires; it never said what belongs in one, so the
+    # body was filled with whatever was freshest -- always the reasoning, never
+    # the location. Headings make the omission visible: an empty section shows,
+    # an unwritten thought does not.
+    for head in S("shape").get(args.kind, []):
+        fm += [f"## {head}", "", S("fill"), ""]
     path.write_text("\n".join(fm), encoding="utf-8")
     print(f"created {path}")
     if not args.no_sync:
@@ -780,6 +806,12 @@ def cmd_check(args) -> int:
     # disagreed in silence: a briefing said "the situation now" and had no state
     # to take it from, and "what this stream is" resolved to a TODO comment.
     # Reported here rather than asked for in prose -- prose was asked four times.
+    for n in notes:
+        if "<!-- kb:fill" in n.path.read_text(encoding="utf-8"):
+            problems.append(
+                f"{n.name}: a section is still empty — fill it or delete it, "
+                "an unanswered heading is worse than none")
+
     placeholders = ("<!-- одним абзацем", "<!-- one paragraph")
     if any(ph in text for ph in placeholders):
         problems.append(
