@@ -220,3 +220,8 @@ __marimo__/
 # Session memory written by the assistant tooling. Local, and none of a
 # public repository’s business.
 .memsearch/
+
+# Timestamped copies left by install.sh and by anyone editing a live file.
+# Recoverable from history by definition, and untracked they hide the one thing
+# `git status` is for — a change nobody meant to make.
+*.bak.*

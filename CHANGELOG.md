@@ -18,6 +18,13 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.7.2
+
+- `*.bak.*` is ignored. `install.sh` and any hand edit of a live file leave
+  timestamped copies; untracked, they hide the one thing `git status` is for —
+  a change nobody meant to make. An outside reader found exactly that: a stray
+  `install.sh.bak.*` against a snapshot promising an empty `git status`.
+
 ## 4.7.1
 
 - `install.sh` backs up an overwritten file only when its content is NOT in the
