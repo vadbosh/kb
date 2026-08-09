@@ -3,30 +3,32 @@
 Triggered by "kbsave", "запиши в kb", "задокументируй это", or the end of a task
 worth remembering. `SKILL.md` has the tool contract; everything else is here.
 
-**Step 1 comes first. There is no path to "nothing to save" that skips it.**
-Deciding from the conversation that nothing happened is the one judgement this
-file does not accept, in any wording — "nothing new", "nothing changed since last
-time", "already saved above" all mean the same thing and all mean it was decided
-without looking.
+## The procedure
 
-Two facts settle it, both on disk and both **inside the stream's own
-directory** — nowhere else:
+Follow it. The steps below are fixed; the prose after them is *why*, read only
+when a step is genuinely ambiguous.
 
-- **does the stream have a kb at all** — `ls -d <dir>/kb`
-- **if it does, is the note still in it** — `ls <dir>/kb`
+```
+1. kb streams                     which directories this session worked in
+2. ls -d <dir>/kb                 per directory — does it have notes yet
+3. no kb   → kb add … in that directory, creating it
+   has kb  → kb status, then append or new file
+4. write the body
+5. kb sync && kb check
+```
 
-**Do not go looking for it anywhere else.** No `find /`, no hunting through
-`/tmp`, no chasing a copy someone left behind. A note that is not in this
-stream's `kb/` is not this stream's record, whatever it is and wherever it sits;
-finding it changes nothing and reading it wastes the turn. Two `ls` in one
-directory answer the question completely.
+**Never conclude "nothing to save" before step 2.** "Nothing new", "nothing
+changed since last time", "already saved above" are one judgement made from
+memory, and memory does not know a note was deleted an hour ago. A directory
+with no `kb/` and a session that did work has nothing written down anywhere —
+the opposite of nothing to save.
 
-**No kb, and the session did work → there is nothing written down anywhere.**
-That cannot be "nothing durable"; it is the opposite. Write it.
+Step 2 is two `ls` in the stream's own directory. **Not a search.** No `find /`,
+no looking through `/tmp`, no chasing a copy someone left behind: a note outside
+this stream's `kb/` is not this stream's record, wherever it sits.
 
-Only after those two answers: no findings, no decisions, no traps, nothing that
-outlives the conversation → say `Nothing durable for kb.` Do NOT create empty
-notes.
+Genuinely nothing durable — no findings, no decisions, no traps — after step 2:
+say `Nothing durable for kb.` and create nothing.
 
 ## The five kinds
 
