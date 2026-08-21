@@ -18,6 +18,18 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.15.3
+
+- A title written the way strict YAML requires kept its quotes. The block is not
+  YAML and never was — `---` fences and a split on the first colon — but it
+  looks like one, so a value containing `": "` gets quoted by whoever edits it by
+  hand, and the pair travelled verbatim into the index row. That row is what a
+  reader sees before opening any file, and nothing in `check` reads the first
+  character of a title, so the table was the only place it showed. Found while
+  writing a `recipe` whose title had a colon in it. One pair of surrounding
+  quotes is now dropped at parse time; quotes anywhere else in the line are left
+  alone, and `kb add` still writes the value unquoted.
+
 ## 4.15.2
 
 - Two facts in the documentation had gone stale over a day of releases, in all

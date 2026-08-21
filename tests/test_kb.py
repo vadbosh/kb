@@ -757,6 +757,20 @@ class Parsing(Base):
         self.assertEqual(meta["kind"], "decision")
         self.assertIn("# h", body)
 
+    def test_a_hand_quoted_title_loses_the_quotes(self):
+        # The block looks like YAML, so a human editing it quotes a value with
+        # a colon. Without dequoting, the quotes reach the index row.
+        for quoted, plain in (('"why: the choice"', "why: the choice"),
+                              ("'why: the choice'", "why: the choice")):
+            meta, _ = kb_cli.parse_front_matter(
+                f"---\ntitle: {quoted}\nkind: decision\n---\n\n# h\n")
+            self.assertEqual(meta["title"], plain)
+
+    def test_quotes_that_are_not_surrounding_are_kept(self):
+        meta, _ = kb_cli.parse_front_matter(
+            '---\ntitle: the "quoted" word inside\nkind: reference\n---\n\n# h\n')
+        self.assertEqual(meta["title"], 'the "quoted" word inside')
+
     def test_text_without_front_matter_survives_intact(self):
         meta, body = kb_cli.parse_front_matter("# just a heading\n")
         self.assertEqual(meta, {})

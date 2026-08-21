@@ -352,11 +352,26 @@ def find_root(explicit: str | None, *, for_init: bool = False) -> Path:
     die(f"no {OVERVIEW} in ./kb or . — run `kb init` first, or pass --dir")
 
 
+def dequote(value: str) -> str:
+    """Drop one pair of surrounding quotes.
+
+    The block is not YAML, but it looks like it — `---` fences and `key: value`.
+    Anyone editing by hand quotes a value containing ": " because strict YAML
+    demands it there, and without this the quotes would be part of the title.
+    They land in the index row, which is what a reader sees before opening any
+    file, and nothing in `check` looks at the first character of a title.
+    """
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in "\"'":
+        return value[1:-1]
+    return value
+
+
 def parse_front_matter(text: str) -> tuple[dict, str]:
     """Minimal front-matter reader: `key: value` lines between --- fences.
 
     Not YAML on purpose — no dependency, and every field here is a flat string.
     Values may contain colons (titles do), so only the FIRST colon splits.
+    Surrounding quotes are dropped, so a hand-written YAML-style value works.
     """
     if not text.startswith(FM_FENCE):
         return {}, text
@@ -374,7 +389,7 @@ def parse_front_matter(text: str) -> tuple[dict, str]:
             continue
         key, sep, value = line.partition(":")
         if sep:
-            meta[key.strip()] = value.strip()
+            meta[key.strip()] = dequote(value.strip())
     return meta, "\n".join(lines[end + 1:])
 
 
