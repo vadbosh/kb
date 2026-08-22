@@ -18,6 +18,21 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.15.4
+
+- A note could not cite the overview. `load_notes()` skips `00-overview.md` on
+  purpose — it has no kind and belongs in no generated table — and the same set
+  was doing double duty as "files that exist" for the link check. So a note
+  writing `` `00-overview.md` `` was told it links a missing file, and the file
+  in question is the one `check` separately insists must be present and filled
+  in. Found while writing a state note that pointed a reader at the map.
+
+  The fix is one term: the overview joins `known`. Nothing else moves — the
+  generated table still comes from notes alone, and a name listed in
+  `supersedes:` is still history rather than a broken link. Two cases added: a
+  note citing the overview, and the overview citing itself, both of which fail
+  on the previous version.
+
 ## 4.15.3
 
 - A title written the way strict YAML requires kept its quotes. The block is not

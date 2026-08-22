@@ -795,7 +795,12 @@ def cmd_check(args) -> int:
         if MARK_BEGIN in text and expected not in text:
             problems.append("index table is stale — run `kb sync`")
 
-    known = {n.name for n in notes}
+    # The overview is not a note -- load_notes() skips it, and rightly: it has no
+    # kind and belongs in no generated table. But `known` doubles as "files that
+    # exist" for the link check below, and leaving it out made a reference to
+    # 00-overview.md read as broken -- the one file `check` separately insists
+    # must be there.
+    known = {n.name for n in notes} | {OVERVIEW}
 
     # A file named in `supersedes:` is SUPPOSED to be gone -- the note that
     # replaced it says so. Naming it afterwards is how the record of a

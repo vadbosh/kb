@@ -364,6 +364,29 @@ class Check(Base):
         res = self.kb("check", expect=3)
         self.assertIn("01-a.md links a missing file: 08-gone.md", res.stdout)
 
+    def test_a_note_may_point_at_the_overview(self):
+        """The overview is not a note, which once made a link to it "missing".
+
+        load_notes() skips 00-overview.md on purpose -- it has no kind and
+        belongs in no generated table -- and the same set was being used as
+        "files that exist". So the one file check separately insists must be
+        present was the one a note could not cite.
+        """
+        root = self.clean_kb()
+        note = root / "01-a.md"
+        note.write_text(note.read_text(encoding="utf-8") + "\nSee `00-overview.md`.\n",
+                        encoding="utf-8")
+        self.kb("sync", expect=0)
+        self.kb("check", expect=0)
+
+    def test_the_overview_may_point_at_itself(self):
+        root = self.clean_kb()
+        overview = root / "00-overview.md"
+        overview.write_text(
+            overview.read_text(encoding="utf-8") + "\nThis file is `00-overview.md`.\n",
+            encoding="utf-8")
+        self.kb("check", expect=0)
+
     def test_a_superseded_name_is_history_not_a_broken_link(self):
         root = self.clean_kb()
         self.write_note(root, "03-new.md", kind="decision",
