@@ -121,6 +121,80 @@ shipped_leaks() {
 	return $found
 }
 
+# Run the tool on a COPY of a live kb, in the order a session actually uses it.
+#
+# Every check above this line compares a record with a record. The unit tests
+# build their world per case, one command at a time -- and three of the four
+# releases on 2026-09-13 fixed a defect that needed neither: a directory with a
+# decision already taken, or a second command run after a first. Both were found
+# by hand, after shipping, on a real directory.
+#
+# `kb/01-code-map.md` has prescribed exactly this since 4.5.0 -- "потом руками,
+# на сломанной копии" -- and prose did not make it happen. Mechanism does.
+#
+# Nothing here touches the live notes: everything runs inside mktemp, against a
+# copy, with the registry redirected so the probe cannot register itself.
+smoke() {
+	local tmp proj kb out line rc=0
+	kb="$SRC/kb"
+	if [ ! -f "$kb/00-overview.md" ]; then
+		echo "  smoke:            no live kb at $kb — skipped"
+		return 0
+	fi
+	tmp="$(mktemp -d)"
+	proj="$tmp/proj"
+	mkdir -p "$proj"
+	cp -a "$kb" "$proj/kb"
+	# Backdate the copy, or the probe cannot reproduce what it is looking for.
+	# `verify` only calls work "ahead of the notes" past UNWRITTEN_HOURS, so a
+	# kb whose notes were written minutes ago can never produce that finding --
+	# the first version of this gate passed with the 4.16.3 defect put back,
+	# because the notes it copied were fresh. The defect surfaced originally on
+	# a stream whose notes were 94 hours old.
+	find "$proj/kb" -name '*.md' -exec touch -d '48 hours ago' {} +
+	git -C "$proj" init -q .
+	export KB_REGISTRY="$tmp/registry.txt"
+
+	# Step 1: the entry point, on notes that came with history.
+	if ! out="$(cd "$proj" && "$SRC/skills/kb/scripts/kb" route 2>&1)"; then
+		echo "  smoke:            route failed on a copy of the live kb"
+		while IFS= read -r line; do
+			echo "                    $line"
+		done <<<"$out"
+		rc=1
+	fi
+
+	# Step 2: verify must not count what route just wrote as work that outran
+	# the notes. Those files are newer than every note by construction, so
+	# without the exclusion this fires every single time (fixed in 4.16.3).
+	out="$(cd "$proj" && "$SRC/skills/kb/scripts/kb" verify 2>&1 || true)"
+	if printf '%s' "$out" | grep -q 'work went on'; then
+		echo "  smoke:            verify counts route's own files as work"
+		rc=1
+	fi
+
+	# Step 3: notes excluded, pointer not. Each half is defensible alone and
+	# only the pair is broken, which is why no single-command test finds it
+	# (fixed in 4.16.2).
+	(cd "$proj" && "$SRC/skills/kb/scripts/kb" local >/dev/null 2>&1) || true
+	out="$(cd "$proj" && "$SRC/skills/kb/scripts/kb" route 2>&1 || true)"
+	if ! printf '%s' "$out" | grep -q 'kept out of git'; then
+		echo "  smoke:            route stays silent on a committed pointer to excluded notes"
+		rc=1
+	fi
+
+	# Accepted warning, not an oversight: a recursive delete is the only way to
+	# drop a tree, and the validator flags the string rather than the target.
+	# Three things make it safe here and they are all checked: the path came
+	# from mktemp in this function, it is non-empty, and it is still a
+	# directory. `set -u` already rules out an unset expansion.
+	if [ -n "$tmp" ] && [ -d "$tmp" ]; then
+		rm -rf -- "$tmp"
+	fi
+	[ "$rc" -eq 0 ] && echo "  smoke:            the live sequence runs clean on a copy"
+	return "$rc"
+}
+
 check() {
 	local v problems=0
 	v="$(version)"
@@ -174,6 +248,7 @@ check() {
 	[ -n "$leaks" ] || echo "  shipped files:    nothing local named in them"
 
 	copies "$v" || problems=1
+	smoke || problems=1
 
 	[ "$problems" -eq 0 ] || return 3
 	if [ "$ahead" -gt 0 ]; then

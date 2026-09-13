@@ -29,6 +29,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import unittest
 from datetime import date, timedelta
 from pathlib import Path
@@ -1026,6 +1027,87 @@ class GitState(Base):
         self.assertNotIn("git:", self.kb("status").stdout)
         res = self.kb("local", expect=1)
         self.assertIn("not inside a git repository", res.stderr)
+
+
+# ── one fixture, commands in the order a session uses them ──────────────────
+
+class Sequence(Base):
+    """Every other case here builds a world for one command and asks it one
+    question. Three of the four releases on 2026-09-13 fixed a defect that
+    needed neither: a directory with a decision already taken, or a second
+    command run after a first. Both were found by hand, after shipping.
+
+    So this class runs the sequence instead: add, route, verify, local, route.
+    State carries from step to step, which is the only condition under which
+    those two defects exist at all.
+    """
+
+    def git(self, *argv):
+        return subprocess.run(
+            ["git", "-c", "user.email=t@t", "-c", "user.name=t", *argv],
+            cwd=str(self.proj), capture_output=True, text=True,
+            env={"HOME": str(self.home), "PATH": "/usr/bin:/bin"}, timeout=60)
+
+    def aged_kb(self, hours=48):
+        """A kb whose notes are not from this minute.
+
+        `verify` only calls work "ahead of the notes" past UNWRITTEN_HOURS, so
+        a fixture written a moment ago cannot produce that finding at all — the
+        first version of the release-time probe passed with the defect put
+        back, for exactly this reason.
+        """
+        root = self.make_kb()
+        self.fill_overview(root)
+        self.write_note(root, "01-now-2026-01-02.md", kind="state", title="now")
+        self.write_note(root, "02-why.md", kind="charter", title="why")
+        self.kb("sync", expect=0)
+        old = time.time() - hours * 3600
+        for f in root.glob("*.md"):
+            os.utime(f, (old, old))
+        return root
+
+    def test_route_then_verify_then_local_then_route(self):
+        self.git("init", "-q", ".")
+        self.aged_kb()
+
+        self.kb("route", expect=0)
+        after_route = self.kb("verify").stdout
+        # Step 1 → 2: the files route just wrote are newer than every note by
+        # construction, so without the exclusion this fires every time.
+        self.assertNotIn("work went on", after_route)
+
+        self.kb("local", expect=0)
+        after_local = self.kb("route", expect=0).stdout
+        # Step 3 → 4: notes excluded, pointer not. Each half is defensible
+        # alone; only the pair ships a promise a clone cannot keep.
+        self.assertIn("kept out of git", after_local)
+
+        # And the pair agreeing again silences it, rather than the finding
+        # being permanent once seen.
+        exclude = self.proj / ".git" / "info" / "exclude"
+        exclude.write_text(exclude.read_text(encoding="utf-8")
+                           + "/AGENTS.md\n/CLAUDE.md\n", encoding="utf-8")
+        self.assertNotIn("kept out of git", self.kb("route", expect=0).stdout)
+
+    def test_a_second_save_does_not_disturb_what_the_first_wrote(self):
+        self.aged_kb()
+        self.kb("route", expect=0)
+        agents = (self.proj / "AGENTS.md").read_text(encoding="utf-8")
+        self.kb("add", "later", "--kind", "recipe", "--title", "a trap", expect=0)
+        # The index moved; the entry point did not, until asked.
+        self.assertEqual((self.proj / "AGENTS.md").read_text(encoding="utf-8"),
+                         agents)
+        self.kb("route", expect=0)
+        self.assertNotEqual((self.proj / "AGENTS.md").read_text(encoding="utf-8"),
+                            agents)
+        # `add` leaves a skeleton, so the kb is legitimately not clean until
+        # the section is answered. Answering it is what makes `check` exit 0,
+        # and asserting that proves the sequence ends somewhere valid.
+        note = self.proj / "kb" / "03-later.md"
+        text = note.read_text(encoding="utf-8")
+        note.write_text(text[:text.index("<!-- kb:fill")] + "the trap and the fix\n",
+                        encoding="utf-8")
+        self.kb("check", expect=0)
 
 
 if __name__ == "__main__":

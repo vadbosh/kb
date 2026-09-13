@@ -18,6 +18,34 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.17.0
+
+- **`release.sh check` now runs the tool before calling a release agreed.**
+  Every check it had compared a record with a record; the unit tests build a
+  world per case, one command at a time. Three of the four releases on
+  2026-09-13 fixed a defect that needed neither — a directory with a decision
+  already taken, or a second command run after a first — and both were found by
+  hand, after shipping, on a real directory.
+
+  `smoke()` copies the live kb into `mktemp`, backdates it, makes a repository
+  of it and runs the sequence a session actually uses: `route`, `verify`,
+  `local`, `route`. It names the two regressions it exists to catch rather than
+  reporting a generic failure. Nothing touches the real notes: a copy, a
+  redirected registry, and a delete guarded on a path this function created.
+
+  The backdating is the part that earns its keep. The first version of this gate
+  **passed** with the 4.16.3 defect deliberately put back, because it copied
+  notes written minutes earlier and `verify` only calls work "ahead of the
+  notes" past `UNWRITTEN_HOURS`. A fixture in which the condition cannot arise
+  is a green run carrying no information. The defect had originally surfaced on
+  a stream whose notes were 94 hours old.
+
+- **A `Sequence` class in the tests, one fixture carried through several
+  commands.** Same reasoning, the other half of the gate: state has to survive
+  from step to step, since that is the only condition under which either defect
+  exists. It also pins the finding *clearing* — a pointer and its notes agreeing
+  again silences the report, rather than the warning being permanent once seen.
+
 ## 4.16.3
 
 - **`verify` counted `route`'s own output as work that had outrun the notes.**
