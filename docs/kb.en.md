@@ -177,10 +177,11 @@ The skill handles all of it:
 Nothing worth keeping → it says `Nothing durable for kb.` and creates no empty
 files.
 
-### The five kinds
+### The six kinds
 
 | kind | holds | superseded |
 |---|---|---|
+| `charter` | why the stream exists, its boundaries, what is deliberately not done | no — edited in place, one per kb |
 | `state` | snapshot on a date: what is done, what is open | yes, by a later date |
 | `plan` | what is planned, in what order | yes, when executed |
 | `decision` | a choice and **why** | no — only `--supersedes` |
@@ -267,6 +268,71 @@ what `kb check` catches (`index table is stale`, exit 3). Inside `/kb save` both
 
 ---
 
+## The entry point at the project root
+
+Everything above assumes somebody runs `kb brief`. Nobody who does not already
+know the notes exist ever does — which makes a kb invisible to the reader who
+needs it most: a fresh session, a different assistant, a new person. What every
+agent does read is the file at the root of the repository.
+
+```
+kb route
+```
+
+writes `AGENTS.md` there, pointing at the notes, the charter and the current
+snapshot, and a `CLAUDE.md` containing one line: `@AGENTS.md`.
+
+`/kb save` runs it unasked exactly once — when it creates `kb/` in a project
+whose root has no `AGENTS.md`. Nothing of anyone's is touched in that case, and
+`kb add` names the condition in its own output, so the instruction arrives with
+the command rather than depending on prose being remembered. Where an
+`AGENTS.md` already exists it is offered, not run.
+
+**Two files, one source.** Claude Code reads `CLAUDE.md` and **not**
+`AGENTS.md`; Codex and Opencode read `AGENTS.md`. So the content lives in
+`AGENTS.md` and `CLAUDE.md` imports it — the pattern Anthropic documents for
+exactly this case. Writing only the file of whichever assistant is running would
+break on the move that makes this worth doing at all: start in one tool,
+continue in another. A symlink works too, but needs Administrator or Developer
+Mode on Windows.
+
+**What is generated and what is yours.** The block between the markers holds
+only what kb can derive. Your check commands and your definition of done sit
+*outside* the markers — kb does not know them, and a placeholder inside the
+block would be erased on the next run. An existing `AGENTS.md` without markers
+is refused rather than rewritten; an existing `CLAUDE.md` without the import is
+reported, not edited.
+
+**Length is a running cost here, unlike a note.** A note is read when someone
+opens it, so `kb check` treats 400 lines as advisory. This file is expanded into
+the context window at the start of every session and paid for on every turn, so
+the 200-line rule for always-loaded instruction files applies — measured as the
+sum of both files, since the import brings `AGENTS.md` in alongside `CLAUDE.md`.
+Over budget, `route` and `verify` say so. Neither trims anything: what overruns
+is prose a human wrote.
+
+---
+
+## Versioned, or only on this machine
+
+Notes inside a git repository are committed by default — nobody chooses that,
+`git add -A` does. The question is asked once, when the directory is created,
+because after that it never arises again:
+
+```
+kb local          # .git/info/exclude — the notes stay here
+                  # or commit them, and they ship with the project
+```
+
+`.git/info/exclude` and not `.gitignore`: the latter is itself committed, so it
+imposes one person's choice on everyone who clones the repository.
+
+Nothing is stored about the answer — `kb status` asks git. A stored flag would
+be a second copy of a fact git already owns, and the two part company the first
+time someone edits an ignore rule.
+
+---
+
 ## CLI reference
 
 | Command | What |
@@ -283,6 +349,8 @@ what `kb check` catches (`index table is stale`, exit 3). Inside `/kb save` both
 | `kb init [--title ...]` | index skeleton only |
 | `kb adopt [--apply] [--in-place]` | migrate an existing hand-made directory |
 | `kb hook --install` | git pre-commit that refuses a commit on exit 4 |
+| `kb route` | `AGENTS.md` at the project root + a `CLAUDE.md` that imports it |
+| `kb local [--dry-run]` | keep the notes out of git (`.git/info/exclude`) |
 | `--dir X` | operate on X instead of `./kb` |
 
 `kb check` exits 3 on drift and **4 when a credential is found in a note**. What
@@ -342,6 +410,7 @@ unchecked. Deliberate — at the opposite ratio the report soon stops being read
 |---|---|
 | `recipe` | 120 days — goes stale as the tooling moves |
 | `reference` | 180 days |
+| `charter` | 365 days — direction is meant to outlive a release; flagging it sooner would train you to skip the whole report |
 | `decision` | **never checked** — why a choice was made stays true |
 | `state`, `plan` | not checked — supersession already covers them |
 

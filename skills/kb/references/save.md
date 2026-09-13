@@ -95,12 +95,13 @@ this stream's `kb/` is not this stream's record, wherever it sits.
 Genuinely nothing durable — no findings, no decisions, no traps — after step 2:
 say `Nothing durable for kb.` and create nothing.
 
-## The five kinds
+## The six kinds
 
 Does a newer file **replace** this one, or is it **edited in place**?
 
 | kind | holds | ages by |
 |---|---|---|
+| `charter` | why this stream exists, its boundaries, what is deliberately not done | edited in place |
 | `state` | a snapshot on a date: what is done, what is open | superseded by a later date |
 | `plan` | what is planned, in what order | superseded when executed |
 | `decision` | a choice and **why**; alternatives rejected | never — `--supersedes` only |
@@ -110,6 +111,14 @@ Does a newer file **replace** this one, or is it **edited in place**?
 `state` needs a date in its filename; `kb add state --kind state` adds today's.
 Which one is current is **computed**, and earlier ones are marked rather than
 deleted — each still describes its own date truthfully.
+
+A `charter` is the one a snapshot cannot stand in for. A `state` says where the
+work stands and a `plan` says what comes next; neither says what the work is
+*for* or what it will not do, so a rejected direction gets proposed again by
+whoever arrives next. There is one per kb — `add` refuses a second, because two
+charters split the answer to "what are we building" with nothing to pick
+between them. Wrong direction is reversed by a `decision` that says why, and
+then the charter is edited to match.
 
 A `decision` is never rewritten. Reversing one means a new `decision` that
 supersedes it: the reasoning behind the old choice is usually what someone needs
@@ -165,6 +174,22 @@ the context is whole. Then there is never more than one.
 - **No kb yet** → create it **where the session is running**, and say so in the
   report. `./kb` is the answer; the directory was chosen when the session was
   started there.
+
+**A kb created this turn inside a git repository needs one question, once.** `kb`
+prints `not ignored — committed by default` when it scaffolds; that default was
+chosen by `git add -A`, not by anybody. Put it to the human with the harness's
+own prompt and do not decide it yourself — it governs whether private working
+notes reach a shared remote:
+
+- **committed** — the notes ship with the project, the team reads them. Nothing
+  to run.
+- **this machine only** — `kb local` writes `.git/info/exclude`. Not
+  `.gitignore`, which is itself committed and would impose the choice on everyone
+  who clones.
+
+Never asked again: the branch is only reachable while `kb/` does not exist. What
+the answer was is readable afterwards from `kb status`, which asks git rather
+than a stored flag.
 
 Do not deliberate about this. The subject of the work does not decide where its
 notes live — the working directory does, and reasoning past that is how notes
@@ -304,6 +329,39 @@ scan covered — a short generic password in a sentence is caught by nothing.
 Never write a sample credential into a note to test the scan: a correctly
 formatted key is a real finding to every tool that later touches the repository,
 fake or not.
+
+## Offer `kb route` when the notes are new, or when nothing points at them
+
+Everything in this file assumes someone will run `kb brief`. Nobody who does not
+already know the notes exist ever does — so a kb with no pointer from the project
+root is invisible to the next fresh session, to a different assistant, and to a
+new person.
+
+```
+kb route      AGENTS.md at the project root + a one-line CLAUDE.md importing it
+```
+
+**Run it without asking when the kb was created this turn and the project root
+has no `AGENTS.md`.** `kb add` says so in its own output when it scaffolds, so
+the condition arrives with the command you already ran. Both files are new in
+that case, nothing of anyone's is touched, and a kb whose first session ends with
+no pointer to it is one the next session walks past. Say in the report that you
+wrote them.
+
+**Otherwise offer it, one line, and wait.** An `AGENTS.md` that already exists
+belongs to someone, and what happens next is a conversation rather than a write:
+without `kb:begin`/`kb:end` markers `route` refuses outright rather than
+rewriting the file, and an existing `CLAUDE.md` is never edited at all — it
+prints the `@AGENTS.md` line to add. Both are reports to relay.
+
+Either way the sections it leaves behind — the check commands, the definition of
+done — are the human's to fill. Name them in the report; `verify` will keep
+asking until they are answered.
+
+**If it warns about size, relay that too.** Over 200 lines across the two files
+is a running cost: unlike a note, they are expanded into context at every session
+start. What overruns is human prose — say what could move into a note, do not
+trim it yourself.
 
 ## Run `kb verify` if this session moved or renamed anything
 

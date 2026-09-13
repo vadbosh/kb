@@ -18,6 +18,74 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.16.0
+
+- **`charter`, a sixth kind.** A `state` says where the work stands and a `plan`
+  says what comes next. Neither says what the work is *for*, where its boundaries
+  are, or what is deliberately not being built — so a direction rejected months
+  ago gets proposed again by whoever arrives next, and the reasoning has to be
+  rebuilt from memory every time. One per kb: `add` refuses a second, because two
+  charters split the answer to "what are we building" and, unlike two snapshots,
+  carry no date to pick a winner by. `check` reports a pair written by hand.
+  Printed by `brief` *before* the snapshot, on the grounds that a list of what is
+  done and open means nothing to a reader who does not yet know what it is for.
+  Re-check age 365 days — direction is meant to outlive a release, and flagging
+  it sooner would train the reader to skip the whole report.
+
+- **`kb route` — an entry point at the project root.** Everything in this tool
+  assumed somebody would run `kb brief`. Nobody who does not already know the
+  notes exist ever does, which made a kb invisible to exactly the reader who
+  needs it most: a fresh session, another assistant, a new person. What every
+  agent does read is the file at the root of the repository.
+
+  Two files, one source. Claude Code reads `CLAUDE.md` and *not* `AGENTS.md`
+  (verified against Anthropic's own memory documentation, which contradicts the
+  common claim that it reads both); Codex and Opencode read `AGENTS.md`. So the
+  content lives in `AGENTS.md` and `CLAUDE.md` holds one line, `@AGENTS.md` —
+  the pattern Anthropic documents for this case. Detecting which assistant is
+  running and writing only its file was considered and dropped: it breaks on the
+  move that makes the feature worth having, which is starting in one tool and
+  continuing in another. A symlink was dropped for needing Administrator or
+  Developer Mode on Windows, where this ships an installer.
+
+  Only what kb can derive goes between the markers. Check commands and the
+  definition of done sit outside them, because kb does not know them and a
+  placeholder inside the block would be erased on the next run. An existing
+  `AGENTS.md` with no markers is refused rather than rewritten; an existing
+  `CLAUDE.md` is never edited, only told what line to add. Those placeholders
+  are now a `verify` finding too: `route` names them in the turn that wrote the
+  file and nobody sees that message again, so an entry point promising an agent
+  a way to check its work and holding a comment instead would rot in silence.
+
+  `/kb save` runs it unasked in the one case where nothing can be damaged — the
+  kb was created this turn and the project root has no `AGENTS.md`. Elsewhere it
+  is offered, because that file belongs to somebody. The condition is announced
+  by `kb add` in its own output rather than asked for in the skill's prose: four
+  rewrites of an instruction in this repository produced four different failures,
+  and a line in output the caller already reads does not have that problem.
+
+- **A context budget on that entry point, advisory both ways.** Note thresholds
+  are generous on purpose: a note is read when someone opens it, so length costs
+  nothing until then. This file is the opposite — expanded into the context
+  window at every session start and paid for on every request — so the 200-line
+  rule for always-loaded instruction files applies to it, measured as the sum of
+  both files, since the import brings one in alongside the other. `route` and
+  `verify` report the overrun. Neither trims: what overruns is prose a human
+  wrote, and silently shortening it is the edit this tool refuses everywhere
+  else. Counted with `splitlines()` rather than the note counter's
+  `count("\n") + 1`, which overstates a newline-terminated file by one — nobody
+  notices that at a 400-line advisory and everybody would at 200.
+
+- **`kb local`, and the question that precedes it.** Notes created inside a git
+  repository are committed by default, and nobody chooses that — `git add -A`
+  does. Scaffolding a kb now says so once, at the only moment the question can
+  arise, and `kb local` writes `.git/info/exclude`. Not `.gitignore`: that file
+  is itself committed, so it imposes one person's choice on everyone who clones.
+  Nothing is stored about the answer — `kb status` asks git, because a stored
+  flag is a second copy of a fact git already owns and the two part company at
+  the first edit of an ignore rule. Refused once the notes are tracked, where an
+  exclude rule would report success and change nothing.
+
 ## 4.15.4
 
 - A note could not cite the overview. `load_notes()` skips `00-overview.md` on

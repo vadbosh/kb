@@ -812,5 +812,185 @@ class Parsing(Base):
         self.assertEqual(kb_cli.checkable_paths(text), {"/usr/share/doc"})
 
 
+# ── one direction per stream ────────────────────────────────────────────────
+
+class Charter(Base):
+    def test_a_second_charter_is_refused(self):
+        self.make_kb()
+        self.kb("add", "why", "--kind", "charter", "--title", "why we build it",
+                expect=0)
+        res = self.kb("add", "why2", "--kind", "charter", "--title", "other way",
+                      expect=1)
+        self.assertIn("already the charter", res.stderr)
+
+    def test_two_hand_written_charters_are_a_finding(self):
+        root = self.make_kb()
+        self.fill_overview(root)
+        self.write_note(root, "01-a.md", kind="charter", title="one direction")
+        self.write_note(root, "02-b.md", kind="charter", title="another")
+        self.kb("sync", expect=0)
+        res = self.kb("check", expect=3)
+        self.assertIn("2 charters", res.stdout)
+
+    def test_brief_prints_the_charter_before_the_snapshot(self):
+        root = self.make_kb()
+        self.fill_overview(root)
+        self.write_note(root, "01-now-2026-01-02.md", kind="state",
+                        title="where it stands")
+        self.write_note(root, "02-why.md", kind="charter", title="why it exists")
+        self.kb("sync", expect=0)
+        out = self.kb("brief", expect=0).stdout
+        # A list of what is done means nothing before the reader knows what the
+        # work is for, so the order is the point, not the presence.
+        self.assertLess(out.index("02-why.md ─"), out.index("01-now-2026-01-02.md ─"))
+
+
+# ── the entry point at the project root ─────────────────────────────────────
+
+class Route(Base):
+    def test_it_writes_both_files_with_the_content_in_only_one(self):
+        self.make_kb()
+        self.kb("route", expect=0)
+        agents = (self.proj / "AGENTS.md").read_text(encoding="utf-8")
+        self.assertIn("kb brief", agents)
+        # Claude Code reads CLAUDE.md and not AGENTS.md, so both must exist --
+        # but a second copy of the text is what goes stale, hence the import.
+        self.assertEqual((self.proj / "CLAUDE.md").read_text(encoding="utf-8"),
+                         "@AGENTS.md\n")
+
+    def test_it_names_the_charter_and_the_current_snapshot(self):
+        root = self.make_kb()
+        self.write_note(root, "01-why.md", kind="charter", title="why")
+        self.write_note(root, "02-now-2026-01-02.md", kind="state", title="now")
+        self.kb("route", expect=0)
+        agents = (self.proj / "AGENTS.md").read_text(encoding="utf-8")
+        self.assertIn("kb/01-why.md", agents)
+        self.assertIn("kb/02-now-2026-01-02.md", agents)
+
+    def test_prose_outside_the_markers_survives_a_rewrite(self):
+        self.make_kb()
+        (self.proj / "AGENTS.md").write_text(
+            "# mine\n\nmy rule\n\n<!-- kb:begin -->\n<!-- kb:end -->\n\nafter\n",
+            encoding="utf-8")
+        self.kb("route", expect=0)
+        text = (self.proj / "AGENTS.md").read_text(encoding="utf-8")
+        self.assertIn("my rule", text)
+        self.assertIn("after", text)
+        self.assertIn("kb brief", text)
+
+    def test_a_foreign_file_without_markers_is_refused(self):
+        self.make_kb()
+        (self.proj / "AGENTS.md").write_text("# hand written\n", encoding="utf-8")
+        res = self.kb("route", expect=1)
+        self.assertIn("no managed block", res.stderr)
+        self.assertEqual((self.proj / "AGENTS.md").read_text(encoding="utf-8"),
+                         "# hand written\n")
+
+    def test_an_existing_claude_file_is_advised_not_edited(self):
+        self.make_kb()
+        (self.proj / "CLAUDE.md").write_text("# mine\n", encoding="utf-8")
+        res = self.kb("route", expect=0)
+        self.assertIn("@AGENTS.md", res.stdout)
+        self.assertEqual((self.proj / "CLAUDE.md").read_text(encoding="utf-8"),
+                         "# mine\n")
+
+    def test_an_oversized_entry_point_is_reported_by_route_and_verify(self):
+        self.make_kb()
+        self.kb("route", expect=0)
+        agents = self.proj / "AGENTS.md"
+        agents.write_text(agents.read_text(encoding="utf-8")
+                          + "\n".join(f"line {i}" for i in range(250)) + "\n",
+                          encoding="utf-8")
+        # Not a note: this is expanded into context at every session start, so
+        # length is a running cost and the 200-line rule applies to it.
+        self.assertIn("reach the context window", self.kb("route", expect=0).stdout)
+        self.assertIn("every session", self.kb("verify", expect=3).stdout)
+
+    def test_scaffolding_says_the_project_root_has_no_pointer(self):
+        # The condition for the automatic `route` arrives in the output of the
+        # command the caller already ran, not in prose it has to remember.
+        res = self.kb("add", "a", "--kind", "reference", "--title", "a", expect=0)
+        self.assertIn("kb route", res.stderr)
+
+    def test_that_note_is_absent_when_an_entry_point_exists(self):
+        (self.proj / "AGENTS.md").write_text("# mine\n", encoding="utf-8")
+        res = self.kb("add", "a", "--kind", "reference", "--title", "a", expect=0)
+        self.assertNotIn("kb route", res.stderr)
+
+    def test_verify_reports_entry_point_slots_left_empty(self):
+        self.make_kb()
+        self.kb("route", expect=0)
+        # `route` says this once, in the turn that wrote the file, and nobody
+        # sees that message again.
+        res = self.kb("verify", expect=3)
+        self.assertIn("empty sections", res.stdout)
+        agents = self.proj / "AGENTS.md"
+        text = agents.read_text(encoding="utf-8")
+        while "<!-- kb:fill" in text:
+            start = text.index("<!-- kb:fill")
+            text = text[:start] + "answered" + text[text.index("-->", start) + 3:]
+        agents.write_text(text, encoding="utf-8")
+        self.assertNotIn("empty sections", self.kb("verify").stdout)
+
+    def test_the_reported_size_is_the_one_wc_would_print(self):
+        self.make_kb()
+        self.kb("route", expect=0)
+        expected = sum(len((self.proj / n).read_text(encoding="utf-8").splitlines())
+                       for n in ("AGENTS.md", "CLAUDE.md"))
+        self.assertEqual(kb_cli.route_weight(self.proj)[0], expected)
+
+    def test_running_it_twice_changes_nothing(self):
+        self.make_kb()
+        self.kb("route", expect=0)
+        first = (self.proj / "AGENTS.md").read_text(encoding="utf-8")
+        res = self.kb("route", expect=0)
+        self.assertIn("already current", res.stdout)
+        self.assertEqual((self.proj / "AGENTS.md").read_text(encoding="utf-8"),
+                         first)
+
+
+# ── versioned, local, or nobody has chosen ──────────────────────────────────
+
+class GitState(Base):
+    def git(self, *argv, cwd=None):
+        return subprocess.run(
+            ["git", "-c", "user.email=t@t", "-c", "user.name=t", *argv],
+            cwd=str(cwd or self.proj), capture_output=True, text=True,
+            env={"HOME": str(self.home), "PATH": "/usr/bin:/bin"}, timeout=60)
+
+    def test_a_new_kb_in_a_repo_says_the_choice_is_open(self):
+        self.git("init", "-q", ".")
+        res = self.kb("add", "a", "--kind", "reference", "--title", "a", expect=0)
+        self.assertIn("not ignored", res.stderr)
+        self.assertIn("neither tracked nor ignored", self.kb("status").stdout)
+
+    def test_local_excludes_the_notes_and_is_idempotent(self):
+        self.git("init", "-q", ".")
+        self.make_kb()
+        self.kb("local", expect=0)
+        exclude = (self.proj / ".git" / "info" / "exclude").read_text(encoding="utf-8")
+        self.assertIn("/kb/", exclude.splitlines())
+        self.assertIn("git: excluded", self.kb("status").stdout)
+        res = self.kb("local", expect=0)
+        self.assertIn("already ignored", res.stdout)
+
+    def test_local_refuses_once_the_notes_are_tracked(self):
+        self.git("init", "-q", ".")
+        self.make_kb()
+        self.git("add", "-A")
+        self.git("commit", "-qm", "notes")
+        res = self.kb("local", expect=1)
+        # An exclude rule does not apply to a tracked file, so writing one would
+        # print success and change nothing.
+        self.assertIn("already tracked", res.stderr)
+        self.assertIn("git: tracked", self.kb("status").stdout)
+
+    def test_outside_a_repository_there_is_no_question(self):
+        self.make_kb()
+        self.assertNotIn("git:", self.kb("status").stdout)
+        res = self.kb("local", expect=1)
+        self.assertIn("not inside a git repository", res.stderr)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2 if "-v" in sys.argv else 1)

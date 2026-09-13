@@ -90,6 +90,7 @@ doubting both. kb makes you say which it is, in the `kind` field.
 
 | kind | holds | how it ages |
 |---|---|---|
+| `charter` | why this exists, its boundaries, what is *deliberately not* built | edited in place — one per kb |
 | `state` | a snapshot on a date | **superseded** by a later one |
 | `plan` | what is planned, in what order | superseded once executed |
 | `decision` | a choice and *why*; rejected alternatives | **never expires** — a historical fact |
@@ -225,6 +226,54 @@ from each `# H1` — the phrasing a human wrote for a reader answers "what do I
 need", a document title does not, and losing it would defeat the point. Every
 touched file is backed up first.
 
+### Making the notes findable without kb
+
+Everything above assumes somebody runs `/kb restore`. Nobody who does not already
+know the notes exist ever does — so a fresh session, a different assistant or a
+new person walks past a kb without seeing it. What every agent *does* read is the
+file at the root of the repository.
+
+```bash
+kb route
+```
+
+writes `AGENTS.md` there — pointing at the notes, the charter and the current
+snapshot — and a `CLAUDE.md` holding one line, `@AGENTS.md`.
+
+**`/kb save` runs this for you the first time**, when it creates `kb/` in a
+project whose root has no `AGENTS.md`: both files are new, nothing of yours is
+touched, and a kb whose first session leaves no pointer to it is one the next
+session walks past. Where an `AGENTS.md` already exists it is offered instead —
+that file is someone's, and what happens next is a conversation.
+
+Two files, one source. Claude Code reads `CLAUDE.md` and **not** `AGENTS.md`;
+Codex and Opencode read `AGENTS.md`. Importing rather than duplicating is what
+Anthropic documents for this case, and it survives the move that makes the whole
+thing worth doing: start in one tool, continue in another.
+
+Your check commands and your definition of done go *outside* the markers, where
+nothing regenerates them. kb refuses an `AGENTS.md` that has no markers instead
+of rewriting it, and never edits an existing `CLAUDE.md` — it prints the line to
+add.
+
+Unlike a note, these two are expanded into the context window at every session
+start, so `route` and `verify` report when their combined length passes 200
+lines. Neither trims anything: what overruns is prose you wrote.
+
+### Versioned, or only on this machine
+
+Notes inside a git repository are committed by default — `git add -A` decides
+that, nobody else. kb says so once, when it creates the directory:
+
+```bash
+kb local          # .git/info/exclude — the notes stay here
+                  # or commit them, and they ship with the project
+```
+
+`.git/info/exclude` rather than `.gitignore`, because `.gitignore` is itself
+committed and would impose one person's choice on everyone who clones. Nothing
+records the answer — `kb status` asks git.
+
 ---
 
 ## What it deliberately does not do
@@ -279,6 +328,8 @@ CLI also works on its own if you prefer driving it by hand.
 | `kb streams [--sessions N]` | which directories this session touched, read from the transcript |
 | `kb adopt [--apply] [--in-place]` | migrate a hand-made notes directory |
 | `kb hook --install` | git pre-commit that refuses a commit on exit 4 |
+| `kb route` | `AGENTS.md` at the project root so agents find the notes without kb; `CLAUDE.md` imports it |
+| `kb local [--dry-run]` | keep the notes on this machine (`.git/info/exclude`) |
 | `--dir X` | operate on X instead of `./kb` |
 
 ---

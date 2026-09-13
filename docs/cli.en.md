@@ -304,6 +304,76 @@ done
 
 ---
 
+## The entry point, and what `route` refuses
+
+`kb route` writes two files one level above the notes — at the project root, not
+inside `kb/`:
+
+```bash
+kb route
+```
+
+| File | What lands in it |
+|---|---|
+| `AGENTS.md` | the pointer to the notes, the charter, the current snapshot — inside `kb:begin`/`kb:end` markers. Read by Codex and Opencode |
+| `CLAUDE.md` | one line, `@AGENTS.md`. Claude Code reads this file and not the other one |
+
+Re-running it rewrites **only** the managed block, exactly as `kb sync` does for
+the index. Everything you wrote around it survives byte for byte, which is why
+the check commands and the definition of done belong outside the markers. They
+are left as `kb:fill` comments on the first run.
+
+Three refusals, all of them reports rather than failures to work around:
+
+| Situation | What happens | Exit |
+|---|---|---|
+| `AGENTS.md` exists without markers | refused, with the two lines to add printed | 1 |
+| `CLAUDE.md` exists without the import | left alone, the line to add is printed | 0 |
+| the two together exceed 200 lines | written, then reported as a context cost | 0 |
+
+That last one is the opposite of the note thresholds. A note is read when
+somebody opens it, so 400 lines is advisory and cheap. These two are expanded
+into the context window at every session start and paid for on every request, so
+the 200-line rule for always-loaded instruction files applies — to the **sum**,
+because the import brings one in alongside the other. `kb verify` repeats the
+finding afterwards, so it does not depend on anyone re-running `route`.
+
+Nothing is trimmed automatically. The generated block is some fifteen lines; what
+overruns it is prose a human wrote, and shortening that silently is the one edit
+this tool refuses everywhere.
+
+---
+
+## Notes in a repository: committed, or only here
+
+Notes created inside a git repository are committed by default, because
+`git add -A` sweeps them in. `kb add` says so once, when it scaffolds the
+directory, and never again — after that the directory exists and the question
+cannot arise.
+
+```bash
+kb local              # append /kb/ to .git/info/exclude
+kb local --dry-run    # print what would happen, write nothing
+```
+
+`.git/info/exclude` is per-checkout; `.gitignore` is committed and would impose
+the choice on everyone who clones. The pattern is written relative to the
+repository root, so a kb at `sub/kb` is excluded as `/sub/kb/`.
+
+| Situation | What happens | Exit |
+|---|---|---|
+| not tracked, not ignored | the pattern is appended | 0 |
+| already ignored | nothing, and it says so | 0 |
+| already tracked | refused — an exclude rule does not apply to a tracked file and would report a success that changes nothing | 1 |
+| not inside a repository | refused, nothing to exclude from | 1 |
+
+The answer is never stored. `kb status` prints `git: tracked`, `git: excluded` or
+`git: neither tracked nor ignored` by asking git, because a stored flag is a
+second copy of something git already owns and the two part company at the first
+edit of an ignore rule.
+
+---
+
 ## Command reference
 
 | Command | What it does |
@@ -320,6 +390,8 @@ done
 | `kb init [--title ...]` | the index skeleton alone |
 | `kb adopt [--apply] [--in-place]` | retrofit hand-written notes: numbers unnumbered `.md`, adds front matter, builds the index |
 | `kb hook` | install a git pre-commit that refuses a commit holding a credential |
+| `kb route` | write `AGENTS.md` at the project root pointing at the notes, plus a one-line `CLAUDE.md` that imports it |
+| `kb local [--dry-run]` | keep the notes out of git, via `.git/info/exclude` |
 
 Flags: `--dir <path>` anywhere, `--supersedes <file>` on `add`, `--no-sync` on
 `add` to skip the reindex.
