@@ -1066,6 +1066,30 @@ class Sequence(Base):
             os.utime(f, (old, old))
         return root
 
+    def test_a_hand_edited_entry_point_is_a_check_finding(self):
+        self.aged_kb()
+        self.kb("route", expect=0)
+        agents = self.proj / "AGENTS.md"
+        # `sync` keeps it current now, so drift means sync never ran: front
+        # matter edited by hand, or the block itself.
+        agents.write_text(
+            agents.read_text(encoding="utf-8").replace("2 of them", "99 of them"),
+            encoding="utf-8")
+        res = self.kb("check", expect=3)
+        self.assertIn("entry point at the project root", res.stdout)
+        self.kb("sync", expect=0)
+        self.assertIn("2 of them", agents.read_text(encoding="utf-8"))
+
+    def test_a_foreign_file_at_the_project_root_is_never_touched(self):
+        self.aged_kb()
+        mine = self.proj / "AGENTS.md"
+        mine.write_text("# mine, no markers\n", encoding="utf-8")
+        # No markers means kb did not write it, so sync has nothing to refresh
+        # and check has nothing to compare — silence, not a finding.
+        self.kb("add", "later", "--kind", "recipe", "--title", "a trap", expect=0)
+        self.assertEqual(mine.read_text(encoding="utf-8"), "# mine, no markers\n")
+        self.assertNotIn("entry point", self.kb("check").stdout)
+
     def test_route_then_verify_then_local_then_route(self):
         self.git("init", "-q", ".")
         self.aged_kb()
@@ -1089,25 +1113,26 @@ class Sequence(Base):
                            + "/AGENTS.md\n/CLAUDE.md\n", encoding="utf-8")
         self.assertNotIn("kept out of git", self.kb("route", expect=0).stdout)
 
-    def test_a_second_save_does_not_disturb_what_the_first_wrote(self):
+    def test_a_second_save_carries_the_entry_point_with_it(self):
         self.aged_kb()
         self.kb("route", expect=0)
-        agents = (self.proj / "AGENTS.md").read_text(encoding="utf-8")
-        self.kb("add", "later", "--kind", "recipe", "--title", "a trap", expect=0)
-        # The index moved; the entry point did not, until asked.
-        self.assertEqual((self.proj / "AGENTS.md").read_text(encoding="utf-8"),
-                         agents)
-        self.kb("route", expect=0)
-        self.assertNotEqual((self.proj / "AGENTS.md").read_text(encoding="utf-8"),
-                            agents)
-        # `add` leaves a skeleton, so the kb is legitimately not clean until
-        # the section is answered. Answering it is what makes `check` exit 0,
-        # and asserting that proves the sequence ends somewhere valid.
-        note = self.proj / "kb" / "03-later.md"
-        text = note.read_text(encoding="utf-8")
-        note.write_text(text[:text.index("<!-- kb:fill")] + "the trap and the fix\n",
-                        encoding="utf-8")
-        self.kb("check", expect=0)
+        agents = self.proj / "AGENTS.md"
+        before = agents.read_text(encoding="utf-8")
+        self.assertIn("2 of them", before)
+
+        self.kb("add", "later", "--kind", "state", "--title", "newer", expect=0)
+        after = agents.read_text(encoding="utf-8")
+        # The entry point carries the same derived facts as the index. Left to
+        # an explicit `route` it named a superseded snapshot for as long as
+        # nobody ran one -- and it is the copy a fresh session reads first.
+        self.assertIn("3 of them", after)
+        self.assertNotIn(before.split("<!-- kb:begin")[1], after)
+        # Prose outside the markers is still nobody's business but the human's.
+        self.assertEqual(before.split("<!-- kb:begin")[0],
+                         after.split("<!-- kb:begin")[0])
+        # And the snapshot it names is the new one, not the one it was written
+        # with — the whole point of refreshing rather than reporting.
+        self.assertNotIn("01-now-2026-01-02.md", after)
 
 
 if __name__ == "__main__":

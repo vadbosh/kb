@@ -251,6 +251,10 @@ Codex and Opencode read `AGENTS.md`. Importing rather than duplicating is what
 Anthropic documents for this case, and it survives the move that makes the whole
 thing worth doing: start in one tool, continue in another.
 
+After that it keeps itself current: `kb sync` refreshes the block, so every
+`/kb save` carries it along rather than leaving it naming a snapshot two saves
+old.
+
 Your check commands and your definition of done go *outside* the markers, where
 nothing regenerates them. kb refuses an `AGENTS.md` that has no markers instead
 of rewriting it, and never edits an existing `CLAUDE.md` — it prints the line to

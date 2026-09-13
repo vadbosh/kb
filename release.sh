@@ -88,7 +88,7 @@ copies() {
 # is not a word list: it asks whether the thing named exists HERE and is not
 # part of what gets installed.
 shipped_leaks() {
-	local f found=0 tok base
+	local f found=0 tok
 	for f in "$SRC"/skills/kb/SKILL.md "$SRC"/skills/kb/references/*.md; do
 		# A path into this checkout. Invented examples do not resolve here,
 		# which is exactly what makes them safe to print.
@@ -96,7 +96,11 @@ shipped_leaks() {
 			[ -n "$tok" ] || continue
 			echo "    ${f#"$SRC"/}: $tok — a path into this checkout"
 			found=1
-		done < <(grep -oE "$SRC[A-Za-z0-9._/-]*" "$f" || true)
+		# Braces are load-bearing: `$SRC[...]` is how an array index is
+		# written, so shellcheck reads this as one (SC1087). It happens to
+		# work -- SRC is a plain string, the brackets stay literal -- but a
+		# construct that only works by accident is one refactor from not.
+		done < <(grep -oE "${SRC}[A-Za-z0-9._/-]*" "$f" || true)
 
 		# A file of ours that is NOT installed: the reader cannot run it.
 		# Written with the suffix or the slash it always carries -- a bare

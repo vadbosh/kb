@@ -323,6 +323,14 @@ the index. Everything you wrote around it survives byte for byte, which is why
 the check commands and the definition of done belong outside the markers. They
 are left as `kb:fill` comments on the first run.
 
+**`kb sync` refreshes that block too**, so `kb add` — and therefore every save —
+carries it along. The block holds the same derived facts as the index: how many
+notes there are and which snapshot is current. Left to an explicit `route` it
+went on naming a superseded snapshot for as long as nobody ran one, and that is
+the copy a fresh session reads first. Edited by hand, or left behind because
+`sync` never ran, it becomes a `check` finding — the same one a stale index
+table gets.
+
 Three refusals, all of them reports rather than failures to work around:
 
 | Situation | What happens | Exit |

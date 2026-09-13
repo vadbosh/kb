@@ -18,6 +18,35 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.18.0
+
+- **The entry point kept itself up to date with nothing.** `kb add` rebuilt the
+  index inside `kb/` and left `AGENTS.md` at the project root naming a snapshot
+  that a later save had superseded, with a note count to match. Nothing reported
+  it: every staleness check kb had looked inside the notes directory, and this
+  file sits outside it. The one copy of those facts a fresh session reads first
+  was the one copy allowed to rot.
+
+  `kb sync` now refreshes that block, so `kb add` and therefore every save carry
+  it along — the same treatment the index has always had, for the same derived
+  facts. Only between the markers, and only when the markers are there: a file
+  at the project root that kb did not write is still never touched, by this or
+  anything else.
+
+  Drift reaching `check` now means `sync` was not run — front matter edited by
+  hand, or the block itself — and it reads as the finding it is, worded like the
+  stale index table it mirrors.
+
+- `shipped_leaks()` looked for a path into this checkout with `"$SRC[...]"`,
+  which is how an array index is written, so shellcheck read it as one (SC1087,
+  its only error-level finding here). It worked by accident — `SRC` is a plain
+  string and the brackets stayed literal — and a construct that only works by
+  accident is one refactor away from not. Braces, and an unused `base` dropped
+  from the same function. The detector was re-exercised against both kinds of
+  planted leak, a checkout path and a file that never installs, since a fix
+  inside a check that is not re-run on broken input is not a verified fix.
+  `install.sh` was validated at the same time and is clean outright.
+
 ## 4.17.0
 
 - **`release.sh check` now runs the tool before calling a release agreed.**

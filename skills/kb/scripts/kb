@@ -927,6 +927,23 @@ def cmd_add(args) -> int:
     return 0
 
 
+def route_drift(root: Path, notes: list[Note]) -> tuple[Path, str] | None:
+    """The entry point's generated block and what it should say, when it differs.
+
+    None covers three cases that are not drift: no entry point was ever written,
+    it is a file kb does not manage (no markers), or it is already current.
+    """
+    project = root.parent if root.name == "kb" else root
+    target = project / ROUTE_FILE
+    if not target.is_file():
+        return None
+    text = target.read_text(encoding="utf-8")
+    new = replace_block(text, render_route_block(root, project, notes))
+    if new is None or new == text:
+        return None
+    return target, new
+
+
 def cmd_sync(args) -> int:
     root = find_root(args.dir)
     refuse_outside(root)
@@ -941,9 +958,23 @@ def cmd_sync(args) -> int:
             f"  or run `kb adopt` to retrofit an existing directory")
     if new == text:
         print(f"index already current ({len(notes)} files)")
-        return 0
-    overview.write_text(new, encoding="utf-8")
-    print(f"index rewritten: {len(notes)} files")
+    else:
+        overview.write_text(new, encoding="utf-8")
+        print(f"index rewritten: {len(notes)} files")
+
+    # The entry point carries the same derived facts as the index -- how many
+    # notes, which snapshot is current -- and used to be refreshed only by an
+    # explicit `route`. So `add` rebuilt the index and left the file at the
+    # project root naming a superseded snapshot, with nothing reporting it: the
+    # one copy of those facts that a fresh session actually reads was the one
+    # allowed to rot. Only the block between the markers is touched, and only
+    # when kb wrote that file in the first place.
+    drift = route_drift(root, notes)
+    if drift:
+        target, new_text = drift
+        refuse_outside(target.parent)
+        target.write_text(new_text, encoding="utf-8")
+        print(f"entry point refreshed: {target}")
     return 0
 
 
@@ -1018,6 +1049,15 @@ def cmd_check(args) -> int:
         problems.append(
             f"{OVERVIEW}: still has its placeholder — say in a line or two what "
             "this work stream is and what does NOT go in it")
+    # `sync` keeps this current on its own now, so reaching here means sync was
+    # not run: front matter edited by hand, or the block itself edited. Same
+    # finding as a stale index table, for the copy of those facts that lives
+    # outside the notes directory and is read first.
+    if route_drift(root, notes):
+        problems.append(
+            "the entry point at the project root names a different snapshot or "
+            "count than the notes do — run `kb sync`")
+
     # `add` refuses the second one; a hand-written file reaches here anyway, and
     # two charters have no tie-breaker at all — not even a date, the way two
     # snapshots do.

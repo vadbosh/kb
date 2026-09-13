@@ -296,6 +296,12 @@ break on the move that makes this worth doing at all: start in one tool,
 continue in another. A symlink works too, but needs Administrator or Developer
 Mode on Windows.
 
+**It stays current on its own.** `kb sync` refreshes the block, so `kb add` and
+every `/kb save` carry it along: the count and the current snapshot in that file
+are the same derived facts as the index, and the copy a fresh session reads
+first. Hand-edited, or left behind because `sync` never ran, it becomes a
+`check` finding — the same one a stale index table gets.
+
 **What is generated and what is yours.** The block between the markers holds
 only what kb can derive. Your check commands and your definition of done sit
 *outside* the markers — kb does not know them, and a placeholder inside the
