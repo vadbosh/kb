@@ -18,6 +18,36 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.19.0
+
+Three findings from one sweep of `kb verify` across eleven real streams. Nine
+were clean afterwards; the two that were not are a genuine signal and a
+documented false positive, which is the noise floor this check was supposed to
+have.
+
+- **The overview was never scanned for dead paths.** `load_notes()` skips it —
+  it has no `kind` and belongs in no generated table — and that exemption
+  silently followed the set into the path check. So the file whose whole job is
+  "where to start" and "that subject lives in the other kb" was the only one
+  never asked whether those paths still exist, and a pointer to a deleted kb sat
+  in the first file every reader opens, in two separate streams. Exactly the
+  shape of the link check in 4.15.4: a set assembled for one purpose, reused for
+  a second without asking whether its members still belong.
+
+- **A nested kb counted as the parent's work.** A stream inside a stream had its
+  notes and its entry point reported as evidence that the outer one had moved
+  on. Neither is true of either. Both layouts are recognised now — a loose
+  overview, and the usual `<dir>/kb/00-overview.md`; testing only for the first
+  pruned the notes and left the `AGENTS.md` beside them still counting.
+
+- **Generated output counted as work.** A backup pipeline rewrote two hundred
+  files under an ignored directory on every run, so its notes could never stop
+  looking stale and the finding became furniture. Directories git is told to
+  ignore are now pruned — one `check-ignore --stdin` call, and only where a
+  repository answers. Where there is none the behaviour is exactly what it was,
+  which is the point: most streams here are not repositories, and a check that
+  cannot run must not change its answer.
+
 ## 4.18.1
 
 - The generated block left two blank lines where the pointers go when a kb has

@@ -1066,6 +1066,58 @@ class Sequence(Base):
             os.utime(f, (old, old))
         return root
 
+    def test_a_nested_stream_is_not_the_parents_work(self):
+        root = self.aged_kb()
+        del root
+        nested = self.proj / "sub"
+        (nested / "kb").mkdir(parents=True)
+        self.kb("init", cwd=nested, expect=0)
+        (nested / "AGENTS.md").write_text("pointer\n", encoding="utf-8")
+        # A kb inside a kb is another subject, not evidence the parent moved on.
+        # Its notes and its entry point were both counted before.
+        out = self.kb("verify").stdout
+        self.assertNotIn("work went on", out)
+
+    def test_generated_output_git_is_told_to_ignore_is_not_work(self):
+        subprocess.run(["git", "init", "-q", "."], cwd=str(self.proj),
+                       capture_output=True,
+                       env={"HOME": str(self.home), "PATH": "/usr/bin:/bin"},
+                       timeout=60)
+        ignore = self.proj / ".gitignore"
+        ignore.write_text("out/\n", encoding="utf-8")
+        self.aged_kb()
+        # `.gitignore` is tracked content and would otherwise be the newest
+        # thing here, which is a true finding about the wrong subject.
+        old = time.time() - 48 * 3600
+        os.utime(ignore, (old, old))
+        out_dir = self.proj / "out"
+        out_dir.mkdir()
+        for i in range(3):
+            (out_dir / f"artifact{i}.bin").write_text("x", encoding="utf-8")
+        # A pipeline that rewrites its own output on every run would otherwise
+        # keep its notes permanently "behind the work".
+        self.assertNotIn("work went on", self.kb("verify").stdout)
+        # A tracked file of the same age still counts — the point is what the
+        # project calls its content, not the timestamp.
+        (self.proj / "real.sh").write_text("x", encoding="utf-8")
+        self.assertIn("work went on", self.kb("verify").stdout)
+
+    def test_a_dead_path_in_the_overview_is_reported(self):
+        root = self.make_kb()
+        self.fill_overview(root)
+        self.write_note(root, "01-a.md", kind="reference", title="a")
+        gone = self.tmp / "vanished" / "kb"
+        text = (root / "00-overview.md").read_text(encoding="utf-8")
+        (root / "00-overview.md").write_text(
+            text + f"\nBoundary: that subject lives in `{gone}`.\n",
+            encoding="utf-8")
+        # load_notes() skips the overview, and that exemption used to follow the
+        # set into the path check — leaving the file with the most cross-stream
+        # pointers as the only one never checked.
+        res = self.kb("verify", expect=3)
+        self.assertIn(str(gone), res.stdout)
+        self.assertIn("00-overview.md", res.stdout)
+
     def test_a_hand_edited_entry_point_is_a_check_finding(self):
         self.aged_kb()
         self.kb("route", expect=0)

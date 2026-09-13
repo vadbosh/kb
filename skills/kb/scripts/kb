@@ -777,6 +777,46 @@ def git_state(root: Path) -> str | None:
     return "local" if ignored.returncode == 0 else "undecided"
 
 
+def is_stream(d: Path) -> bool:
+    """Does this directory belong to another kb?
+
+    Both layouts count. `<dir>/kb/00-overview.md` is the usual one and the one
+    that matters here: the nested stream is the project directory, not the `kb`
+    inside it, so testing only for a loose overview pruned the notes and left
+    the entry point beside them still reading as the parent's work.
+    """
+    return (d / OVERVIEW).is_file() or (d / "kb" / OVERVIEW).is_file()
+
+
+def git_ignored_children(stream: Path) -> set[Path]:
+    """Directories directly under `stream` that git is told to ignore.
+
+    One call, not one per directory: `check-ignore --stdin` takes the whole
+    list. Empty when there is no repository or no git, which leaves the caller
+    behaving exactly as it did before -- most work streams here are not
+    repositories, and a check that cannot run must not change its answer.
+    """
+    try:
+        kids = [d for d in stream.iterdir() if d.is_dir()]
+    except OSError:
+        return set()
+    if not kids or find_git_dir(stream) is None:
+        return set()
+    try:
+        res = subprocess.run(
+            ["git", "check-ignore", "--stdin"], cwd=stream, timeout=10,
+            input="\n".join(str(d) for d in kids), capture_output=True, text=True)
+    except (OSError, subprocess.SubprocessError):
+        return set()
+    out = set()
+    for line in res.stdout.splitlines():
+        try:
+            out.add(Path(line.strip()).resolve())
+        except OSError:
+            pass
+    return out
+
+
 def git_ignores(path: Path) -> bool:
     """Would git leave this path out of a commit? False when git cannot say."""
     try:
@@ -1245,12 +1285,21 @@ def cmd_verify(args) -> int:
     notes = load_notes(root)
     today = date.today()
 
+    # The overview is scanned too, and it is the file that needed it most. Its
+    # whole job is "where to start" and "that subject lives in the other kb",
+    # so it carries more cross-stream paths than any note -- and `load_notes()`
+    # skips it, because it has no `kind` and belongs in no generated table.
+    # That exemption silently followed the set into the path check, and a dead
+    # pointer sat in the first file every reader opens. Same shape as the link
+    # check in 4.15.4: a set assembled for one purpose, reused for a second.
     dead: dict[str, set[str]] = {}
-    for n in notes:
-        text = n.path.read_text(encoding="utf-8", errors="replace")
+    for path in [n.path for n in notes] + [root / OVERVIEW]:
+        if not path.is_file():
+            continue
+        text = path.read_text(encoding="utf-8", errors="replace")
         for p in checkable_paths(text):
             if not Path(p).exists():
-                dead.setdefault(p, set()).add(n.name)
+                dead.setdefault(p, set()).add(path.name)
 
     aging = []
     for n in notes:
@@ -1292,10 +1341,23 @@ def cmd_verify(args) -> int:
             since = None
         seen = 0
         if since:
+            ignored = git_ignored_children(stream)
             for dirpath, dirnames, filenames in os.walk(stream, onerror=lambda e: None):
                 dirnames[:] = [d for d in dirnames
                                if d not in SCAN_SKIP and not d.startswith(".")
-                               and Path(dirpath) / d != root]
+                               and Path(dirpath) / d != root
+                               # Another stream's notes are not this stream's
+                               # work. A nested kb reported its own overview and
+                               # entry point as evidence that the parent had
+                               # moved on, which is true of neither.
+                               and not is_stream(Path(dirpath) / d)
+                               # Generated output is not work either. A backup
+                               # pipeline rewrote 201 files under an ignored
+                               # directory on every run, so its notes could
+                               # never stop looking stale. Only asked where git
+                               # can answer -- most streams here are not
+                               # repositories, and that stays as it was.
+                               and (Path(dirpath) / d).resolve() not in ignored]
                 for name in filenames:
                     # kb writes these itself. Counting them as work that outran
                     # the notes made `route` guarantee a false positive on the
