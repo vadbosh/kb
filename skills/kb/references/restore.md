@@ -20,10 +20,15 @@ kb brief
 ```
 
 That is the read. It prints the verdict of `check` and `verify`, the index in
-full, the current `state` in full, the plans as their own group, and every other
-note as one line saying what it answers. Deterministic — the same files give the
-same bytes — and it costs what reading the index and the snapshot costs anyway,
-which is what any orientation does first.
+full, the `charter` and the current `state` in full, the plans as their own
+group, and every other note as one line saying what it answers. Deterministic —
+the same files give the same bytes — and it costs what reading the index and the
+snapshot costs anyway, which is what any orientation does first.
+
+The charter comes **before** the snapshot and that ordering is the point: a list
+of what is done and what is open means nothing to a reader who does not yet know
+what the work is for or what it deliberately excludes. There is at most one, and
+a kb without one simply omits the block.
 
 Four steps used to stand here: three commands whose answers had to be held
 together, then a choice of which files to open. Each was a chance to skip one,
@@ -41,6 +46,16 @@ What its verdict lines mean:
   moved on and the snapshot may be behind. Surface these under Discrepancies,
   fix nothing unasked, and never rewrite a path without confirming the
   replacement exists.
+
+Two of `verify`'s findings are about the project's entry point rather than the
+notes, and both are relayed, never acted on:
+
+- **empty sections in `AGENTS.md`/`CLAUDE.md`** → `kb route` left slots only the
+  human can fill — the check commands, the definition of done. Name the file;
+  the answers are not yours to invent.
+- **over the 200-line context budget** → those two files are expanded into
+  context at every session start, unlike a note, which is read when opened. Say
+  what could move into a note. Do not shorten prose a human wrote.
 
 No `kb/` under cwd → `kb brief` says so. Run `kb list` before concluding there
 are no notes; the project's kb may be registered elsewhere. Still nothing → say
@@ -72,6 +87,10 @@ resume rather than assuming the context is fresh.
 
 ```
 ## kb: <path>   (<N> files, snapshot <NN-state-YYYY-MM-DD>)
+
+## What this is
+<one line from the charter: what the work is for, and what it will not do.
+ Omit the whole section when there is no charter — do not infer one>
 
 ## State
 <2-4 lines from the current state file>

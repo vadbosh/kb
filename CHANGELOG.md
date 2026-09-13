@@ -18,6 +18,23 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.16.1
+
+- The restore half still described the previous release. 4.16.0 changed what
+  `kb brief` prints and what `kb verify` finds, and only the save half was
+  updated — so `references/restore.md` listed the index, the snapshot and the
+  plans, with no charter among them, and gave no reading for either of the two
+  new `verify` findings. The tool was right and the instructions beside it were
+  a version behind, which is the arrangement most likely to be believed.
+
+  Three edits, all of them saying what the output already contains: the charter
+  is printed in full and **before** the snapshot, because a list of what is done
+  means nothing to a reader who does not yet know what the work is for; the
+  briefing template gains a "what this is" line, omitted rather than inferred
+  when there is no charter; and the two entry-point findings — empty `kb:fill`
+  slots, the 200-line budget — are marked as relay-only, since the answers
+  belong to the human and the prose that overruns is theirs.
+
 ## 4.16.0
 
 - **`charter`, a sixth kind.** A `state` says where the work stands and a `plan`
