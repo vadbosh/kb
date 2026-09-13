@@ -18,6 +18,22 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.16.3
+
+- **`verify` counted `route`'s own output as work that had outrun the notes.**
+  The two files kb writes are newer than every note by construction, so running
+  `route` guaranteed the next `verify` would report them — naming the two files
+  it had just created as evidence the work had moved on. Found on a stream that
+  is not a git repository, which is where that check matters most: four of six
+  live streams here are not repositories, and a check that cannot run reads as a
+  check that passed.
+
+  The same lesson as the overview and the link check in 4.15.4: a set assembled
+  for one purpose cannot be reused for a second without asking whether the
+  members still belong. The entry point is a pointer to the notes rather than
+  the work, and it already has two findings of its own — empty slots and the
+  context budget — so it is excluded from the one about the work.
+
 ## 4.16.2
 
 - **A committed entry point pointing at excluded notes is now reported.** Found

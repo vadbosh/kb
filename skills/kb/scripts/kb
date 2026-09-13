@@ -1259,6 +1259,13 @@ def cmd_verify(args) -> int:
                                if d not in SCAN_SKIP and not d.startswith(".")
                                and Path(dirpath) / d != root]
                 for name in filenames:
+                    # kb writes these itself. Counting them as work that outran
+                    # the notes made `route` guarantee a false positive on the
+                    # very next `verify`, naming the two files it had just
+                    # created. They are a pointer to the notes rather than the
+                    # work, and they have findings of their own further down.
+                    if Path(dirpath) == stream and name in (ROUTE_FILE, CLAUDE_FILE):
+                        continue
                     seen += 1
                     if seen > 20000 or len(moved) > 200:
                         break

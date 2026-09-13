@@ -932,6 +932,18 @@ class Route(Base):
         agents.write_text(text, encoding="utf-8")
         self.assertNotIn("empty sections", self.kb("verify").stdout)
 
+    def test_route_does_not_make_verify_report_its_own_output_as_work(self):
+        root = self.make_kb()
+        self.fill_overview(root)
+        self.write_note(root, "01-now-2026-01-02.md", kind="state", title="now")
+        self.kb("sync", expect=0)
+        self.kb("route", expect=0)
+        # The two files kb just wrote are newer than every note by construction,
+        # so counting them would make `route` guarantee this finding.
+        out = self.kb("verify").stdout
+        self.assertNotIn("AGENTS.md", out.split("empty sections")[0])
+        self.assertNotIn("work went on", out)
+
     def test_the_reported_size_is_the_one_wc_would_print(self):
         self.make_kb()
         self.kb("route", expect=0)
