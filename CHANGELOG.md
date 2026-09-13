@@ -18,6 +18,30 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.19.3
+
+- **The mismatch between the notes and their pointer was only checked in one
+  direction.** 4.16.2 reported a pointer committed while its notes are excluded;
+  the opposite arrangement — notes committed, pointer ignored — went unreported,
+  and that is the one a real repository had. Its `.gitignore` excludes every AI
+  artifact by policy (`CLAUDE.md`, `AGENTS.md`, `.claude/`, `.cursor/`,
+  `GEMINI.md`) and simply had not heard of `kb/`, so a first save there would
+  have shipped the notes to everyone while the file pointing at them stayed
+  local. Both directions are reported now.
+
+- `kb route` carried its own copy of the git check and its own copy of the
+  budget check, separate from the ones `sync` and `verify` ask for. That is how
+  the missing direction shipped: adding a condition to `route_findings()` left
+  `route` itself blind to it. One implementation, three callers.
+
+- The nested-`CLAUDE.md` question was settled against Anthropic's documentation
+  rather than guessed: files in subdirectories are "included when Claude reads
+  files in those subdirectories", not at launch, so the budget is right to count
+  only the pair at the project root. The same page puts the recommendation at
+  "under 200 lines", which is where `ROUTE_BUDGET` already sat. Block-level HTML
+  comments are stripped before injection, so the markers are counted and not
+  paid for — two lines in a real file, left alone rather than special-cased.
+
 ## 4.19.2
 
 - **Everything the entry point can be wrong about is now reported by every

@@ -182,7 +182,7 @@ smoke() {
 	# (fixed in 4.16.2).
 	(cd "$proj" && "$SRC/skills/kb/scripts/kb" local >/dev/null 2>&1) || true
 	out="$(cd "$proj" && "$SRC/skills/kb/scripts/kb" route 2>&1 || true)"
-	if ! printf '%s' "$out" | grep -q 'kept out of git'; then
+	if ! printf '%s' "$out" | grep -q 'is committed while'; then
 		echo "  smoke:            route stays silent on a committed pointer to excluded notes"
 		rc=1
 	fi

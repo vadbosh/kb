@@ -1543,9 +1543,17 @@ def route_findings(root: Path) -> list[str]:
     elif CLAUDE_IMPORT not in claude.read_text(encoding="utf-8", errors="replace"):
         out.append(f"{CLAUDE_FILE} does not import {ROUTE_FILE} — add "
                    f"`{CLAUDE_IMPORT}` at the top")
-    if git_state(root) == "local" and not git_ignores(target):
+    # Both directions, because each ships half of a pair. Only the first was
+    # thought of at first, and the repository that found the second had the
+    # opposite arrangement: every AI artifact ignored by policy, the notes not
+    # yet named in that policy.
+    state, ignored = git_state(root), git_ignores(target)
+    if state == "local" and not ignored:
         out.append(f"{target.name} is committed while {root.name}/ is not — a "
                    "clone gets a pointer to a directory it does not have")
+    elif state == "versioned" and ignored:
+        out.append(f"{root.name}/ is committed while {target.name} is not — the "
+                   "notes reach a clone and nothing there points at them")
     total, parts = route_weight(project)
     if total > ROUTE_BUDGET:
         out.append(f"{total} lines of context every session ({', '.join(parts)}), "
@@ -1653,27 +1661,13 @@ def cmd_route(args) -> int:
         print(f"{claude} exists and does not import {ROUTE_FILE}.")
         print(f"  Add this line at the top yourself:\n    {CLAUDE_IMPORT}")
 
-    # Found by running this on kb's own repository. The entry point is committed
-    # and the notes it points at are not, so every clone gets a file promising
-    # thirteen notes in a directory that is not there. The two halves are each
-    # defensible on their own -- local notes, a shared entry point -- and only
-    # the combination is broken, which is why nothing else would catch it.
-    if git_state(root) == "local" and not git_ignores(target):
-        print(f"\n⚠ {root} is kept out of git, {target.name} is not.")
-        print("  Anyone who clones this repository gets a file promising notes "
-              "in a directory\n  they do not have. Either commit the notes, or "
-              "keep this file out too.")
+    # One implementation, asked by three commands. `route` used to carry its
+    # own copy of the git check and its own copy of the budget check, so a
+    # condition added to one was invisible to the others -- which is exactly
+    # how the reverse mismatch shipped undetected here.
+    for finding in route_findings(root):
+        print(f"\n⚠ {finding}")
 
-    total, parts = route_weight(project)
-    if total > ROUTE_BUDGET:
-        # Reported, never trimmed. Everything kb generates here is some fifteen
-        # lines; what overruns is prose a human wrote, and silently shortening
-        # that is the one edit this tool refuses everywhere else.
-        print(f"\n⚠ {total} lines reach the context window every session "
-              f"({', '.join(parts)}), budget {ROUTE_BUDGET}.")
-        print("  This file is loaded on every turn, unlike a note, which is read "
-              "only when opened.")
-        print("  Move what is not routing into a note and point at it from here.")
     return 0
 
 

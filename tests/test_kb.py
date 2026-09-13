@@ -904,8 +904,8 @@ class Route(Base):
                           encoding="utf-8")
         # Not a note: this is expanded into context at every session start, so
         # length is a running cost and the 200-line rule applies to it.
-        self.assertIn("reach the context window", self.kb("route", expect=0).stdout)
-        self.assertIn("every session", self.kb("verify", expect=3).stdout)
+        self.assertIn("lines of context every session", self.kb("route", expect=0).stdout)
+        self.assertIn("lines of context every session", self.kb("verify", expect=3).stdout)
 
     def test_scaffolding_says_the_project_root_has_no_pointer(self):
         # The condition for the automatic `route` arrives in the output of the
@@ -962,7 +962,26 @@ class Route(Base):
         # Each half is defensible alone -- local notes, a shared entry point.
         # Only the combination ships a promise the clone cannot keep.
         res = self.kb("route", expect=0)
-        self.assertIn("kept out of git", res.stdout)
+        self.assertIn("is committed while", res.stdout)
+
+    def test_the_reverse_mismatch_is_reported_too(self):
+        env = {"HOME": str(self.home), "PATH": "/usr/bin:/bin"}
+        def git(*a):
+            subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t", *a],
+                           cwd=str(self.proj), capture_output=True, env=env,
+                           timeout=60)
+        git("init", "-q", ".")
+        (self.proj / ".gitignore").write_text("AGENTS.md\nCLAUDE.md\n",
+                                              encoding="utf-8")
+        self.make_kb()
+        self.kb("route", expect=0)
+        git("add", "-A")
+        git("commit", "-qm", "notes")
+        # The other half of the pair: notes ship, the pointer does not. Found on
+        # a repository whose policy ignores every AI artifact and had not yet
+        # named the notes.
+        res = self.kb("route", expect=0)
+        self.assertIn("nothing there points at them", res.stdout)
 
     def test_no_such_report_when_both_are_excluded(self):
         subprocess.run(["git", "init", "-q", "."], cwd=str(self.proj),
@@ -974,7 +993,7 @@ class Route(Base):
         exclude = self.proj / ".git" / "info" / "exclude"
         exclude.write_text(exclude.read_text(encoding="utf-8")
                            + "/AGENTS.md\n/CLAUDE.md\n", encoding="utf-8")
-        self.assertNotIn("kept out of git", self.kb("route", expect=0).stdout)
+        self.assertNotIn("is committed while", self.kb("route", expect=0).stdout)
 
     def test_running_it_twice_changes_nothing(self):
         self.make_kb()
@@ -1171,14 +1190,14 @@ class Sequence(Base):
         after_local = self.kb("route", expect=0).stdout
         # Step 3 → 4: notes excluded, pointer not. Each half is defensible
         # alone; only the pair ships a promise a clone cannot keep.
-        self.assertIn("kept out of git", after_local)
+        self.assertIn("is committed while", after_local)
 
         # And the pair agreeing again silences it, rather than the finding
         # being permanent once seen.
         exclude = self.proj / ".git" / "info" / "exclude"
         exclude.write_text(exclude.read_text(encoding="utf-8")
                            + "/AGENTS.md\n/CLAUDE.md\n", encoding="utf-8")
-        self.assertNotIn("kept out of git", self.kb("route", expect=0).stdout)
+        self.assertNotIn("is committed while", self.kb("route", expect=0).stdout)
 
     def test_a_second_save_carries_the_entry_point_with_it(self):
         self.aged_kb()
