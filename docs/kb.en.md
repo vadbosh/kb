@@ -270,54 +270,38 @@ what `kb check` catches (`index table is stale`, exit 3). Inside `/kb save` both
 
 ## The entry point at the project root
 
-Everything above assumes somebody runs `kb brief`. Nobody who does not already
-know the notes exist ever does — which makes a kb invisible to the reader who
-needs it most: a fresh session, a different assistant, a new person. What every
-agent does read is the file at the root of the repository.
+Everything described above starts with the `kb brief` command. Someone who does
+not know the notes exist will not run it. A file at the project root, though, is
+what an agent reads every time.
 
 ```
 kb route
 ```
 
-writes `AGENTS.md` there, pointing at the notes, the charter and the current
-snapshot, and a `CLAUDE.md` containing one line: `@AGENTS.md`.
+`kb route` writes two files into the project root. The first is `AGENTS.md`,
+holding the pointer to the notes, the charter and the current snapshot. The
+second is `CLAUDE.md`, holding one line: `@AGENTS.md`.
 
-`/kb save` runs it unasked exactly once — when it creates `kb/` in a project
-whose root has no `AGENTS.md`. Nothing of anyone's is touched in that case, and
-`kb add` names the condition in its own output, so the instruction arrives with
-the command rather than depending on prose being remembered. Where an
-`AGENTS.md` already exists it is offered, not run.
+There are two files because Claude Code reads `CLAUDE.md` and does not read
+`AGENTS.md`, while Codex and Opencode read `AGENTS.md`. The text itself lives
+only in `AGENTS.md`; `CLAUDE.md` imports it.
 
-**Two files, one source.** Claude Code reads `CLAUDE.md` and **not**
-`AGENTS.md`; Codex and Opencode read `AGENTS.md`. So the content lives in
-`AGENTS.md` and `CLAUDE.md` imports it — the pattern Anthropic documents for
-exactly this case. Writing only the file of whichever assistant is running would
-break on the move that makes this worth doing at all: start in one tool,
-continue in another. A symlink works too, but needs Administrator or Developer
-Mode on Windows.
+`/kb save` calls `kb route` too — when it creates the `kb/` directory in a
+project that has no `AGENTS.md` yet. Where `AGENTS.md` already exists, `/kb save`
+only offers to run `kb route` and touches the file itself not at all.
 
-**It stays current on its own.** `kb sync` refreshes the block, so `kb add` and
-every `/kb save` carry it along: the count and the current snapshot in that file
-are the same derived facts as the index, and the copy a fresh session reads
-first. Hand-edited, or left behind because `sync` never ran, it becomes a
-`check` finding — the same one a stale index table gets.
+**What is generated and what is yours.** Between the `kb:begin` and `kb:end`
+markers is what kb derives from the notes; `kb route` and `kb sync` keep that
+block current. Outside the markers is your text: the check commands and the
+definition of done. On the first run those sit as `kb:fill` comments. An
+`AGENTS.md` without markers kb does not touch and refuses to write to. A
+`CLAUDE.md` without the import kb does not write to either — it prints the line
+for you to add by hand.
 
-**What is generated and what is yours.** The block between the markers holds
-only what kb can derive. Your check commands and your definition of done sit
-*outside* the markers — kb does not know them, and a placeholder inside the
-block would be erased on the next run. An existing `AGENTS.md` without markers
-is refused rather than rewritten; an existing `CLAUDE.md` without the import is
-reported, not edited.
-
-**Length is a running cost here, unlike a note.** A note is read when someone
-opens it, so `kb check` treats 400 lines as advisory. This file is expanded into
-the context window at the start of every session and paid for on every turn, so
-the 200-line rule for always-loaded instruction files applies — measured as the
-sum of both files, since the import brings `AGENTS.md` in alongside `CLAUDE.md`.
-Over budget, `route` and `verify` say so. Neither trims anything: what overruns
-is prose a human wrote.
-
----
+**Length.** Both files reach the context window at every session start, so their
+combined length is capped at 200 lines. If the files come out longer, `kb route`
+and `kb verify` say so. kb will not shorten them: outside the markers the text
+is yours.
 
 ## Versioned, or only on this machine
 
@@ -409,6 +393,23 @@ roughly two of them real — URL paths (`/stats/prometheus`), API versions
 (`/v1alpha1`), fragments of longer paths. With them: 6 flags, 2 real. The other
 side of the bargain is that a path inside a code block, without backticks, goes
 unchecked. Deliberate — at the opposite ratio the report soon stops being read.
+
+Paths are looked for in the notes and in the overview.
+
+**Work ahead of the notes.** kb takes the newest file in the work directory and
+compares it against the newest file in `kb/`. A gap of more than an hour means
+something was done and not written down.
+
+Git is not used here — more than half of all work streams are not repositories.
+
+Not counted as work:
+
+| Skipped | Why |
+|---|---|
+| the `kb/` directory itself | a record of the work, not the work |
+| `AGENTS.md` and `CLAUDE.md` at the root | kb writes them |
+| a nested kb — `<dir>/kb/00-overview.md` or a loose overview | that is the neighbouring stream |
+| directories in `.gitignore` | build output |
 
 **Age by kind.** Not "wrong", just "nobody has looked at this in a while":
 

@@ -18,6 +18,31 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.19.1
+
+- Both manuals described `verify`'s path and age checks and said nothing about
+  the third one. "Work ahead of the notes" existed only as a row in the command
+  table, so what it compares and what it skips were nowhere a reader could find
+  them — and 4.19.0 had just changed both. Documented in both languages.
+
+- The Russian text was rewritten after a reader called it unreadable, and the
+  English followed so the two would not diverge. Three defects ran through
+  everything added this session: the subject named by hint rather than by word
+  ("пока их немного, всё сходится"), a pointer at where the text sits on the
+  page rather than at what was done ("ниже — три механизма"), and actions with
+  no actor ("файлы добавляются", "начинается расхождение"). All three are now
+  rules 9-11 in the `ru-tech-docs` skill, found on this repository's own README.
+
+  The archaeology went with them. Half the added prose argued with a previous
+  release the reader never saw — "пока обновление зависело от явного `route`",
+  "раньше это исключение действовало и здесь". That belongs in this file, not
+  in a manual, which is why it is here.
+
+- Both installers were checked at the end of the run: `install.sh` passes
+  syntax, ShellCheck and the custom audit with nothing to report, and
+  `install.ps1` parses clean. Their flags differ by `--version`, which the
+  Windows one does not have and the README does not promise it does.
+
 ## 4.19.0
 
 Three findings from one sweep of `kb verify` across eleven real streams. Nine

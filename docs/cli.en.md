@@ -318,67 +318,49 @@ kb route
 | `AGENTS.md` | the pointer to the notes, the charter, the current snapshot — inside `kb:begin`/`kb:end` markers. Read by Codex and Opencode |
 | `CLAUDE.md` | one line, `@AGENTS.md`. Claude Code reads this file and not the other one |
 
-Re-running it rewrites **only** the managed block, exactly as `kb sync` does for
-the index. Everything you wrote around it survives byte for byte, which is why
-the check commands and the definition of done belong outside the markers. They
-are left as `kb:fill` comments on the first run.
+The block between the markers is updated by `kb route` and by `kb sync`, and so
+by `kb add`. Nothing outside the markers is touched. The check commands and the
+definition of done are yours to write — on the first run they are `kb:fill`
+comments.
 
-**`kb sync` refreshes that block too**, so `kb add` — and therefore every save —
-carries it along. The block holds the same derived facts as the index: how many
-notes there are and which snapshot is current. Left to an explicit `route` it
-went on naming a superseded snapshot for as long as nobody ran one, and that is
-the copy a fresh session reads first. Edited by hand, or left behind because
-`sync` never ran, it becomes a `check` finding — the same one a stale index
-table gets.
-
-Three refusals, all of them reports rather than failures to work around:
+Refusals and findings:
 
 | Situation | What happens | Exit |
 |---|---|---|
-| `AGENTS.md` exists without markers | refused, with the two lines to add printed | 1 |
-| `CLAUDE.md` exists without the import | left alone, the line to add is printed | 0 |
-| the two together exceed 200 lines | written, then reported as a context cost | 0 |
+| `AGENTS.md` exists without markers | left alone, the two lines to add are printed | 1 |
+| `CLAUDE.md` exists without the import | left alone, the `@AGENTS.md` line is printed | 0 |
+| the block disagrees with the notes | a `kb check` finding, fixed by `kb sync` | 3 |
+| the two files together exceed 200 lines | written, and reported: that much context goes to every session | 0 |
 
-That last one is the opposite of the note thresholds. A note is read when
-somebody opens it, so 400 lines is advisory and cheap. These two are expanded
-into the context window at every session start and paid for on every request, so
-the 200-line rule for always-loaded instruction files applies — to the **sum**,
-because the import brings one in alongside the other. `kb verify` repeats the
-finding afterwards, so it does not depend on anyone re-running `route`.
-
-Nothing is trimmed automatically. The generated block is some fifteen lines; what
-overruns it is prose a human wrote, and shortening that silently is the one edit
-this tool refuses everywhere.
+The 200 lines are counted across both files: `@AGENTS.md` is expanded alongside
+`CLAUDE.md`, so both reach the context window. kb never shortens either — it
+prints the number and leaves the decision to you.
 
 ---
 
 ## Notes in a repository: committed, or only here
 
-Notes created inside a git repository are committed by default, because
-`git add -A` sweeps them in. `kb add` says so once, when it scaffolds the
-directory, and never again — after that the directory exists and the question
-cannot arise.
+Notes inside a git repository are committed by default — `git add -A` sweeps
+them in. `kb add` says so once, when it creates the directory.
 
 ```bash
 kb local              # append /kb/ to .git/info/exclude
 kb local --dry-run    # print what would happen, write nothing
 ```
 
-`.git/info/exclude` is per-checkout; `.gitignore` is committed and would impose
-the choice on everyone who clones. The pattern is written relative to the
-repository root, so a kb at `sub/kb` is excluded as `/sub/kb/`.
+`.git/info/exclude` applies to one checkout, `.gitignore` to everyone who
+clones. The pattern is written relative to the repository root: a kb at `sub/kb`
+is excluded as `/sub/kb/`.
 
 | Situation | What happens | Exit |
 |---|---|---|
 | not tracked, not ignored | the pattern is appended | 0 |
 | already ignored | nothing, and it says so | 0 |
-| already tracked | refused — an exclude rule does not apply to a tracked file and would report a success that changes nothing | 1 |
+| already tracked | refused — an exclude rule does not apply to a tracked file | 1 |
 | not inside a repository | refused, nothing to exclude from | 1 |
 
-The answer is never stored. `kb status` prints `git: tracked`, `git: excluded` or
-`git: neither tracked nor ignored` by asking git, because a stored flag is a
-second copy of something git already owns and the two part company at the first
-edit of an ignore rule.
+The choice is not stored anywhere. `kb status` asks git and prints
+`git: tracked`, `git: excluded` or `git: neither tracked nor ignored`.
 
 ---
 

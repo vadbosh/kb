@@ -1,7 +1,7 @@
 # kb
 
-**A knowledge base in plain Markdown whose index cannot rot, where every fact is
-typed by how it goes out of date.**
+**A knowledge base in plain Markdown. The agent updates the index itself as the
+session goes. Every note says how it goes out of date.**
 
 Point it at anything you would otherwise keep as a growing pile of `.md` files —
 a migration, an incident, a research thread, a renovation, a legal case. Nothing
@@ -16,18 +16,20 @@ Using it from a terminal, without an assistant: [CLI guide](docs/cli.en.md) · [
 
 ## The idea
 
-Almost everyone ends up keeping a wiki for their own work: one file listing the
-rest, topic files around it. While there are few files, it holds together.
+Almost everyone ends up keeping a wiki for their own work. It is usually built
+the same way: a list of files, and beside it the files that the list points at.
+While there are few files, the list and the files agree.
 
 Then files get added, renamed, split. Each of those changes means editing the
-list by hand, and sooner or later nobody does. That is where the divergence
-starts: the "current status" section keeps a date no one refreshed, links lead to
-files that moved long ago, and a stack of `00-overview.md.bak.*` builds up beside
-the directory — one copy per attempt to put the index back in order.
+list by hand. One day the list stops being edited. From that point the list and
+the files disagree, and it looks like this: the "current status" section keeps a
+date no one refreshed, links lead to files that moved long ago, and a stack of
+`00-overview.md.bak.*` builds up beside the directory — one copy per attempt to
+put the list back in order.
 
-Three mechanisms below work against that. The first two remove the source of the
-divergence automatically. The third fixes nothing — it shows you where the
-divergence has already happened.
+We built a skill that solves this. It has three mechanisms. The first two keep
+the list from falling behind the files. The third fixes nothing: it shows you
+where the list has already fallen behind the files.
 
 ### 1. The index is generated, not maintained
 
@@ -228,55 +230,50 @@ touched file is backed up first.
 
 ### Making the notes findable without kb
 
-Everything above assumes somebody runs `/kb restore`. Nobody who does not already
-know the notes exist ever does — so a fresh session, a different assistant or a
-new person walks past a kb without seeing it. What every agent *does* read is the
-file at the root of the repository.
+The notes get read by whoever runs `/kb restore`. Someone who does not know the
+notes exist will never run that command. A file at the project root, though, is
+what an agent reads every time — it starts there.
 
 ```bash
 kb route
 ```
 
-writes `AGENTS.md` there — pointing at the notes, the charter and the current
-snapshot — and a `CLAUDE.md` holding one line, `@AGENTS.md`.
+`kb route` writes two files into the project root. The first is `AGENTS.md`,
+holding the pointer to the notes, the charter and the current snapshot. The
+second is `CLAUDE.md`, holding one line: `@AGENTS.md`.
 
-**`/kb save` runs this for you the first time**, when it creates `kb/` in a
-project whose root has no `AGENTS.md`: both files are new, nothing of yours is
-touched, and a kb whose first session leaves no pointer to it is one the next
-session walks past. Where an `AGENTS.md` already exists it is offered instead —
-that file is someone's, and what happens next is a conversation.
+There are two files because Claude Code reads `CLAUDE.md` and does not read
+`AGENTS.md`, while Codex and Opencode read `AGENTS.md`. The text itself lives
+only in `AGENTS.md`; `CLAUDE.md` imports it.
 
-Two files, one source. Claude Code reads `CLAUDE.md` and **not** `AGENTS.md`;
-Codex and Opencode read `AGENTS.md`. Importing rather than duplicating is what
-Anthropic documents for this case, and it survives the move that makes the whole
-thing worth doing: start in one tool, continue in another.
+`/kb save` calls `kb route` too — when it creates the `kb/` directory in a
+project that has no `AGENTS.md` yet. Where `AGENTS.md` already exists, `/kb save`
+only offers to run `kb route` and touches the file itself not at all.
 
-After that it keeps itself current: `kb sync` refreshes the block, so every
-`/kb save` carries it along rather than leaving it naming a snapshot two saves
-old.
+Between the `kb:begin` and `kb:end` markers is what kb derives from the notes.
+`kb route` and `kb sync` keep that block current. Outside the markers is your
+text: the check commands and the definition of done. An `AGENTS.md` without
+markers kb does not touch and refuses to write to. A `CLAUDE.md` without the
+import kb does not write to either — it prints the line for you to add by hand.
 
-Your check commands and your definition of done go *outside* the markers, where
-nothing regenerates them. kb refuses an `AGENTS.md` that has no markers instead
-of rewriting it, and never edits an existing `CLAUDE.md` — it prints the line to
-add.
-
-Unlike a note, these two are expanded into the context window at every session
-start, so `route` and `verify` report when their combined length passes 200
-lines. Neither trims anything: what overruns is prose you wrote.
+Both files reach the context window at every session start, so their combined
+length is capped at 200 lines. If the files come out longer, `kb route` and
+`kb verify` say so. kb will not shorten them: outside the markers the text is
+yours.
 
 ### Versioned, or only on this machine
 
-Notes inside a git repository are committed by default — `git add -A` decides
-that, nobody else. kb says so once, when it creates the directory:
+Notes inside a git repository are committed by default: `git add -A` sweeps them
+in. kb says so once — when it creates the `kb/` directory.
 
 ```bash
 kb local          # .git/info/exclude — the notes stay here
                   # or commit them, and they ship with the project
 ```
 
-`.git/info/exclude` rather than `.gitignore`, because `.gitignore` is itself
-committed and would impose one person's choice on everyone who clones. Nothing
-records the answer — `kb status` asks git.
+`.git/info/exclude` applies to one checkout, `.gitignore` to everyone who clones
+the repository. kb records its own choice nowhere: `kb status` asks git every
+time.
 
 ---
 
