@@ -883,9 +883,23 @@ class Route(Base):
         self.make_kb()
         (self.proj / "AGENTS.md").write_text("# hand written\n", encoding="utf-8")
         res = self.kb("route", expect=1)
-        self.assertIn("no managed block", res.stderr)
+        self.assertIn("no managed block", res.stdout)
         self.assertEqual((self.proj / "AGENTS.md").read_text(encoding="utf-8"),
                          "# hand written\n")
+
+    def test_a_refused_agents_file_still_gets_its_claude_import(self):
+        self.make_kb()
+        mine = self.proj / "AGENTS.md"
+        mine.write_text("# hand written\n\nmy rules\n", encoding="utf-8")
+        res = self.kb("route", expect=1)
+        # Dying on the refusal skipped the CLAUDE.md step too, so a project with
+        # a hand-written AGENTS.md and no CLAUDE.md got nothing — and Claude
+        # Code reads only the second one.
+        self.assertEqual(mine.read_text(encoding="utf-8"),
+                         "# hand written\n\nmy rules\n")
+        self.assertEqual((self.proj / "CLAUDE.md").read_text(encoding="utf-8"),
+                         "@AGENTS.md\n")
+        self.assertIn("no managed block", res.stdout)
 
     def test_an_existing_claude_file_is_advised_not_edited(self):
         self.make_kb()

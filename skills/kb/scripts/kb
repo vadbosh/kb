@@ -1625,6 +1625,7 @@ def cmd_route(args) -> int:
     refuse_outside(project)
     notes = load_notes(root)
     block = render_route_block(root, project, notes)
+    refused = False
 
     target = project / ROUTE_FILE
     if not target.exists():
@@ -1637,12 +1638,19 @@ def cmd_route(args) -> int:
         text = target.read_text(encoding="utf-8")
         new = replace_block(text, block)
         if new is None:
-            die(f"{target} exists and has no managed block — refusing to rewrite "
-                "a file someone else wrote.\n"
-                "  Add these two lines where the pointer to the notes belongs, "
-                "then re-run:\n"
-                f"    {MARK_BEGIN} -->\n    {MARK_END}")
-        if new == text:
+            # Reported, and the command carries on. Dying here also skipped the
+            # CLAUDE.md step, so a project with a hand-written AGENTS.md and no
+            # CLAUDE.md got nothing at all -- and Claude Code reads only the
+            # second one. The import is worth writing whether or not the file it
+            # points at carries a kb block: it links an instruction file that
+            # already exists to the assistant that cannot see it.
+            print(f"{target} exists and has no managed block — not writing to a "
+                  "file someone else wrote.")
+            print("  Add these two lines where the pointer to the notes belongs, "
+                  "then re-run:")
+            print(f"    {MARK_BEGIN} -->\n    {MARK_END}")
+            refused = True
+        elif new == text:
             print(f"{target} already current")
         else:
             target.write_text(new, encoding="utf-8")
@@ -1668,7 +1676,7 @@ def cmd_route(args) -> int:
     for finding in route_findings(root):
         print(f"\n⚠ {finding}")
 
-    return 0
+    return 1 if refused else 0
 
 
 def cmd_local(args) -> int:

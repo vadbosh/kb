@@ -18,6 +18,20 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.19.4
+
+- **A refusal on `AGENTS.md` no longer cancels the `CLAUDE.md` step.** `route`
+  died when it found an `AGENTS.md` it had not written, and dying skipped
+  everything after — so a project with a hand-written `AGENTS.md` and no
+  `CLAUDE.md` came away with nothing at all, which is the worst of the three
+  possible outcomes: Claude Code reads `CLAUDE.md` and not `AGENTS.md`, so it saw
+  neither the notes nor the instructions already sitting there.
+
+  The refusal is still a refusal — the file is not touched and the exit code is
+  1 — but the import is written, because it links an instruction file that
+  already exists to the assistant that cannot otherwise see it, whether or not
+  that file carries a kb block.
+
 ## 4.19.3
 
 - **The mismatch between the notes and their pointer was only checked in one
