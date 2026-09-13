@@ -1013,6 +1013,13 @@ def cmd_sync(args) -> int:
         refuse_outside(target.parent)
         target.write_text(new_text, encoding="utf-8")
         print(f"entry point refreshed: {target}")
+        # Said here as well as in `route`, because after the first run this is
+        # the only command that ever touches the file again. Reporting it only
+        # where it was written means reporting it once, in a turn nobody
+        # revisits -- which is how the budget went unmentioned for a whole file
+        # that had grown past it.
+        for finding in route_findings(root):
+            print(f"  ⚠ {finding}")
     return 0
 
 
@@ -1384,8 +1391,7 @@ def cmd_verify(args) -> int:
     # The entry point is not a note and is not read on demand: it is expanded
     # into the context window at the start of every session, so it is the one
     # file here where length is a running cost rather than a one-off.
-    route_lines, route_parts = route_weight(stream) if stream else (0, [])
-    over_budget = route_lines > ROUTE_BUDGET
+    entry = route_findings(root)
     # `route` leaves the slots it cannot fill -- the check commands, the
     # definition of done -- and says so once, in the turn that created the file.
     # Nobody sees that message again, so an entry point that promises an agent a
@@ -1419,12 +1425,13 @@ def cmd_verify(args) -> int:
               "stay clean while\n  describing a state the work has left. Read "
               "what changed; if it matters, it\n  belongs in a note.")
 
-    if over_budget:
-        print(f"\n{ROUTE_FILE}/{CLAUDE_FILE} cost {route_lines} lines of context "
-              f"every session ({', '.join(route_parts)}), budget {ROUTE_BUDGET}:")
-        print("  Loaded on every turn, unlike a note, which is read only when "
-              "opened.\n  Move what is not routing into a note and point at it "
-              "from there.")
+    if entry:
+        print(f"\nthe entry point at the project root ({len(entry)}):")
+        for f in entry:
+            print(f"  ⚠ {f}")
+        print("  These are conditions, not events: each one stays wrong until "
+              "somebody fixes it,\n  and `route` said so only in the turn that "
+              "wrote the file.")
 
     if unfilled:
         print(f"\nthe entry point still has empty sections ({len(unfilled)}):")
@@ -1434,7 +1441,7 @@ def cmd_verify(args) -> int:
               "with no answer\n  under it is worse than no heading: fill the "
               "kb:fill slots or delete them.")
 
-    if not dead and not aging and not moved and not over_budget and not unfilled:
+    if not dead and not aging and not moved and not entry and not unfilled:
         print("nothing suspicious: every checkable path resolves, no note is "
               "past its re-check age, and no work has outrun the notes")
         return 0
@@ -1510,6 +1517,40 @@ CLAUDE_IMPORT = "@AGENTS.md"
 # Measured as the SUM: `@AGENTS.md` is expanded into context alongside the
 # CLAUDE.md that imports it, so counting either one alone understates the bill.
 ROUTE_BUDGET = 200
+
+
+def route_findings(root: Path) -> list[str]:
+    """Everything wrong with the entry point, for whoever asks.
+
+    `route` reported these in the turn that wrote the file and nowhere else, so
+    a session that never re-ran it never heard them again. They are conditions,
+    not events: a pointer committed while its notes are not stays wrong until
+    somebody fixes it. `verify` asks this on every restore.
+    """
+    project = root.parent if root.name == "kb" else root
+    target = project / ROUTE_FILE
+    if not target.is_file():
+        return []                       # no entry point is a choice, not a fault
+    out = []
+    text = target.read_text(encoding="utf-8", errors="replace")
+    if MARK_BEGIN not in text:
+        out.append(f"{target.name} has no kb:begin/kb:end markers, so nothing "
+                   "keeps it current — add them where the pointer belongs")
+    claude = project / CLAUDE_FILE
+    if not claude.is_file():
+        out.append(f"{CLAUDE_FILE} is missing — Claude Code reads it and not "
+                   f"{ROUTE_FILE}; one line `{CLAUDE_IMPORT}` restores the link")
+    elif CLAUDE_IMPORT not in claude.read_text(encoding="utf-8", errors="replace"):
+        out.append(f"{CLAUDE_FILE} does not import {ROUTE_FILE} — add "
+                   f"`{CLAUDE_IMPORT}` at the top")
+    if git_state(root) == "local" and not git_ignores(target):
+        out.append(f"{target.name} is committed while {root.name}/ is not — a "
+                   "clone gets a pointer to a directory it does not have")
+    total, parts = route_weight(project)
+    if total > ROUTE_BUDGET:
+        out.append(f"{total} lines of context every session ({', '.join(parts)}), "
+                   f"budget {ROUTE_BUDGET} — move what is not routing into a note")
+    return out
 
 
 def route_weight(project: Path) -> tuple[int, list[str]]:

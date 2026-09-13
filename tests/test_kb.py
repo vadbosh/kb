@@ -1118,6 +1118,21 @@ class Sequence(Base):
         self.assertIn(str(gone), res.stdout)
         self.assertIn("00-overview.md", res.stdout)
 
+    def test_sync_reports_the_budget_it_just_refreshed_past(self):
+        self.aged_kb()
+        self.kb("route", expect=0)
+        agents = self.proj / "AGENTS.md"
+        agents.write_text(agents.read_text(encoding="utf-8")
+                          + "\n".join(f"line {i}" for i in range(250)) + "\n",
+                          encoding="utf-8")
+        # `sync` is the only command that touches this file after the first
+        # `route`, so reporting the overrun only in `route` reports it once, in
+        # a turn nobody revisits.
+        res = self.kb("add", "later", "--kind", "recipe", "--title", "a trap",
+                      expect=0)
+        self.assertIn("entry point refreshed", res.stdout)
+        self.assertIn("budget 200", res.stdout)
+
     def test_a_hand_edited_entry_point_is_a_check_finding(self):
         self.aged_kb()
         self.kb("route", expect=0)

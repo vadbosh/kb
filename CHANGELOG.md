@@ -18,6 +18,31 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.19.2
+
+- **Everything the entry point can be wrong about is now reported by every
+  command that touches it.** Four conditions were known to `kb route` alone: the
+  200-line context budget, a missing `CLAUDE.md`, a `CLAUDE.md` that does not
+  import, and a pointer committed while its notes are excluded. `route` runs once
+  per project and then effectively never again, so each was announced in a single
+  turn nobody revisits — and 4.18.0 made that worse by moving the writing to
+  `sync`, which reported none of them. A file could grow past the budget one save
+  at a time with the tool rewriting it each time and saying nothing.
+
+  They are conditions rather than events: a pointer committed while its notes are
+  not stays wrong until somebody fixes it. `route_findings()` collects them once
+  and both `sync` and `verify` ask, so a save reports them at the moment of
+  writing and a restore reports them at the start of every session.
+
+- **The skill now fixes them rather than relaying them.** `references/save.md`
+  gains a table: over budget → move the prose that is not routing into a note and
+  leave a pointer, naming what moved; `CLAUDE.md` missing → write the import
+  outright, since without it the entry point reaches Claude Code at all; no
+  markers or a committed-vs-excluded mismatch → name the options and ask, because
+  both belong to somebody else. Moving a section is an edit and is reported, never
+  silent. The check commands and the definition of done never move: they are why
+  the file exists.
+
 ## 4.19.1
 
 - Both manuals described `verify`'s path and age checks and said nothing about

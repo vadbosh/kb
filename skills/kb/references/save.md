@@ -358,10 +358,28 @@ Either way the sections it leaves behind — the check commands, the definition 
 done — are the human's to fill. Name them in the report; `verify` will keep
 asking until they are answered.
 
-**If it warns about size, relay that too.** Over 200 lines across the two files
-is a running cost: unlike a note, they are expanded into context at every session
-start. What overruns is human prose — say what could move into a note, do not
-trim it yourself.
+## Act on what the entry point reports, do not just relay it
+
+`kb sync` — and therefore every save — prints a `⚠` line for each condition that
+is wrong about `AGENTS.md`. They are conditions rather than events: each one
+stays wrong until somebody fixes it. Fixing them is yours.
+
+| Reported | What to do |
+|---|---|
+| **over 200 lines of context** | move the prose that is not routing into a note, replace it with one line pointing at that note, re-run `kb sync`. Say in the report which sections moved and where |
+| `CLAUDE.md` missing, or without the import | write the one line `@AGENTS.md`. A missing `CLAUDE.md` you may create outright: Claude Code reads it and not `AGENTS.md`, so without it the entry point reaches nobody |
+| `AGENTS.md` has no markers | do not add them silently — the file belongs to somebody. Say where they go and ask |
+| pointer committed while the notes are not | name the two ways out — commit the notes, or exclude the pointer as well — and ask which. Both are real answers |
+
+**Moving prose is an edit, so it is reported, never silent.** The rule this tool
+holds is that nobody shortens a human's text without saying so — not that the
+text may never be touched. A section moved into a note with a pointer left behind
+loses nothing and costs nothing per session; the same section left in place is
+paid for on every request of every session.
+
+What may never move: the check commands and the definition of done. Those are the
+reason the file exists, and an agent that has to open a note to find them will
+not.
 
 ## Run `kb verify` if this session moved or renamed anything
 

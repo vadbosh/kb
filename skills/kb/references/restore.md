@@ -47,15 +47,16 @@ What its verdict lines mean:
   fix nothing unasked, and never rewrite a path without confirming the
   replacement exists.
 
-Two of `verify`'s findings are about the project's entry point rather than the
-notes, and both are relayed, never acted on:
+`verify` also reports on the project's entry point, under its own heading. Those
+findings are conditions, not events — each stays wrong until fixed:
 
-- **empty sections in `AGENTS.md`/`CLAUDE.md`** → `kb route` left slots only the
-  human can fill — the check commands, the definition of done. Name the file;
-  the answers are not yours to invent.
-- **over the 200-line context budget** → those two files are expanded into
-  context at every session start, unlike a note, which is read when opened. Say
-  what could move into a note. Do not shorten prose a human wrote.
+- **empty sections** → `kb route` left slots only the human can fill: the check
+  commands, the definition of done. Name the file and ask; the answers are not
+  yours to invent.
+- **over the 200-line context budget**, **`CLAUDE.md` missing or not importing**,
+  **pointer committed while the notes are not** → surface them under
+  Discrepancies with what each one costs. Fixing them belongs to the save half,
+  which has the rules; this half briefs and writes nothing.
 
 No `kb/` under cwd → `kb brief` says so. Run `kb list` before concluding there
 are no notes; the project's kb may be registered elsewhere. Still nothing → say
