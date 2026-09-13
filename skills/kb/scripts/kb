@@ -124,8 +124,7 @@ STRINGS = {
 kb brief
 ```
 
-{pointers}
-Источники расходятся — остановись и скажи человеку, не выбирай удобный:
+{pointers}Источники расходятся — остановись и скажи человеку, не выбирай удобный:
 тесты = зафиксированное ожидание, код = фактическая реализация,
 `decision` = намерение и почему так, активный `plan` = незаконченное изменение.
 
@@ -204,8 +203,7 @@ The notes are in `{rel}`, {count} of them. One command reads all of it:
 kb brief
 ```
 
-{pointers}
-If the sources disagree, stop and tell the human — do not pick the convenient
+{pointers}If the sources disagree, stop and tell the human — do not pick the convenient
 one: tests are the recorded expectation, the code is the actual implementation,
 a `decision` is the intent and the reasoning, an active `plan` is a change that
 is not finished.
@@ -1478,9 +1476,14 @@ def render_route_block(root: Path, project: Path, notes: list[Note]) -> str:
         pointers.append(S("route_charter").format(path=f"{rel}/{charter.name}"))
     if cur:
         pointers.append(S("route_current").format(path=f"{rel}/{cur.name}"))
+    # The value carries its own trailing blank line and the template does not,
+    # so an empty group collapses instead of leaving a hole. The other way
+    # round -- a newline in the template -- put two blank lines into every kb
+    # that had neither a charter nor a snapshot, which is every kb on day one.
+    joined = "".join(f"{p}\n" for p in pointers)
     body = S("route_block").format(
         rel=f"{rel}/", count=len(notes),
-        pointers="".join(f"{p}\n" for p in pointers))
+        pointers=f"{joined}\n" if joined else "")
     return MARK_BEGIN + S("route_note") + "\n\n" + body.rstrip() + "\n\n" + MARK_END
 
 

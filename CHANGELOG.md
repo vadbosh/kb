@@ -18,6 +18,15 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.18.1
+
+- The generated block left two blank lines where the pointers go when a kb has
+  neither a charter nor a snapshot — which is every kb on its first day, and the
+  state `route` is most often run in. The newline sat in the template rather
+  than in the value, so an empty group could not collapse. Found by reading a
+  filled-in entry point in another stream, not by any check: nothing here
+  compares whitespace, and nothing should.
+
 ## 4.18.0
 
 - **The entry point kept itself up to date with nothing.** `kb add` rebuilt the
