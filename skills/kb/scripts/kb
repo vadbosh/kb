@@ -1519,7 +1519,7 @@ CLAUDE_IMPORT = "@AGENTS.md"
 ROUTE_BUDGET = 200
 
 
-def route_findings(root: Path) -> list[str]:
+def route_findings(root: Path, *, on_write: bool = False) -> list[str]:
     """Everything wrong with the entry point, for whoever asks.
 
     `route` reported these in the turn that wrote the file and nowhere else, so
@@ -1551,7 +1551,18 @@ def route_findings(root: Path) -> list[str]:
     if state == "local" and not ignored:
         out.append(f"{target.name} is committed while {root.name}/ is not — a "
                    "clone gets a pointer to a directory it does not have")
-    elif state == "versioned" and ignored:
+    elif state == "versioned" and ignored and on_write:
+        # Only where the file is being written, and deliberately not on every
+        # save and every restore. The two directions are not equally bad: a
+        # committed pointer to excluded notes ships a promise nothing can keep,
+        # while this one ships the notes and omits the signpost — the reader
+        # still has everything. It also follows from a choice the human already
+        # made, when `add` asked whether the notes are committed, and a
+        # repository whose policy excludes every AI artifact answers it the same
+        # way every time. Repeated each session it would be furniture.
+        #
+        # The cost, stated because it is real: `route` runs about once per
+        # project, so this may go unseen. That is the trade accepted for it.
         out.append(f"{root.name}/ is committed while {target.name} is not — the "
                    "notes reach a clone and nothing there points at them")
     total, parts = route_weight(project)
@@ -1673,7 +1684,7 @@ def cmd_route(args) -> int:
     # own copy of the git check and its own copy of the budget check, so a
     # condition added to one was invisible to the others -- which is exactly
     # how the reverse mismatch shipped undetected here.
-    for finding in route_findings(root):
+    for finding in route_findings(root, on_write=True):
         print(f"\n⚠ {finding}")
 
     return 1 if refused else 0

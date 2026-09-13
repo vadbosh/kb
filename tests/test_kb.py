@@ -996,6 +996,14 @@ class Route(Base):
         # named the notes.
         res = self.kb("route", expect=0)
         self.assertIn("nothing there points at them", res.stdout)
+        # …and only there. The notes still reach a clone, the choice was already
+        # made when `add` asked, and a repository that excludes every AI
+        # artifact by policy answers it the same way every time — repeated each
+        # session it would be furniture.
+        self.assertNotIn("nothing there points at them", self.kb("verify").stdout)
+        self.assertNotIn("nothing there points at them",
+                         self.kb("add", "two", "--kind", "recipe",
+                                 "--title", "a trap", expect=0).stdout)
 
     def test_no_such_report_when_both_are_excluded(self):
         subprocess.run(["git", "init", "-q", "."], cwd=str(self.proj),

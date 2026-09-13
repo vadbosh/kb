@@ -18,6 +18,24 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.19.5
+
+- **The reverse mismatch is reported by `route` alone, not by `sync` and
+  `verify`.** Its first use on a real repository landed on a state that was
+  deliberate: notes committed next to the code on purpose, and every AI artifact
+  excluded by a policy written long before kb existed. A finding that repeats
+  every session against an intended state is furniture, and this file has the
+  note explaining why that is the expensive kind of noise.
+
+  The two directions are not equally bad, which is what the split now says. A
+  committed pointer to excluded notes ships a promise nothing can keep, and that
+  one still surfaces everywhere. Notes committed without their pointer ships the
+  notes and omits the signpost — the reader has everything; it also follows from
+  a choice `add` already put to the human.
+
+  Stated in the code because it is a real cost: `route` runs about once per
+  project, so this may go unseen. That is the trade.
+
 ## 4.19.4
 
 - **A refusal on `AGENTS.md` no longer cancels the `CLAUDE.md` step.** `route`
