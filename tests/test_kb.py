@@ -939,6 +939,30 @@ class Route(Base):
                        for n in ("AGENTS.md", "CLAUDE.md"))
         self.assertEqual(kb_cli.route_weight(self.proj)[0], expected)
 
+    def test_a_committed_pointer_to_excluded_notes_is_reported(self):
+        subprocess.run(["git", "init", "-q", "."], cwd=str(self.proj),
+                       capture_output=True,
+                       env={"HOME": str(self.home), "PATH": "/usr/bin:/bin"},
+                       timeout=60)
+        self.make_kb()
+        self.kb("local", expect=0)
+        # Each half is defensible alone -- local notes, a shared entry point.
+        # Only the combination ships a promise the clone cannot keep.
+        res = self.kb("route", expect=0)
+        self.assertIn("kept out of git", res.stdout)
+
+    def test_no_such_report_when_both_are_excluded(self):
+        subprocess.run(["git", "init", "-q", "."], cwd=str(self.proj),
+                       capture_output=True,
+                       env={"HOME": str(self.home), "PATH": "/usr/bin:/bin"},
+                       timeout=60)
+        self.make_kb()
+        self.kb("local", expect=0)
+        exclude = self.proj / ".git" / "info" / "exclude"
+        exclude.write_text(exclude.read_text(encoding="utf-8")
+                           + "/AGENTS.md\n/CLAUDE.md\n", encoding="utf-8")
+        self.assertNotIn("kept out of git", self.kb("route", expect=0).stdout)
+
     def test_running_it_twice_changes_nothing(self):
         self.make_kb()
         self.kb("route", expect=0)

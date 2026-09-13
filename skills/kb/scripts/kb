@@ -779,6 +779,16 @@ def git_state(root: Path) -> str | None:
     return "local" if ignored.returncode == 0 else "undecided"
 
 
+def git_ignores(path: Path) -> bool:
+    """Would git leave this path out of a commit? False when git cannot say."""
+    try:
+        return subprocess.run(
+            ["git", "check-ignore", "-q", "--", str(path.resolve())],
+            cwd=path.parent, capture_output=True, timeout=10).returncode == 0
+    except (OSError, subprocess.SubprocessError):
+        return False
+
+
 def write_skeleton(root: Path, title: str | None) -> Path:
     refuse_bad_root(root)
     root.mkdir(parents=True, exist_ok=True)
@@ -1489,6 +1499,17 @@ def cmd_route(args) -> int:
         # everywhere else.
         print(f"{claude} exists and does not import {ROUTE_FILE}.")
         print(f"  Add this line at the top yourself:\n    {CLAUDE_IMPORT}")
+
+    # Found by running this on kb's own repository. The entry point is committed
+    # and the notes it points at are not, so every clone gets a file promising
+    # thirteen notes in a directory that is not there. The two halves are each
+    # defensible on their own -- local notes, a shared entry point -- and only
+    # the combination is broken, which is why nothing else would catch it.
+    if git_state(root) == "local" and not git_ignores(target):
+        print(f"\n⚠ {root} is kept out of git, {target.name} is not.")
+        print("  Anyone who clones this repository gets a file promising notes "
+              "in a directory\n  they do not have. Either commit the notes, or "
+              "keep this file out too.")
 
     total, parts = route_weight(project)
     if total > ROUTE_BUDGET:

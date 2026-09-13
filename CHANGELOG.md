@@ -18,6 +18,28 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.16.2
+
+- **A committed entry point pointing at excluded notes is now reported.** Found
+  by running `kb route` on this repository, which is the only place the two
+  halves meet: the notes here are deliberately kept out of git and the file
+  `route` writes is not, so every clone would have received an `AGENTS.md`
+  promising thirteen notes in a directory that is not there.
+
+  Each half is defensible alone — local notes are the right call for a scratch
+  stream, a shared entry point is the right call for a repository — and only the
+  combination is broken. That is why nothing else would have caught it: no check
+  here compares a decision about the notes with a decision about a file outside
+  them. `route` now asks git about both and says which way to resolve it, commit
+  the notes or exclude the pointer as well. It does not choose.
+
+- The entry point was verified the one way that counts: generated for this
+  repository, filled in, then read cold from Codex with the notes directory
+  explicitly off limits. It recovered the project, its boundaries, all four check
+  commands and the definition of done, including the release gate and the
+  requirement to exercise a check against broken input — from `AGENTS.md` alone,
+  on a model that had never loaded this skill.
+
 ## 4.16.1
 
 - The restore half still described the previous release. 4.16.0 changed what
