@@ -959,6 +959,31 @@ class Route(Base):
         self.assertNotIn("AGENTS.md", out.split("empty sections")[0])
         self.assertNotIn("work went on", out)
 
+    def test_the_budget_follows_imports(self):
+        self.make_kb()
+        self.kb("route", expect=0)
+        big = self.proj / "conventions.md"
+        big.write_text("\n".join(f"line {i}" for i in range(250)) + "\n",
+                       encoding="utf-8")
+        claude = self.proj / "CLAUDE.md"
+        claude.write_text(claude.read_text(encoding="utf-8")
+                          + f"@{big}\n", encoding="utf-8")
+        # An import is expanded into context at launch, so counting only the two
+        # files at the project root reported 35 lines where 635 were loaded —
+        # silent on exactly the files that overrun the budget worst.
+        res = self.kb("route", expect=0)
+        self.assertIn("conventions.md 250", res.stdout)
+        self.assertIn("budget 200", res.stdout)
+
+    def test_a_file_imported_twice_is_counted_once(self):
+        self.make_kb()
+        self.kb("route", expect=0)
+        # `CLAUDE.md` imports `AGENTS.md` in the layout `route` writes, so
+        # AGENTS.md is both a root and an import.
+        total, parts = kb_cli.route_weight(self.proj)
+        self.assertEqual(len([p for p in parts if p.startswith("AGENTS.md")]), 1)
+        self.assertEqual(total, sum(int(p.rsplit(" ", 1)[1]) for p in parts))
+
     def test_the_reported_size_is_the_one_wc_would_print(self):
         self.make_kb()
         self.kb("route", expect=0)

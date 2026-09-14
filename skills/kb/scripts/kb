@@ -1572,11 +1572,47 @@ def route_findings(root: Path, *, on_write: bool = False) -> list[str]:
     return out
 
 
+IMPORT_RE = re.compile(r"^@(\S+)", re.M)
+IMPORT_DEPTH = 4        # Claude Code stops here; counting further would overstate
+
+
+def _imports(f: Path, depth: int, seen: set[Path]) -> list[Path]:
+    """Files an `@path` line pulls in, recursively, the way the host expands them.
+
+    Counting only the two files at the project root said 35 lines where 635
+    reached the context window: an import is expanded at launch, so the lines
+    are paid for wherever they are written. A budget that ignores them is
+    silent exactly on the files that overrun it worst.
+    """
+    if depth <= 0:
+        return []
+    out = []
+    for raw in IMPORT_RE.findall(f.read_text(encoding="utf-8", errors="replace")):
+        p = Path(raw).expanduser()
+        if not p.is_absolute():
+            p = f.parent / p
+        try:
+            p = p.resolve()
+        except OSError:
+            continue
+        if p in seen or not p.is_file():
+            continue
+        seen.add(p)
+        out.append(p)
+        out.extend(_imports(p, depth - 1, seen))
+    return out
+
+
 def route_weight(project: Path) -> tuple[int, list[str]]:
     """Lines that reach the context window at session start, and their sources."""
     total, parts = 0, []
-    for name in (CLAUDE_FILE, ROUTE_FILE):
-        f = project / name
+    roots = [project / CLAUDE_FILE, project / ROUTE_FILE]
+    # Seeded with the roots: `CLAUDE.md` imports `AGENTS.md` in the layout this
+    # tool writes, and without the seed that file is counted twice.
+    seen: set[Path] = {r.resolve() for r in roots if r.is_file()}
+    imported = [i for r in roots if r.is_file()
+                for i in _imports(r, IMPORT_DEPTH, seen)]
+    for f in roots + imported:
         if f.is_file():
             # splitlines, not count("\n") + 1: this number is compared against a
             # documented budget and the reader checks it with `wc -l`. The note
@@ -1584,7 +1620,7 @@ def route_weight(project: Path) -> tuple[int, list[str]]:
             # notices at a 400-line advisory and everybody would at 200.
             n = len(f.read_text(encoding="utf-8", errors="replace").splitlines())
             total += n
-            parts.append(f"{name} {n}")
+            parts.append(f"{f.name} {n}")
     return total, parts
 
 

@@ -18,6 +18,29 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.20.0
+
+- **The context budget follows `@`-imports now, up to four hops.** It counted the
+  two files at the project root and nothing else, so a `CLAUDE.md` of two lines
+  importing 633 more reported 35 and stayed quiet. An import is expanded into
+  context at launch — the lines are paid for wherever they are written — which
+  makes the un-followed case exactly the one that overruns worst. Measured on a
+  real repository: three EKS clusters were loading 481, 471 and 381 lines each
+  against a 200-line budget, and kb had nothing to say about any of them.
+
+  Four hops because that is where Claude Code stops expanding; counting further
+  would report lines that never arrive. A file reached twice is counted once —
+  `CLAUDE.md` imports `AGENTS.md` in the layout `route` writes, so the seed
+  matters.
+
+- **`references/save.md` gains the table that says where moved text goes.** The
+  instruction was "move what is not routing into a note", which is right for one
+  of the four cases and wrong for the rest. The destination is chosen by *when*
+  the file loads: a convention tied to a file type belongs in a rule with `paths:`
+  frontmatter, a procedure shared across projects belongs in a skill, and
+  anything reached by `@path` belongs nowhere — moving text there saves nothing
+  and only makes the entry point look shorter.
+
 ## 4.19.5
 
 - **The reverse mismatch is reported by `route` alone, not by `sync` and

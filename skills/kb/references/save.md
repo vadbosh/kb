@@ -366,7 +366,7 @@ stays wrong until somebody fixes it. Fixing them is yours.
 
 | Reported | What to do |
 |---|---|
-| **over 200 lines of context** | move the prose that is not routing into a note, replace it with one line pointing at that note, re-run `kb sync`. Say in the report which sections moved and where |
+| **over 200 lines of context** | move what is not routing out, leave one line pointing at it, re-run `kb sync`. **Choose the destination by when it loads** — the table below. Say in the report what moved and where |
 | `CLAUDE.md` missing, or without the import | write the one line `@AGENTS.md`. A missing `CLAUDE.md` you may create outright: Claude Code reads it and not `AGENTS.md`, so without it the entry point reaches nobody |
 | `AGENTS.md` has no markers | do not add them silently — the file belongs to somebody. Say where they go and ask |
 | pointer committed while the notes are not | name the two ways out — commit the notes, or exclude the pointer as well — and ask which. Both are real answers |
@@ -380,6 +380,25 @@ paid for on every request of every session.
 What may never move: the check commands and the definition of done. Those are the
 reason the file exists, and an agent that has to open a note to find them will
 not.
+
+### Where the moved text goes, by when it loads
+
+The budget is about *when* a file reaches the context window, not about where it
+sits on disk. Moving text into another file that also loads at launch saves
+nothing — it only makes the entry point look shorter.
+
+| What the text is | Where it goes | When it loads |
+|---|---|---|
+| routing: what this work is, the check commands, the definition of done | stays in `AGENTS.md` | every session — that is what it is for |
+| a convention tied to a file type ("when touching `.tf`…") | `.claude/rules/<topic>.md` with `paths:` frontmatter | only when a matching file is read |
+| a repeatable procedure shared across projects | a skill | when the model judges it relevant |
+| something true of this stream only | a note in `kb/`, named from `AGENTS.md` | when someone opens it |
+| anything reached by `@path` | **nowhere** — an import is expanded at launch, so the lines are paid for wherever they are written | every session |
+
+That last row is the one that surprises: `@`-imports look like references and
+behave like paste. `kb` counts them, up to four hops, because a budget that
+ignored them stayed silent on the files that overran it worst — 35 lines
+reported where 635 were loaded.
 
 ## Run `kb verify` if this session moved or renamed anything
 
