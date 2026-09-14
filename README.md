@@ -257,9 +257,11 @@ markers kb does not touch and refuses to write to. A `CLAUDE.md` without the
 import kb does not write to either — it prints the line for you to add by hand.
 
 Both files reach the context window at every session start, so their combined
-length is capped at 200 lines. If the files come out longer, `kb route` and
-`kb verify` say so. kb will not shorten them: outside the markers the text is
-yours.
+length is capped at 200 lines — imports and `CLAUDE.local.md` included, since the
+host expands those at launch too. The cap is per launch directory: a session
+started in a subdirectory loads that directory's `CLAUDE.md` on top of every
+ancestor's, and `kb route` and `kb verify` report those chains as well. kb will
+not shorten them: outside the markers the text is yours.
 
 ### Versioned, or only on this machine
 
@@ -432,7 +434,8 @@ Worth knowing before extending it:
   them you get 271 flags of which about two are real — URL paths, API versions,
   fragments of longer paths. With them: 6 flags, 2 real. At the first ratio the
   report stops being read within days. The cost is that a path inside a fenced
-  block is not checked.
+  block is not checked. `~/…` counts as absolute; the notes, the overview and the
+  entry point are all scanned.
 - **Size thresholds are 400 and 1200 lines.** The familiar "keep it under 200
   lines" rule is about instruction files, which load into context on every turn.
   kb files are read on demand and one at a time, so that rule does not apply to

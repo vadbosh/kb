@@ -4,6 +4,42 @@ Versions are the `version:` field in `skills/kb/SKILL.md`, and each is tagged at
 the commit that introduced it. Breaking means a command that used to work now
 refuses.
 
+## 4.21.0
+
+- **The context budget is per launch directory, not per file.** It measured the
+  pair at the project root, which is the only place a session never actually
+  starts in a layered repository. The host loads `CLAUDE.md` from the launch
+  directory and every directory above it, so a component's own instruction file
+  is charged **on top of** its ancestors — a sum belonging to no single file, and
+  therefore to no check. Found by a human reading the tree: a component at 124
+  lines under a root at 100 overran the 200-line budget while neither file broke
+  it alone.
+
+  `route_chains()` walks the project, prunes what the work-ahead check already
+  prunes (ignored directories, nested streams, `SCAN_SKIP`), and reports the
+  worst three chains. The root finding stays first: the root file is in every
+  chain, so shortening it shortens all of them.
+
+  Run against three real cluster repositories it named one overrun the same
+  manual pass had missed — 215 lines, because the chain pulls an `@AGENTS.md`
+  the eye does not add up.
+
+- **`CLAUDE.local.md` counts.** Loaded straight after `CLAUDE.md` in the same
+  directory, uncommitted, and until now absent from every number kb printed. A
+  personal file is still context, and the one measured here carried 15 lines of
+  it into every session started in that component.
+
+- **`verify` scans the entry point for dead paths, and `~/…` is a path.** Two
+  pointers to a directory moved that morning survived a sweep of the notes and
+  the code, because they sat in a `CLAUDE.md` — which git ignores in those
+  repositories, so no commit hook saw them either. Both were found by a human
+  reading the file.
+
+  `~/…` was excluded from `checkable_paths()` as shell syntax rather than a
+  path, which exempted the one shape people write for a file in their home
+  directory. Expanded before the root test now, so the first two components are
+  still what decides.
+
 Releasing, in one commit: bump `version:`, add the section here, commit, then
 `./release.sh tag` and `git push --tags origin`. The tag carries this file's
 section for that version, so `git tag -n99 v4.1.0` answers "what changed"

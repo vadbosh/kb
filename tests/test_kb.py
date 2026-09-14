@@ -975,6 +975,45 @@ class Route(Base):
         self.assertIn("conventions.md 250", res.stdout)
         self.assertIn("budget 200", res.stdout)
 
+    def test_the_budget_covers_a_session_started_in_a_subdirectory(self):
+        self.make_kb()
+        self.kb("route", expect=0)
+        # Neither file breaks the budget alone. The host loads both when the
+        # session starts in the component directory, and that sum was nobody's.
+        comp = self.proj / "7.GRAFANA"
+        comp.mkdir()
+        (comp / "CLAUDE.md").write_text(
+            "\n".join(f"line {i}" for i in range(150)) + "\n", encoding="utf-8")
+        root_claude = self.proj / "CLAUDE.md"
+        root_claude.write_text(root_claude.read_text(encoding="utf-8")
+                               + "\n".join(f"pad {i}" for i in range(80)) + "\n",
+                               encoding="utf-8")
+        out = self.kb("route", expect=0).stdout
+        self.assertIn("7.GRAFANA/", out)
+        self.assertIn("7.GRAFANA/CLAUDE.md 150", out)
+        self.assertIn("budget 200", out)
+
+    def test_a_subdirectory_under_the_budget_is_not_reported(self):
+        self.make_kb()
+        self.kb("route", expect=0)
+        comp = self.proj / "2.CORE"
+        comp.mkdir()
+        (comp / "CLAUDE.md").write_text("small\n", encoding="utf-8")
+        self.assertEqual(kb_cli.route_chains(self.proj), [])
+        self.assertNotIn("2.CORE", self.kb("route", expect=0).stdout)
+
+    def test_the_personal_file_is_part_of_the_bill(self):
+        self.make_kb()
+        self.kb("route", expect=0)
+        before = kb_cli.route_weight(self.proj)[0]
+        # Loaded straight after CLAUDE.md in the same directory, uncommitted and
+        # therefore invisible to anything that reads the repository instead.
+        (self.proj / "CLAUDE.local.md").write_text(
+            "\n".join(f"mine {i}" for i in range(40)) + "\n", encoding="utf-8")
+        total, parts = kb_cli.route_weight(self.proj)
+        self.assertEqual(total, before + 40)
+        self.assertIn("CLAUDE.local.md 40", parts)
+
     def test_a_file_imported_twice_is_counted_once(self):
         self.make_kb()
         self.kb("route", expect=0)
@@ -1183,6 +1222,29 @@ class Sequence(Base):
         res = self.kb("verify", expect=3)
         self.assertIn(str(gone), res.stdout)
         self.assertIn("00-overview.md", res.stdout)
+
+    def test_a_dead_path_in_the_entry_point_is_reported(self):
+        root = self.aged_kb()
+        self.kb("route", expect=0)
+        gone = self.tmp / "moved-away" / "runbook.md"
+        agents = self.proj / "AGENTS.md"
+        agents.write_text(agents.read_text(encoding="utf-8")
+                          + f"\nFull runbook: `{gone}`.\n", encoding="utf-8")
+        # An agent reads this file before touching anything, and git ignores it
+        # in the repositories that found this — so no commit hook sees it either.
+        res = self.kb("verify", expect=3)
+        self.assertIn(str(gone), res.stdout)
+        self.assertIn("AGENTS.md", res.stdout.split("empty sections")[0])
+        self.assertTrue(root.is_dir())
+
+    def test_a_home_relative_path_is_checked(self):
+        root = self.aged_kb()
+        self.write_note(root, "02-b.md", kind="reference", title="b",
+                        body="Runbook: `~/.claude/conventions/gone.md`.")
+        # `~/…` was excluded as shell syntax, which let through the one shape
+        # people write for a file in their home directory.
+        res = self.kb("verify", expect=3)
+        self.assertIn("~/.claude/conventions/gone.md", res.stdout)
 
     def test_sync_reports_the_budget_it_just_refreshed_past(self):
         self.aged_kb()

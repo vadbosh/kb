@@ -299,9 +299,14 @@ definition of done. On the first run those sit as `kb:fill` comments. An
 for you to add by hand.
 
 **Length.** Both files reach the context window at every session start, so their
-combined length is capped at 200 lines. If the files come out longer, `kb route`
-and `kb verify` say so. kb will not shorten them: outside the markers the text
-is yours.
+combined length is capped at 200 lines. Everything the host expands at launch
+counts towards it — an `@path` import up to four hops deep, and `CLAUDE.local.md`
+alongside `CLAUDE.md`.
+
+The cap applies per launch directory, not per file. A session started in a
+subdirectory loads that directory's `CLAUDE.md` on top of every ancestor's, so
+`kb route` and `kb verify` report those chains as well as the root, worst first.
+kb will not shorten any of them: outside the markers the text is yours.
 
 ## Versioned, or only on this machine
 
@@ -394,7 +399,14 @@ roughly two of them real — URL paths (`/stats/prometheus`), API versions
 side of the bargain is that a path inside a code block, without backticks, goes
 unchecked. Deliberate — at the opposite ratio the report soon stops being read.
 
-Paths are looked for in the notes and in the overview.
+A `~/…` path counts as absolute and is expanded before the test. It was left out
+at first as shell syntax rather than a path, which quietly exempted the one shape
+people write for a file in their home directory.
+
+Paths are looked for in the notes, in the overview, and in the entry point —
+`AGENTS.md`, `CLAUDE.md` and whatever they import. The entry point is the file an
+agent reads before touching the project, and in a repository that excludes AI
+artifacts from git no commit hook sees it either.
 
 **Work ahead of the notes.** kb takes the newest file in the work directory and
 compares it against the newest file in `kb/`. A gap of more than an hour means

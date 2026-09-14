@@ -331,10 +331,21 @@ Refusals and findings:
 | `CLAUDE.md` exists without the import | left alone, the `@AGENTS.md` line is printed | 0 |
 | the block disagrees with the notes | a `kb check` finding, fixed by `kb sync` | 3 |
 | the two files together exceed 200 lines | written, and reported: that much context goes to every session | 0 |
+| a subdirectory's own `CLAUDE.md` pushes a session started there over 200 | reported, worst three first | 0 |
 
-The 200 lines are counted across both files: `@AGENTS.md` is expanded alongside
-`CLAUDE.md`, so both reach the context window. kb never shortens either — it
-prints the number and leaves the decision to you.
+The 200 lines are counted across every file the host expands at launch, not just
+the one you edited: `@AGENTS.md` is pulled in alongside `CLAUDE.md`, an import
+inside that is pulled in too, up to four hops, and `CLAUDE.local.md` is loaded
+straight after `CLAUDE.md` in the same directory.
+
+A session started in a subdirectory loads that directory's `CLAUDE.md` **on top
+of** every ancestor's, so the same root file is charged again in every chain.
+That sum belongs to no single file, which is why it went unmeasured: a component
+at 124 lines under a root at 100 overran the budget while neither file broke it
+alone.
+
+kb never shortens any of them — it prints the numbers and leaves the decision to
+you.
 
 ---
 

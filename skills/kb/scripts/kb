@@ -1265,13 +1265,19 @@ def checkable_paths(text: str) -> set[str]:
       * only inside backticks — a mention in prose is not a claim about disk
       * the first two components must exist — that alone kills URLs, versions
         and fragments, since `/stats` and `/v1alpha1` are not directories here
+
+    `~/…` counts as absolute and is expanded before testing. It was excluded at
+    first as shell syntax rather than a path, which let the one shape people
+    actually write for a file in their home directory through unchecked: a
+    pointer to `~/.claude/conventions/…` outlived the directory by a day and
+    was found by a human reading the file, not by this.
     """
     out = set()
-    for raw in re.findall(r"`(/[A-Za-z0-9._/-]{6,})`", text):
+    for raw in re.findall(r"`(~?/[A-Za-z0-9._/-]{6,})`", text):
         p = raw.rstrip(".,;:")
         if "..." in p:
             continue                    # elision in prose, not a literal path
-        parts = p.strip("/").split("/")
+        parts = Path(p).expanduser().as_posix().strip("/").split("/")
         if len(parts) < 2:
             continue
         anchor = Path("/") / parts[0]
@@ -1299,13 +1305,20 @@ def cmd_verify(args) -> int:
     # That exemption silently followed the set into the path check, and a dead
     # pointer sat in the first file every reader opens. Same shape as the link
     # check in 4.15.4: a set assembled for one purpose, reused for a second.
+    # The entry point is scanned on the same terms. It is not a note, but it is
+    # the one file an agent reads before touching anything, and a pointer in it
+    # that no longer resolves sends the reader to a directory somebody moved.
+    # Two of them survived a sweep of the notes and the code because they sat in
+    # a `CLAUDE.md` -- which git ignored, so no commit hook saw them either.
+    project = root.parent if root.name == "kb" else root
     dead: dict[str, set[str]] = {}
-    for path in [n.path for n in notes] + [root / OVERVIEW]:
+    for path in ([n.path for n in notes] + [root / OVERVIEW]
+                 + route_files(project)):
         if not path.is_file():
             continue
         text = path.read_text(encoding="utf-8", errors="replace")
         for p in checkable_paths(text):
-            if not Path(p).exists():
+            if not Path(p).expanduser().exists():
                 dead.setdefault(p, set()).add(path.name)
 
     aging = []
@@ -1507,6 +1520,9 @@ def cmd_hook(args) -> int:
 
 ROUTE_FILE = "AGENTS.md"
 CLAUDE_FILE = "CLAUDE.md"
+# Personal, uncommitted, and loaded straight after `CLAUDE.md` in the same
+# directory — so it is part of the bill whether or not anyone counts it.
+LOCAL_FILE = "CLAUDE.local.md"
 CLAUDE_IMPORT = "@AGENTS.md"
 
 # The entry point is the one file here that does NOT get the notes' treatment.
@@ -1569,6 +1585,16 @@ def route_findings(root: Path, *, on_write: bool = False) -> list[str]:
     if total > ROUTE_BUDGET:
         out.append(f"{total} lines of context every session ({', '.join(parts)}), "
                    f"budget {ROUTE_BUDGET} — move what is not routing into a note")
+    # A component directory pays for its own instruction file plus every one
+    # above it. Reported after the root so the cheaper fix is read first: the
+    # root line is in every chain, and shortening it shortens all of them.
+    chains = route_chains(project)
+    for here, n, parts in chains[:3]:
+        rel = os.path.relpath(here, project).replace(os.sep, "/")
+        out.append(f"a session started in {rel}/ loads {n} lines "
+                   f"({', '.join(parts)}), budget {ROUTE_BUDGET}")
+    if len(chains) > 3:
+        out.append(f"… and {len(chains) - 3} more subdirectories over the budget")
     return out
 
 
@@ -1603,16 +1629,50 @@ def _imports(f: Path, depth: int, seen: set[Path]) -> list[Path]:
     return out
 
 
-def route_weight(project: Path) -> tuple[int, list[str]]:
+def _ancestry(start: Path, project: Path) -> list[Path]:
+    """Directories from just under `project` down to `start`, outermost first."""
+    chain, p = [], start
+    while p != project and p.parent != p:
+        chain.append(p)
+        p = p.parent
+    return list(reversed(chain)) if p == project else []
+
+
+def _label(f: Path, project: Path) -> str:
+    """`AGENTS.md` at the root, `7.GRAFANA/CLAUDE.md` below it.
+
+    A chain names several files called `CLAUDE.md` and the bare name cannot say
+    which is which.
+    """
+    try:
+        return f.relative_to(project).as_posix()
+    except ValueError:
+        return f.name
+
+
+def route_files(project: Path, start: Path | None = None) -> list[Path]:
+    """Files expanded into context when a session starts in `start`.
+
+    The host loads `CLAUDE.md` and `CLAUDE.local.md` from the launch directory
+    and every directory above it, the local file after the shared one at each
+    level; `AGENTS.md` arrives only through the `@` import the root `CLAUDE.md`
+    carries, and is named here as well because a Codex-only project has it with
+    no `CLAUDE.md` at all.
+    """
+    roots = [project / CLAUDE_FILE, project / ROUTE_FILE, project / LOCAL_FILE]
+    for d in _ancestry(start, project) if start else []:
+        roots += [d / CLAUDE_FILE, d / LOCAL_FILE]
+    files = [r for r in roots if r.is_file()]
+    # Seeded with the files themselves: `CLAUDE.md` imports `AGENTS.md` in the
+    # layout this tool writes, and without the seed that file is counted twice.
+    seen: set[Path] = {f.resolve() for f in files}
+    return files + [i for f in files for i in _imports(f, IMPORT_DEPTH, seen)]
+
+
+def route_weight(project: Path, start: Path | None = None) -> tuple[int, list[str]]:
     """Lines that reach the context window at session start, and their sources."""
     total, parts = 0, []
-    roots = [project / CLAUDE_FILE, project / ROUTE_FILE]
-    # Seeded with the roots: `CLAUDE.md` imports `AGENTS.md` in the layout this
-    # tool writes, and without the seed that file is counted twice.
-    seen: set[Path] = {r.resolve() for r in roots if r.is_file()}
-    imported = [i for r in roots if r.is_file()
-                for i in _imports(r, IMPORT_DEPTH, seen)]
-    for f in roots + imported:
+    for f in route_files(project, start):
         if f.is_file():
             # splitlines, not count("\n") + 1: this number is compared against a
             # documented budget and the reader checks it with `wc -l`. The note
@@ -1620,8 +1680,34 @@ def route_weight(project: Path) -> tuple[int, list[str]]:
             # notices at a 400-line advisory and everybody would at 200.
             n = len(f.read_text(encoding="utf-8", errors="replace").splitlines())
             total += n
-            parts.append(f"{f.name} {n}")
+            parts.append(f"{_label(f, project)} {n}")
     return total, parts
+
+
+def route_chains(project: Path) -> list[tuple[Path, int, list[str]]]:
+    """Per subdirectory with its own instruction file, what a session there loads.
+
+    The budget was measured for the project root only, where it is the cheapest
+    thing to see: two files, one sum. A session started in a component directory
+    loads that directory's `CLAUDE.md` on top of every ancestor's, and that sum
+    was nobody's — a component at 124 lines under a root at 100 overran a budget
+    neither file broke on its own, and a human found it by reading.
+    """
+    out = []
+    ignored = git_ignored_children(project)
+    for dirpath, dirnames, filenames in os.walk(project, onerror=lambda e: None):
+        here = Path(dirpath)
+        dirnames[:] = [d for d in dirnames
+                       if d not in SCAN_SKIP and not d.startswith(".")
+                       # Another stream's entry point is that stream's budget.
+                       and not is_stream(here / d)
+                       and (here / d).resolve() not in ignored]
+        if here == project or not ({CLAUDE_FILE, LOCAL_FILE} & set(filenames)):
+            continue
+        total, parts = route_weight(project, here)
+        if total > ROUTE_BUDGET:
+            out.append((here, total, parts))
+    return sorted(out, key=lambda r: -r[1])
 
 
 def render_route_block(root: Path, project: Path, notes: list[Note]) -> str:
