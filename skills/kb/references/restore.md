@@ -53,7 +53,9 @@ findings are conditions, not events — each stays wrong until fixed:
 - **empty sections** → `kb route` left slots only the human can fill: the check
   commands, the definition of done. Name the file and ask; the answers are not
   yours to invent.
-- **over the 200-line context budget**, **`CLAUDE.md` missing or not importing**,
+- **over the 200-line context budget** — at the project root, or for a session
+  started in a named subdirectory, which loads that directory's `CLAUDE.md` on
+  top of every ancestor's — **`CLAUDE.md` missing or not importing**,
   **pointer committed while the notes are not** → surface them under
   Discrepancies with what each one costs. Fixing them belongs to the save half,
   which has the rules; this half briefs and writes nothing.
