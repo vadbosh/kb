@@ -4,6 +4,28 @@ Versions are the `version:` field in `skills/kb/SKILL.md`, and each is tagged at
 the commit that introduced it. Breaking means a command that used to work now
 refuses.
 
+Releasing, in one commit: bump `version:`, add the section here, commit, then
+`./release.sh tag` and `git push --tags origin`. The tag carries this file's
+section for that version, so `git tag -n99 v4.1.0` answers "what changed"
+without leaving git.
+
+A tag is not edited afterwards: `git tag -f` recreates it, and for one already
+pushed that means a force-push while anyone who fetched keeps the old. Anything
+that needs correcting later belongs here, where it can be.
+
+`./release.sh check` verifies the three agree — the field that ships, the section
+a reader looks at, and the tag `git checkout` needs. They drift independently,
+and a release where they disagree is worse than an untagged one: each source
+looks authoritative, and nothing says which is right.
+
+## 4.21.1
+
+- The restore half enumerated the entry-point findings and 4.21.0 added one to
+  the list, so the subdirectory chain was reported by the tool and absent from
+  the instructions that say what to do about it. Prose that enumerates tool
+  output is exactly what goes stale — the same defect 4.16.1 fixed, one release
+  later.
+
 ## 4.21.0
 
 - **The context budget is per launch directory, not per file.** It measured the
@@ -39,20 +61,6 @@ refuses.
   path, which exempted the one shape people write for a file in their home
   directory. Expanded before the root test now, so the first two components are
   still what decides.
-
-Releasing, in one commit: bump `version:`, add the section here, commit, then
-`./release.sh tag` and `git push --tags origin`. The tag carries this file's
-section for that version, so `git tag -n99 v4.1.0` answers "what changed"
-without leaving git.
-
-A tag is not edited afterwards: `git tag -f` recreates it, and for one already
-pushed that means a force-push while anyone who fetched keeps the old. Anything
-that needs correcting later belongs here, where it can be.
-
-`./release.sh check` verifies the three agree — the field that ships, the section
-a reader looks at, and the tag `git checkout` needs. They drift independently,
-and a release where they disagree is worse than an untagged one: each source
-looks authoritative, and nothing says which is right.
 
 ## 4.20.0
 
