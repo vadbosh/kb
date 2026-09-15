@@ -263,6 +263,39 @@ class Add(Base):
 
 # ── the generated index ─────────────────────────────────────────────────────
 
+    def test_add_takes_the_body_at_creation(self):
+        root = self.make_kb()
+        body = self.tmp / "body.md"
+        body.write_text("First paragraph.\n\n## A section\n\nText.\n",
+                        encoding="utf-8")
+        self.kb("add", "note", "--kind", "recipe", "--title", "a trap",
+                "--body-file", str(body), expect=0)
+        # Without this the note is created empty and overwritten whole: two
+        # round trips, and in a long session a round trip costs the whole
+        # context again -- measured at ~105k against 16 calls for one save.
+        text = (root / "01-note.md").read_text(encoding="utf-8")
+        self.assertIn("First paragraph.", text)
+        self.assertIn("## A section", text)
+        self.assertNotIn("kb:fill", text)
+        self.assertEqual(text.count("# a trap"), 1)
+
+    def test_a_body_repeating_the_heading_does_not_double_it(self):
+        root = self.make_kb()
+        body = self.tmp / "body.md"
+        body.write_text("# a trap\n\nText.\n", encoding="utf-8")
+        self.kb("add", "note", "--kind", "recipe", "--title", "a trap",
+                "--body-file", str(body), expect=0)
+        # Two `# ` lines for one index row is what a reader sees otherwise.
+        self.assertEqual(
+            (root / "01-note.md").read_text(encoding="utf-8").count("# a trap"), 1)
+
+    def test_without_the_flag_the_skeleton_is_still_written(self):
+        root = self.make_kb()
+        self.kb("add", "note", "--kind", "recipe", "--title", "a trap", expect=0)
+        self.assertIn("kb:fill",
+                      (root / "01-note.md").read_text(encoding="utf-8"))
+
+
 class Index(Base):
     def test_table_is_regenerated_from_front_matter(self):
         root = self.make_kb()

@@ -278,9 +278,22 @@ bad    <component name>            (a noun, answers nothing)
 
 ## Step 4 — write the body
 
-`kb add` creates the file with front matter, an `# H1` and **headings for the
-kind you chose** — fill them, or delete the ones that do not apply. Deleting is a
-decision and fine; leaving one unanswered is not, and `check` says so.
+**Have the body ready and pass it: `kb add … --body-file -`, text on stdin.**
+The note is written once, with its front matter. Creating it empty and then
+overwriting it whole is two tool calls, and in a long session a tool call costs
+the whole context again — measured on one save: sixteen calls against a context
+of about 105 000 tokens, against roughly 800 tokens for the longest section of
+this file. Shortening prose is not where the cost is.
+
+It also removes a trap that had to be warned about instead: a file a command has
+just created exists, has never been read, and looks new — and a `Write` over it
+is refused after the whole body has been sent.
+
+`--body-file` skips the section skeleton, so the headings are yours to write.
+Without it `kb add` creates the file with front matter, an `# H1` and **headings
+for the kind you chose** — fill them, or delete the ones that do not apply.
+Deleting is a decision and fine; leaving one unanswered is not, and `check` says
+so.
 
 The headings exist because `kind` used to say only when a note expires, never
 what belongs in it. The body then filled with whatever was freshest, which is

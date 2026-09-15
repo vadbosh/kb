@@ -18,6 +18,23 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.29.0
+
+- **`kb add --body-file <path|->` writes the note in one call.** The body had
+  nowhere to go, so every save created the file empty and then overwrote it
+  whole: two tool calls where one does. Measured on a real save — sixteen calls
+  against a context of about 105 000 tokens, so a round trip costs the entire
+  conversation again, while the longest section of `references/save.md` is worth
+  roughly 800 tokens. Shortening prose is not where the cost is, and the measured
+  numbers are in `kb/16-cost-is-round-trips.md` so the idea stops coming back.
+
+  It also closes a trap that had to be warned about in prose: a file a command
+  has just created exists, has never been read, and looks new — and a `Write`
+  over it is refused *after* the whole body has been sent.
+
+  With a body the section skeleton is skipped; the headings are the writer's. A
+  body that repeats the `# title` heading does not get a second one.
+
 ## 4.28.0
 
 - **kb no longer writes into a directory it did not make.** `kb` is an ordinary

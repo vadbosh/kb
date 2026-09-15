@@ -1069,12 +1069,28 @@ def cmd_add(args) -> int:
     if args.supersedes:
         fm.append(f"supersedes: {args.supersedes}")
     fm += [FM_FENCE, "", f"# {title}", ""]
-    # A kind says when a note expires; it never said what belongs in one, so the
-    # body was filled with whatever was freshest -- always the reasoning, never
-    # the location. Headings make the omission visible: an empty section shows,
-    # an unwritten thought does not.
-    for head in S("shape").get(args.kind, []):
-        fm += [f"## {head}", "", S("fill"), ""]
+    # The body, when the caller has it already. Without this the note is created
+    # empty and then overwritten whole -- two round trips instead of one, and in
+    # a long session a round trip costs the entire context again. Measured on a
+    # real save: sixteen tool calls, of which this pair was one, against a
+    # context of ~105k. It also closes the trap of writing over a file a command
+    # has just created, which had to be warned about in prose instead.
+    if args.body_file:
+        body = (sys.stdin.read() if args.body_file == "-"
+                else Path(args.body_file).read_text(encoding="utf-8"))
+        # The heading is already there. A body that repeats it gives the reader
+        # two `# ` lines and the index one title.
+        stripped = body.lstrip()
+        if stripped.startswith(f"# {title}"):
+            body = stripped[len(f"# {title}"):].lstrip("\n")
+        fm += [body.rstrip("\n"), ""]
+    else:
+        # A kind says when a note expires; it never said what belongs in one, so
+        # the body was filled with whatever was freshest -- always the reasoning,
+        # never the location. Headings make the omission visible: an empty
+        # section shows, an unwritten thought does not.
+        for head in S("shape").get(args.kind, []):
+            fm += [f"## {head}", "", S("fill"), ""]
     path.write_text("\n".join(fm), encoding="utf-8")
     print(f"created {path}")
     if not args.no_sync:
@@ -2591,6 +2607,8 @@ def main() -> int:
     p.add_argument("--kind", default="reference", choices=list(KINDS))
     p.add_argument("--title", help="what the reader finds here (index row text)")
     p.add_argument("--supersedes", help="file this one replaces")
+    p.add_argument("--body-file", metavar="PATH",
+                   help="note body, or - for stdin; skips the section skeleton")
     p.add_argument("--no-sync", action="store_true", help="skip the index rewrite")
     p.set_defaults(fn=cmd_add)
 

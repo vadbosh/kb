@@ -402,7 +402,9 @@ The choice is not stored anywhere. `kb status` asks git and prints
 | `kb local [--dry-run]` | keep the notes out of git, via `.git/info/exclude` |
 
 Flags: `--dir <path>` anywhere, `--supersedes <file>` on `add`, `--no-sync` on
-`add` to skip the reindex.
+`add` to skip the reindex, `--body-file <path|->` on `add` to write the body in
+the same call instead of creating the note empty and editing it afterwards. With
+a body the section skeleton is skipped — the headings are yours.
 
 ### Exit codes
 
