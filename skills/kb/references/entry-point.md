@@ -80,7 +80,7 @@ not quietly forgotten, and not announced once in a turn nobody revisits.
 | **a subdirectory over the budget** | the chain is named in the finding. Shorten the root file first — it is charged again in every chain, so one edit fixes several. Then the subdirectory's own `CLAUDE.md`, by the same table |
 | `CLAUDE.md` missing, or without the import | write the one line `@AGENTS.md`. A missing `CLAUDE.md` you may create outright: Claude Code reads it and not `AGENTS.md`, so without it the entry point reaches nobody |
 | `AGENTS.md` has no markers | do not add them silently — the file belongs to somebody. Say where they go and ask |
-| pointer committed while the notes are not | name the two ways out — commit the notes, or exclude the pointer as well — and ask which. Both are real answers |
+| pointer not excluded while the notes are | name the two ways out — stop excluding the notes, or exclude the pointer as well — and ask which. Both are real answers |
 
 **Moving prose is an edit, so it is reported, never silent.** The rule this tool
 holds is that nobody shortens a human's text without saying so — not that the

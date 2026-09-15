@@ -269,7 +269,8 @@ Notes inside a git repository are committed by default: `git add -A` sweeps them
 in. kb says so once — when it creates the `kb/` directory.
 
 ```bash
-kb local          # .git/info/exclude — the notes stay here
+kb local          # .git/info/exclude — the notes stay here, and the
+                  # entry point kb wrote goes with them
                   # or commit them, and they ship with the project
 ```
 

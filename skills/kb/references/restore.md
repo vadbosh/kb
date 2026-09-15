@@ -57,7 +57,7 @@ findings are conditions, not events — each stays wrong until fixed:
 - **over the 200-line context budget** — at the project root, or for a session
   started in a named subdirectory, which loads that directory's `CLAUDE.md` on
   top of every ancestor's — **`CLAUDE.md` missing or not importing**,
-  **pointer committed while the notes are not** → surface them under
+  **pointer not excluded while the notes are** → surface them under
   Discrepancies with what each one costs. Fixing them belongs to the save half,
   which has the rules; this half briefs and writes nothing.
 

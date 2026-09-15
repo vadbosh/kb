@@ -1069,7 +1069,11 @@ class Route(Base):
         # Each half is defensible alone -- local notes, a shared entry point.
         # Only the combination ships a promise the clone cannot keep.
         res = self.kb("route", expect=0)
-        self.assertIn("is committed while", res.stdout)
+        self.assertIn("is not excluded while", res.stdout)
+        # And it says what git would say. The word was "committed", in a
+        # repository that had no commits at all: a finding that overstates the
+        # state sends the reader to fix a situation that does not exist.
+        self.assertNotIn("is committed", res.stdout)
 
     def test_the_reverse_mismatch_is_reported_too(self):
         env = {"HOME": str(self.home), "PATH": "/usr/bin:/bin"}
@@ -1108,7 +1112,7 @@ class Route(Base):
         exclude = self.proj / ".git" / "info" / "exclude"
         exclude.write_text(exclude.read_text(encoding="utf-8")
                            + "/AGENTS.md\n/CLAUDE.md\n", encoding="utf-8")
-        self.assertNotIn("is committed while", self.kb("route", expect=0).stdout)
+        self.assertNotIn("is not excluded while", self.kb("route", expect=0).stdout)
 
     def test_running_it_twice_changes_nothing(self):
         self.make_kb()
@@ -1324,18 +1328,29 @@ class Sequence(Base):
         # construction, so without the exclusion this fires every time.
         self.assertNotIn("work went on", after_route)
 
-        self.kb("local", expect=0)
-        after_local = self.kb("route", expect=0).stdout
-        # Step 3 → 4: notes excluded, pointer not. Each half is defensible
-        # alone; only the pair ships a promise a clone cannot keep.
-        self.assertIn("is committed while", after_local)
+        out = self.kb("local", expect=0).stdout
+        # Step 3 → 4: the notes and the file pointing at them are one decision.
+        # Excluding only the notes left a pointer the next `git add -A` takes,
+        # and the tool then reported the state it had just created itself.
+        self.assertIn("/AGENTS.md", out)
+        self.assertIn("/CLAUDE.md", out)
+        exclude = (self.proj / ".git" / "info" / "exclude").read_text(
+            encoding="utf-8")
+        for pattern in ("/kb/", "/AGENTS.md", "/CLAUDE.md"):
+            self.assertIn(pattern, exclude)
+        self.assertNotIn("is not excluded while", self.kb("route", expect=0).stdout)
 
-        # And the pair agreeing again silences it, rather than the finding
-        # being permanent once seen.
-        exclude = self.proj / ".git" / "info" / "exclude"
-        exclude.write_text(exclude.read_text(encoding="utf-8")
-                           + "/AGENTS.md\n/CLAUDE.md\n", encoding="utf-8")
-        self.assertNotIn("is committed while", self.kb("route", expect=0).stdout)
+    def test_local_leaves_a_file_it_did_not_write_alone(self):
+        self.git("init", "-q", ".")
+        self.aged_kb()
+        mine = self.proj / "AGENTS.md"
+        mine.write_text("# mine, no markers\n", encoding="utf-8")
+        self.kb("local", expect=0)
+        exclude = (self.proj / ".git" / "info" / "exclude").read_text(
+            encoding="utf-8")
+        # Somebody else's file, so the decision about it is somebody else's.
+        self.assertIn("/kb/", exclude)
+        self.assertNotIn("/AGENTS.md", exclude)
 
     def test_a_second_save_carries_the_entry_point_with_it(self):
         self.aged_kb()

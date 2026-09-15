@@ -1621,8 +1621,13 @@ def route_findings(root: Path, *, on_write: bool = False) -> list[str]:
     # yet named in that policy.
     state, ignored = git_state(root), git_ignores(target)
     if state == "local" and not ignored:
-        out.append(f"{target.name} is committed while {root.name}/ is not — a "
-                   "clone gets a pointer to a directory it does not have")
+        # "committed" was the word here and it was not true: the file is
+        # merely not excluded, and in a repository with no commits at all
+        # nothing is committed. A finding that overstates the state is acted on
+        # against a situation that does not exist.
+        out.append(f"{target.name} is not excluded while {root.name}/ is — the "
+                   f"next `git add -A` commits it, and a clone then gets a "
+                   f"pointer to a directory it does not have")
     elif state == "versioned" and ignored and on_write:
         # Only where the file is being written, and deliberately not on every
         # save and every restore. The two directions are not equally bad: a
@@ -1635,8 +1640,8 @@ def route_findings(root: Path, *, on_write: bool = False) -> list[str]:
         #
         # The cost, stated because it is real: `route` runs about once per
         # project, so this may go unseen. That is the trade accepted for it.
-        out.append(f"{root.name}/ is committed while {target.name} is not — the "
-                   "notes reach a clone and nothing there points at them")
+        out.append(f"{root.name}/ is tracked while {target.name} is excluded — "
+                   "the notes reach a clone and nothing there points at them")
     # The instructions for filling these live in the page named beside every
     # finding, and that page loads on demand. Without this condition the page
     # was unreachable at the one moment it is needed: `route` creates the slots
@@ -1905,20 +1910,48 @@ def cmd_local(args) -> int:
 
     repo = git_dir.parent
     rel = os.path.relpath(root.resolve(), repo.resolve()).replace(os.sep, "/")
-    pattern = f"/{rel}/"
     exclude = git_dir / "info" / "exclude"
     existing = exclude.read_text(encoding="utf-8") if exclude.exists() else ""
-    if pattern in [line.strip() for line in existing.splitlines()]:
-        print(f"{exclude} already lists {pattern}")
+    listed = [line.strip() for line in existing.splitlines()]
+
+    # The notes and the file that points at them are one decision, not two.
+    # Excluding only the notes leaves a pointer that the next `git add -A`
+    # commits, promising a clone a directory it will never get -- which is a
+    # finding this tool already reports, and reporting a state the tool itself
+    # created is worse than not creating it. Only files kb wrote are touched:
+    # an `AGENTS.md` without the markers belongs to somebody, and a `CLAUDE.md`
+    # holding anything but the import does too.
+    project = root.parent if root.name == "kb" else root
+    wants = [f"/{rel}/"]
+    for name in (ROUTE_FILE, CLAUDE_FILE):
+        f = project / name
+        if not f.is_file():
+            continue
+        body = f.read_text(encoding="utf-8", errors="replace")
+        mine = MARK_BEGIN in body if name == ROUTE_FILE else body.strip() == CLAUDE_IMPORT
+        if mine:
+            wants.append("/" + os.path.relpath(f.resolve(),
+                                               repo.resolve()).replace(os.sep, "/"))
+
+    missing = [w for w in wants if w not in listed]
+    if not missing:
+        print(f"{exclude} already lists {', '.join(wants)}")
         return 0
     if args.dry_run:
-        print(f"would append {pattern} to {exclude}")
+        print(f"would append {', '.join(missing)} to {exclude}")
         return 0
     exclude.parent.mkdir(parents=True, exist_ok=True)
     sep = "" if not existing or existing.endswith("\n") else "\n"
-    exclude.write_text(f"{existing}{sep}{pattern}\n", encoding="utf-8")
-    print(f"appended {pattern} to {exclude}")
+    exclude.write_text(existing + sep + "".join(f"{w}\n" for w in missing),
+                       encoding="utf-8")
+    print(f"appended {', '.join(missing)} to {exclude}")
     print("  the notes stay on this machine; nothing about them is committed")
+    kept = [w for w in wants[1:] if w not in missing]
+    if len(wants) > 1:
+        print("  the entry point goes with them — a pointer without its notes "
+              "is a promise a clone cannot keep")
+    if kept:
+        print(f"  already listed: {', '.join(kept)}")
     return 0
 
 

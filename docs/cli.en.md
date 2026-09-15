@@ -356,9 +356,15 @@ Notes inside a git repository are committed by default — `git add -A` sweeps
 them in. `kb add` says so once, when it creates the directory.
 
 ```bash
-kb local              # append /kb/ to .git/info/exclude
+kb local              # append /kb/ to .git/info/exclude, and the entry point with it
 kb local --dry-run    # print what would happen, write nothing
 ```
+
+The notes and the file that points at them are one decision. Excluding only the
+notes leaves an `AGENTS.md` the next `git add -A` commits, promising a clone a
+directory it will never get — so `AGENTS.md` and `CLAUDE.md` go into the same
+list. Only the ones kb wrote: an `AGENTS.md` without the markers is somebody
+else's file, and so is a `CLAUDE.md` holding anything but the import.
 
 `.git/info/exclude` applies to one checkout, `.gitignore` to everyone who
 clones. The pattern is written relative to the repository root: a kb at `sub/kb`

@@ -18,6 +18,30 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.27.0
+
+- **`kb local` covers the file that points at the notes, not just the notes.**
+  The notes and their pointer are one decision, and excluding only the notes
+  left an `AGENTS.md` the next `git add -A` would commit — promising a clone a
+  directory it will never get. The tool then reported that state as a finding,
+  which is the worst arrangement of all: it created the mismatch and complained
+  about it. Found on a real repository the first time the git branch was
+  exercised, by a human who had answered the question correctly.
+
+  Only files kb wrote are touched: an `AGENTS.md` without the markers belongs to
+  somebody, and a `CLAUDE.md` holding anything but the import does too. Both are
+  left alone and said so.
+
+## 4.26.1
+
+- **The mismatch finding said "committed" about a file that was untracked, in a
+  repository with no commits at all.** What the check actually asks is whether
+  the pointer is *excluded*, and it is not the same question: a file nobody has
+  ever committed is still the file the next `git add -A` will take. Reported on
+  a real repository the day the branch was first exercised — the reader was sent
+  to undo a commit that did not exist. Both directions now say what git would
+  say: not excluded, or tracked.
+
 ## 4.26.0
 
 - **The language belongs to the kb, not to the machine.** `KB_LANG` was one
