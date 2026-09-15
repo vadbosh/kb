@@ -50,9 +50,10 @@ What its verdict lines mean:
 `verify` also reports on the project's entry point, under its own heading. Those
 findings are conditions, not events — each stays wrong until fixed:
 
-- **empty sections** → `kb route` left slots only the human can fill: the check
-  commands, the definition of done. Name the file and ask; the answers are not
-  yours to invent.
+- **empty sections** → the save half fills these from the session that wrote the
+  notes; seeing them here means that never happened. Name the file and say
+  `/kb save` answers them. This half writes nothing, and inventing a check
+  command for work you have not done is how a wrong one gets executed.
 - **over the 200-line context budget** — at the project root, or for a session
   started in a named subdirectory, which loads that directory's `CLAUDE.md` on
   top of every ancestor's — **`CLAUDE.md` missing or not importing**,

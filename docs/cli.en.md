@@ -319,9 +319,10 @@ kb route
 | `CLAUDE.md` | one line, `@AGENTS.md`. Claude Code reads this file and not the other one |
 
 The block between the markers is updated by `kb route` and by `kb sync`, and so
-by `kb add`. Nothing outside the markers is touched. The check commands and the
-definition of done are yours to write — on the first run they are `kb:fill`
-comments.
+by `kb add`. Nothing outside the markers is touched. What the work is, the check
+commands and the definition of done are left as `kb:fill` comments — the CLI
+cannot write prose. Running kb by hand, they are yours; under an assistant,
+`/kb save` fills them from the session and reports what it wrote.
 
 Refusals and findings:
 

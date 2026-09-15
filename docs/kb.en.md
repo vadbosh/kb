@@ -292,8 +292,13 @@ only offers to run `kb route` and touches the file itself not at all.
 
 **What is generated and what is yours.** Between the `kb:begin` and `kb:end`
 markers is what kb derives from the notes; `kb route` and `kb sync` keep that
-block current. Outside the markers is your text: the check commands and the
-definition of done. On the first run those sit as `kb:fill` comments. An
+block current. Outside the markers is your text: what the work is, the check
+commands, the definition of done. The CLI leaves them as `kb:fill` comments,
+because a CLI cannot write prose — **`/kb save` fills them in the same turn**,
+from the notes it just wrote and the commands the session actually ran, and says
+what it wrote so you can correct it. It asks instead of guessing only where the
+session holds no answer: a stream that ran nothing has no honest check command,
+and a made-up one lands in a file an agent will execute. An
 `AGENTS.md` without markers kb does not touch and refuses to write to. A
 `CLAUDE.md` without the import kb does not write to either — it prints the line
 for you to add by hand.

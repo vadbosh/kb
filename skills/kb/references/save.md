@@ -354,9 +354,36 @@ without `kb:begin`/`kb:end` markers `route` refuses outright rather than
 rewriting the file, and an existing `CLAUDE.md` is never edited at all — it
 prints the `@AGENTS.md` line to add. Both are reports to relay.
 
-Either way the sections it leaves behind — the check commands, the definition of
-done — are the human's to fill. Name them in the report; `verify` will keep
-asking until they are answered.
+### Fill the `kb:fill` slots yourself, in the same turn
+
+`route` leaves three: what the work is, the commands that check it, what proves
+it done. **Write them from the session you just had, then say what you wrote.**
+Handing the file back with the slots empty is the one outcome nobody wants: the
+human asked for a save and got homework, and the next session reads a heading
+with no answer under it, which is worse than no heading.
+
+The material is already in front of you — it is the note you just wrote, the
+overview you just filled, and the commands you actually ran. That is derivation,
+not invention:
+
+| Slot | Where the answer comes from |
+|---|---|
+| what this work is, and its boundaries | the overview paragraph — one sentence of it |
+| the commands | the ones this session ran, or the ones the note itself names as the way to check |
+| what proves it done | the shape of a good result from those commands — `OK`, empty output, no drift |
+
+**Ask only for what the session genuinely does not contain**, and ask for that
+one thing rather than for the file: a stream where nothing was run and the note
+names no command has no honest answer to the commands slot, and guessing one
+puts a command into a file an agent will execute. Leave that slot's comment in
+place, say which slot and why, and fill the rest.
+
+Never write a command that changes anything — `apply`, `delete`, a deploy, a
+migration. The same rule as a note's check block, and for the same reason: an
+agent told to brief and not to act read one and ran it.
+
+`verify` keeps reporting empty sections until they are answered, so a slot left
+behind is not quietly forgotten — it is a finding every session from now on.
 
 ## Act on what the entry point reports, do not just relay it
 

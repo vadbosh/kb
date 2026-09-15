@@ -18,6 +18,26 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.22.0
+
+- **The save half fills the `kb:fill` slots instead of handing them back.**
+  `route` leaves three — what the work is, the commands that check it, what
+  proves it done — and the instruction said they were the human's. So a save on
+  a fresh stream ended by asking the human to go and write them, which is the
+  one outcome nobody wants: they asked for a save and got homework, and the
+  next session reads a heading with no answer under it.
+
+  The material was already there and unused. The overview paragraph answers the
+  first slot, the commands the session actually ran answer the second, and the
+  shape of a good result from those commands answers the third. That is
+  derivation from what was just written, not invention.
+
+  The guard that produced the old wording stays, narrowed to where it belongs:
+  a stream where nothing was run and the note names no command has no honest
+  answer for the commands slot. Ask for that one slot, say why, fill the rest —
+  and never write a command that changes anything, for the same reason a note's
+  check block holds only read-only commands.
+
 ## 4.21.1
 
 - The restore half enumerated the entry-point findings and 4.21.0 added one to
