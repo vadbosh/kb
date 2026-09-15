@@ -18,6 +18,15 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.24.2
+
+- **A filled slot could repeat what the generated block says a few lines below
+  it.** Nothing forbade it, so the first entry point filled under 4.22.0 named
+  `kb brief` twice in the same file — once by hand at the top, once inside the
+  block — in a file loaded at the start of every session. The two copies drift
+  the moment the block is regenerated. Read the block before filling the slots;
+  everything it carries is already said.
+
 ## 4.24.1
 
 - **Two tests now stand where discipline kept failing.** Examples lifted out of

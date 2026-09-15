@@ -38,6 +38,13 @@ work is in good shape?** `kb check` answers that, and so does whatever this
 stream is verified by. A command the notes are *about* answers something else
 entirely, however central it is to the subject.
 
+**Do not restate what the generated block already carries.** It sits a few
+lines below in the same file and names `kb brief`, the notes directory and the
+count, the charter and the current snapshot. Writing any of those into a slot
+above puts them twice in a file loaded every session, and the two copies drift
+the first time the block is regenerated. Read the block before filling the
+slots — everything in it is already said.
+
 **Write the entry point in the language the notes are written in.** The
 generated block already follows `KB_LANG`; matching it by hand keeps one reader
 from meeting two languages in one stream. An English file next to Russian notes
