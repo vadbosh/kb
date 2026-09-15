@@ -18,6 +18,23 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.23.1
+
+- **The commands slot in the entry point is for what checks the work, not what
+  the work is about.** A stream of `tcpdump` recipes had its own `tcpdump` line
+  copied up into `AGENTS.md`, where it became a second copy of a command the
+  note already carried, in a file loaded every session. A copy goes stale and
+  the original does not — the rule that governs a note governs here too, and
+  4.22.0 gave the slot no way to tell the two apart. The test that separates
+  them: after running it, do I know whether the work is in good shape?
+
+- **The entry point is written in the language of the notes.** `KB_LANG` already
+  decides the generated block; the sections the assistant fills now match it, so
+  one stream never asks its reader to switch languages. English beside Russian
+  notes is marginally cheaper per session and worse to live with — and not even
+  uniformly English, since the titles inside the generated block come from the
+  front matter as written.
+
 ## 4.23.0
 
 - **The entry-point instructions load on demand, and the tool says when.** They

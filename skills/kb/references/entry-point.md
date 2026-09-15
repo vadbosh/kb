@@ -23,8 +23,26 @@ invention:
 | Slot | Where the answer comes from |
 |---|---|
 | what this work is, and its boundaries | the overview paragraph — one sentence of it |
-| the commands | the ones this session ran, or the ones the note itself names as the way to check |
+| the commands | what checks **this work**: the test runner, the linter, `kb check` |
 | what proves it done | the shape of a good result from those commands — `OK`, empty output, no drift |
+
+**The commands slot holds what checks the work, not what the work is about.** A
+stream of `tcpdump` recipes had its own `tcpdump` line copied up into the entry
+point, where it was a second copy of a command the note already carried, in a
+file loaded every session. A copy goes stale and the original does not — the
+same rule that governs a note, and it governs here too. Name the note instead;
+what belongs in this slot is `kb check`, the test command, the linter.
+
+The question that separates them: **after running it, do I know whether the
+work is in good shape?** `kb check` answers that. `tcpdump -i any …` is the
+subject being written about, and its output says nothing about the notes.
+
+**Write the entry point in the language the notes are written in.** The
+generated block already follows `KB_LANG`; matching it by hand keeps one reader
+from meeting two languages in one stream. An English file next to Russian notes
+is marginally cheaper per session and worse to live with — and it is not even
+uniformly English, since the note titles inside the generated block come from
+the front matter as they were written.
 
 **Ask only for what the session genuinely does not contain**, and ask for that
 one thing rather than for the file: a stream where nothing was run and the note

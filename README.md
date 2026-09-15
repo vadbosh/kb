@@ -348,7 +348,10 @@ CLI also works on its own if you prefer driving it by hand.
 | `KB_BIN_DIR` | `$HOME/.local/bin` · `%LOCALAPPDATA%\kb\bin` | install target for the optional PATH copy |
 
 A team writing notes in English sets `KB_LANG=en` once. Existing notes are
-unaffected — the setting only applies to text generated from then on. Adding a
+unaffected — the setting only applies to text generated from then on. It governs
+the entry point too: the block kb generates inside `AGENTS.md` follows it, and
+the sections the assistant fills are written to match, so one stream never asks
+its reader to switch languages. Adding a
 language means adding one key to the `STRINGS` dict in the CLI.
 
 No path anywhere is hardcoded to a particular machine.
