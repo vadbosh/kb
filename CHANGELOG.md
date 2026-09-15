@@ -18,6 +18,13 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.30.3
+
+- The briefing headings were translated afresh on every run, so the same section
+  came back as `Открыто` in one and `Открытое` in the next — the second is not
+  what anyone would say. The Russian set is written out now; other languages are
+  still translated as before.
+
 ## 4.30.2
 
 - **"What this is" was forbidden where the answer was sitting on disk.** The

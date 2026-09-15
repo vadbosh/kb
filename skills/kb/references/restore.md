@@ -112,7 +112,10 @@ resume rather than assuming the context is fresh.
 ```
 
 Render the headings **in the language the user writes in** — this is shown to a
-human, not to the tool.
+human, not to the tool. Translating them afresh each run produced a different
+word for the same section from one briefing to the next, so the Russian set is
+fixed here: `Что это`, `Состояние`, `Открыто`, `Что читать под задачу`,
+`Расхождения`. A language with no row here is translated as usual.
 
 Skip any section with nothing in it. Everything empty → say the kb is empty,
 don't pad.
