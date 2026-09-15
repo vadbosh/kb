@@ -18,6 +18,16 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.32.1
+
+- **`check` was thirteen independent questions in one body of 178 lines**, in an
+  order nobody could see, with the working values of one check visible to the
+  next. Each is a `check_<name>(ctx) -> list[str]` now, and `CHECKS` is the list
+  that runs them; the order of the rows is the order the findings are reported
+  in, so adding a check is one function and one row. No output changed —
+  verified against the previous binary on this repository and on a kb carrying
+  twelve findings across most of the families.
+
 ## 4.32.0
 
 Internal: what the commands compute is now separate from what they print. No

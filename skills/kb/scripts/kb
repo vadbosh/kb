@@ -1311,150 +1311,200 @@ class CheckResult:
         return 3 if self.problems else 0
 
 
-def check_problems(root: Path, notes: list[Note]) -> CheckResult:
-    text = (root / OVERVIEW).read_text(encoding="utf-8")
-    problems = []
+@dataclass
+class CheckCtx:
+    """What every check is allowed to look at: the notes, and the overview as
+    text. Anything else a check needs it derives itself, where the derivation
+    can be read next to the use."""
+    root: Path
+    notes: list[Note]
+    overview: str
 
-    # Switching a kb's language is not a setting change. The mark and the table
-    # header flip on the next sync; the titles, the prose outside the markers
-    # and the entry point are written by hand and stay as they were, so the
-    # file ends up half in each. Saying this here is the point: the person who
-    # exported the variable learns what it costs before the half-translated
-    # file exists, and the steps arrive where they are acted on rather than in
-    # a manual nobody opens at that moment.
-    have = recorded_lang(root)
+
+def check_language(c: CheckCtx) -> list[str]:
+    """Switching a kb's language is not a setting change. The mark and the table
+    header flip on the next sync; the titles, the prose outside the markers and
+    the entry point are written by hand and stay as they were, so the file ends
+    up half in each. Saying it here is the point: the person who exported the
+    variable learns what it costs before the half-translated file exists, and
+    the steps arrive where they are acted on rather than in a manual nobody
+    opens at that moment."""
+    have = recorded_lang(c.root)
     if have and LANG_ENV and LANG_ENV != have:
-        problems.append(
-            f"KB_LANG={LANG_ENV} but these notes are {have} — kb keeps writing "
-            f"{have} until the kb itself is switched. To switch: translate the "
-            f"`title:` of every note, the prose outside the markers in "
-            f"{OVERVIEW}, and the filled sections of the entry point, then "
-            f"`KB_LANG={LANG_ENV} kb sync`. Nothing translates by itself")
+        return [f"KB_LANG={LANG_ENV} but these notes are {have} — kb keeps writing "
+                f"{have} until the kb itself is switched. To switch: translate the "
+                f"`title:` of every note, the prose outside the markers in "
+                f"{OVERVIEW}, and the filled sections of the entry point, then "
+                f"`KB_LANG={LANG_ENV} kb sync`. Nothing translates by itself"]
+    return []
 
-    if replace_block(text, "") is None:
-        problems.append("no managed block in the overview — `kb adopt` or add the markers")
-    else:
-        expected = render_block(notes)
-        if MARK_BEGIN in text and expected not in text:
-            problems.append("index table is stale — run `kb sync`")
 
+def check_index(c: CheckCtx) -> list[str]:
+    if replace_block(c.overview, "") is None:
+        return ["no managed block in the overview — `kb adopt` or add the markers"]
+    expected = render_block(c.notes)
+    if MARK_BEGIN in c.overview and expected not in c.overview:
+        return ["index table is stale — run `kb sync`"]
+    return []
+
+
+def check_links(c: CheckCtx) -> list[str]:
+    """Notes cite each other, and those links break exactly when a file is
+    renamed, superseded or split — the moments the overview survives untouched,
+    because `sync` rewrites it from front matter either way."""
     # The overview is not a note -- load_notes() skips it, and rightly: it has no
     # kind and belongs in no generated table. But `known` doubles as "files that
-    # exist" for the link check below, and leaving it out made a reference to
-    # 00-overview.md read as broken -- the one file `check` separately insists
-    # must be there.
-    known = {n.name for n in notes} | {OVERVIEW}
-
+    # exist" here, and leaving it out made a reference to 00-overview.md read as
+    # broken -- the one file `check` separately insists must be there.
+    known = {n.name for n in c.notes} | {OVERVIEW}
     # A file named in `supersedes:` is SUPPOSED to be gone -- the note that
     # replaced it says so. Naming it afterwards is how the record of a
     # replacement is kept readable, so it is history, not a broken link.
-    retired = {r.strip() for n in notes
+    retired = {r.strip() for n in c.notes
                for r in n.supersedes.replace(",", " ").split() if r.strip()}
+    out = [f"overview links a missing file: {ref}"
+           for ref in sorted(linked_files(c.overview) - known - retired)]
+    for n in c.notes:
+        out += [f"{n.name} links a missing file: {ref}"
+                for ref in sorted(linked_files(n.text) - known - retired)
+                if ref != n.name]
+    return out
 
-    for ref in sorted(linked_files(text) - known - retired):
-        problems.append(f"overview links a missing file: {ref}")
 
-    # Notes cite each other, and those links break exactly when a file is
-    # renamed, superseded or split -- the moments the overview survives
-    # untouched because `sync` rewrites it from front matter either way.
-    for n in notes:
-        for ref in sorted(linked_files(n.text) - known - retired):
-            if ref != n.name:
-                problems.append(f"{n.name} links a missing file: {ref}")
-
-    for n in notes:
+def check_front_matter(c: CheckCtx) -> list[str]:
+    out = []
+    for n in c.notes:
         if not n.has_fm:
-            problems.append(f"{n.name}: no front matter (kind/title guessed)")
+            out.append(f"{n.name}: no front matter (kind/title guessed)")
         elif n.kind not in KINDS:
-            problems.append(f"{n.name}: unknown kind {n.kind!r}")
+            out.append(f"{n.name}: unknown kind {n.kind!r}")
         # A date that is not a date sorts as a string against real ones and can
         # win. `updated` also drives the staleness check, which simply skips
         # what it cannot parse -- so a typo here disables two things quietly.
         if n.has_fm and n.updated and not ISO_DATE_RE.match(n.updated):
-            problems.append(
+            out.append(
                 f"{n.name}: updated is not a date: {n.updated!r} — expected YYYY-MM-DD")
         if n.kind == "state" and not ISO_DATE_RE.match(n.sort_date):
-            problems.append(
-                f"{n.name}: a state with no date in its name and no usable "
-                "`updated` — it can never be the current snapshot")
+            out.append(f"{n.name}: a state with no date in its name and no usable "
+                       "`updated` — it can never be the current snapshot")
+    return out
 
-    # Two things `restore` reads that nothing ever made `save` write. The halves
-    # disagreed in silence: a briefing said "the situation now" and had no state
-    # to take it from, and "what this stream is" resolved to a TODO comment.
-    # Reported here rather than asked for in prose -- prose was asked four times.
-    for n in notes:
-        if "<!-- kb:fill" in n.text:
-            problems.append(
-                f"{n.name}: a section is still empty — fill it or delete it, "
-                "an unanswered heading is worse than none")
 
-    placeholders = ("<!-- одним абзацем", "<!-- one paragraph")
-    if any(ph in text for ph in placeholders):
-        problems.append(
-            f"{OVERVIEW}: still has its placeholder — say in a line or two what "
-            "this work stream is and what does NOT go in it")
-    # `sync` keeps this current on its own now, so reaching here means sync was
-    # not run: front matter edited by hand, or the block itself edited. Same
-    # finding as a stale index table, for the copy of those facts that lives
-    # outside the notes directory and is read first.
-    if route_drift(root, notes):
-        problems.append(
-            "the entry point at the project root names a different snapshot or "
-            "count than the notes do — run `kb sync`")
+def check_unanswered(c: CheckCtx) -> list[str]:
+    """Two things `restore` reads that nothing ever made `save` write. The
+    halves disagreed in silence: a briefing said "the situation now" and had no
+    state to take it from, and "what this stream is" resolved to a TODO comment.
+    Reported here rather than asked for in prose — prose was asked four times."""
+    out = [f"{n.name}: a section is still empty — fill it or delete it, "
+           "an unanswered heading is worse than none"
+           for n in c.notes if "<!-- kb:fill" in n.text]
+    if any(ph in c.overview for ph in ("<!-- одним абзацем", "<!-- one paragraph")):
+        out.append(f"{OVERVIEW}: still has its placeholder — say in a line or two "
+                   "what this work stream is and what does NOT go in it")
+    return out
 
-    # `add` refuses the second one; a hand-written file reaches here anyway, and
-    # two charters have no tie-breaker at all — not even a date, the way two
-    # snapshots do.
-    charters = [n.name for n in notes if n.kind == "charter"]
+
+def check_entry_point(c: CheckCtx) -> list[str]:
+    """`sync` keeps the entry point current on its own now, so a difference here
+    means sync was not run: front matter edited by hand, or the block itself
+    edited. Same finding as a stale index table, for the copy of those facts
+    that lives outside the notes directory and is read first."""
+    if route_drift(c.root, c.notes):
+        return ["the entry point at the project root names a different snapshot "
+                "or count than the notes do — run `kb sync`"]
+    return []
+
+
+def check_charter(c: CheckCtx) -> list[str]:
+    """`add` refuses the second one; a hand-written file reaches here anyway,
+    and two charters have no tie-breaker at all — not even a date, the way two
+    snapshots do."""
+    charters = [n.name for n in c.notes if n.kind == "charter"]
     if len(charters) > 1:
-        problems.append(
-            f"{len(charters)} charters ({', '.join(charters)}) — a stream has one "
-            "direction; nothing can pick between them. Merge into one and reverse "
-            "the other with a `decision` that says why")
-    if len(notes) >= 3 and not any(n.kind == "state" for n in notes):
-        problems.append(
-            f"{len(notes)} notes and no `state` — nothing answers 'what is the "
-            "situation now'; `kb add state --kind state` writes one")
+        return [f"{len(charters)} charters ({', '.join(charters)}) — a stream has "
+                "one direction; nothing can pick between them. Merge into one and "
+                "reverse the other with a `decision` that says why"]
+    return []
 
-    for n in notes:
-        if any(c.isspace() for c in n.name):
-            problems.append(
-                f"{n.name}: whitespace in the filename — a link to it can never "
-                "be verified; rename with hyphens")
 
-    # `add` refuses a duplicate title now, which leaves the ones written before
-    # that and the ones edited by hand afterwards. Measured over 43 real notes
-    # in six directories: one group, and it was the real thing.
+def check_state_exists(c: CheckCtx) -> list[str]:
+    if len(c.notes) >= 3 and not any(n.kind == "state" for n in c.notes):
+        return [f"{len(c.notes)} notes and no `state` — nothing answers 'what is "
+                "the situation now'; `kb add state --kind state` writes one"]
+    return []
+
+
+def check_whitespace(c: CheckCtx) -> list[str]:
+    return [f"{n.name}: whitespace in the filename — a link to it can never be "
+            "verified; rename with hyphens"
+            for n in c.notes if any(ch.isspace() for ch in n.name)]
+
+
+def check_titles(c: CheckCtx) -> list[str]:
+    """`add` refuses a duplicate title now, which leaves the ones written before
+    that and the ones edited by hand afterwards. Measured over 43 real notes in
+    six directories: one group, and it was the real thing."""
     by_title: dict[str, list[str]] = {}
-    for n in notes:
+    for n in c.notes:
         by_title.setdefault(n.title.strip(), []).append(n.name)
-    for title, names in by_title.items():
-        if len(names) > 1:
-            problems.append(
-                f"{len(names)} notes promise the reader {title!r} "
-                f"({', '.join(names)}) — the index column answers 'what do I "
-                "need?' and answers it identically; retitle all but one")
+    return [f"{len(names)} notes promise the reader {title!r} "
+            f"({', '.join(names)}) — the index column answers 'what do I "
+            "need?' and answers it identically; retitle all but one"
+            for title, names in by_title.items() if len(names) > 1]
 
-    strays = [p.name for p in sorted(root.glob("*.md"))
-              if p.name != OVERVIEW and not NAME_RE.match(p.name)]
-    for s in strays:
-        problems.append(f"{s}: not in the NN-slug.md scheme, absent from the index")
 
-    for n in sorted(notes, key=lambda n: -n.lines):
+def check_strays(c: CheckCtx) -> list[str]:
+    return [f"{p.name}: not in the NN-slug.md scheme, absent from the index"
+            for p in sorted(c.root.glob("*.md"))
+            if p.name != OVERVIEW and not NAME_RE.match(p.name)]
+
+
+def check_size(c: CheckCtx) -> list[str]:
+    out = []
+    for n in sorted(c.notes, key=lambda n: -n.lines):
         if n.lines > HARD_LINES:
-            problems.append(
-                f"{n.name}: {n.lines} lines (~{n.ktokens}k tokens) — one Read is "
-                "expensive. Split ONLY if the sections answer different questions")
+            out.append(f"{n.name}: {n.lines} lines (~{n.ktokens}k tokens) — one "
+                       "Read is expensive. Split ONLY if the sections answer "
+                       "different questions")
         elif n.lines > SOFT_LINES:
-            problems.append(
-                f"{n.name}: {n.lines} lines — check whether the sections answer "
-                "different questions (size alone is not a reason)")
+            out.append(f"{n.name}: {n.lines} lines — check whether the sections "
+                       "answer different questions (size alone is not a reason)")
+    return out
 
-    baks = list(root.glob("*.bak.*"))
+
+def check_backups(c: CheckCtx) -> list[str]:
+    baks = list(c.root.glob("*.bak.*"))
     if baks:
-        problems.append(f"{len(baks)} *.bak.* file(s) — the index is generated now, "
-                        "these are safe to delete once you have checked them")
+        return [f"{len(baks)} *.bak.* file(s) — the index is generated now, these "
+                "are safe to delete once you have checked them"]
+    return []
 
+
+# Fifteen independent questions used to sit in one body of 178 lines, in an
+# order nobody could see and with the working values of one visible to the next.
+# The list IS the order the findings are reported in, so adding a check is one
+# function and one row, and reordering the report is moving the row.
+CHECKS: list[tuple[str, "object"]] = [
+    ("language", check_language),
+    ("index", check_index),
+    ("links", check_links),
+    ("front-matter", check_front_matter),
+    ("unanswered", check_unanswered),
+    ("entry-point", check_entry_point),
+    ("charter", check_charter),
+    ("state-exists", check_state_exists),
+    ("whitespace", check_whitespace),
+    ("titles", check_titles),
+    ("strays", check_strays),
+    ("size", check_size),
+    ("backups", check_backups),
+]
+
+
+def check_problems(root: Path, notes: list[Note]) -> CheckResult:
+    ctx = CheckCtx(root=root, notes=notes,
+                   overview=(root / OVERVIEW).read_text(encoding="utf-8"))
+    problems = [p for _, fn in CHECKS for p in fn(ctx)]
     secrets, coverage = find_secrets(root, notes)
     return CheckResult(problems, secrets, coverage, len(notes))
 
