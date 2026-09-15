@@ -18,6 +18,15 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.22.1
+
+- `SKILL.md` carried the rule both halves share — "everything outside the
+  markers was written by a human, do not rewrite it" — and 4.22.0 had just told
+  the save half to write in exactly that region. A `kb:fill` comment is kb's own
+  placeholder, not anybody's text, and the rule now says so. Left as it was, the
+  page a half reads first contradicted the page it reads second, which is how an
+  instruction gets ignored.
+
 ## 4.22.0
 
 - **The save half fills the `kb:fill` slots instead of handing them back.**
