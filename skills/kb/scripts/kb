@@ -1018,8 +1018,11 @@ def cmd_sync(args) -> int:
         # where it was written means reporting it once, in a turn nobody
         # revisits -- which is how the budget went unmentioned for a whole file
         # that had grown past it.
-        for finding in route_findings(root):
+        findings = route_findings(root)
+        for finding in findings:
             print(f"  ⚠ {finding}")
+        if findings:
+            print(f"  {ENTRY_POINT_HINT}")
     return 0
 
 
@@ -1534,6 +1537,15 @@ CLAUDE_IMPORT = "@AGENTS.md"
 # CLAUDE.md that imports it, so counting either one alone understates the bill.
 ROUTE_BUDGET = 200
 
+# What to do about each finding is a page of instructions, and it is worth
+# nothing on the saves where the entry point is fine -- which is most of them,
+# since `route` runs about once per project. So the page is loaded on demand and
+# the condition for loading it travels with the finding itself, printed by the
+# tool rather than described in prose. Prose that asks the reader to notice a
+# condition is the thing that gets skipped; an output line arrives whether or
+# not anyone was looking for it.
+ENTRY_POINT_HINT = "what to do about these: references/entry-point.md"
+
 
 def route_findings(root: Path, *, on_write: bool = False) -> list[str]:
     """Everything wrong with the entry point, for whoever asks.
@@ -1806,8 +1818,11 @@ def cmd_route(args) -> int:
     # own copy of the git check and its own copy of the budget check, so a
     # condition added to one was invisible to the others -- which is exactly
     # how the reverse mismatch shipped undetected here.
-    for finding in route_findings(root, on_write=True):
+    findings = route_findings(root, on_write=True)
+    for finding in findings:
         print(f"\n⚠ {finding}")
+    if findings:
+        print(ENTRY_POINT_HINT)
 
     return 1 if refused else 0
 

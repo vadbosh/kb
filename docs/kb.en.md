@@ -22,6 +22,11 @@ The skill loads one half on demand: `references/save.md` to write,
 `references/restore.md` to read. There is one command, `/kb`, and the half is
 chosen by the argument: `/kb save` and `/kb restore`.
 
+A third file, `references/entry-point.md`, loads on a narrower condition: a
+command printed a `⚠` about `AGENTS.md` and named the file beside it. What to do
+about those findings is a page of instructions worth nothing on the saves where
+the entry point is fine, which is most of them.
+
 Normal work never touches the shell — the skill calls the CLI itself. The one
 routine exception is `kb adopt`, once per directory you are migrating.
 

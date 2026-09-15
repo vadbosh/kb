@@ -308,6 +308,7 @@ The skill has two halves, each loaded only when needed:
 kb/SKILL.md               routing + the rules both halves share
 kb/references/save.md     writing: append or new file, which kind, titles
 kb/references/restore.md  reading: orient, be selective, brief
+kb/references/entry-point.md  only when a command prints a ⚠ about AGENTS.md
 kb/scripts/kb             the CLI — one copy, no PATH dependency
 ```
 

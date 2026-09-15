@@ -1,7 +1,7 @@
 ---
 name: kb
 description: Read and write a project's kb/ work-notes — a Markdown knowledge base whose index is generated rather than maintained by hand. Handles phrases "kbsave", "kbrestore", "/kb", "запиши в kb", "запиши в заметки", "прочитай kb", "прочитай заметки", "восстанови контекст из kb", "save to kb", "read kb", "что в заметках", "задокументируй это", "оформи в kb". Use at the start of work to load the notes and see what changed, and at the end to persist findings, decisions, traps or a dated snapshot instead of leaving them in the conversation.
-version: "4.22.1"
+version: "4.23.0"
 ---
 
 # kb
@@ -17,6 +17,7 @@ front matter, so it cannot drift from the files it describes.
 | to load the notes, orient, see what changed — "kbrestore", "прочитай kb", start of a session | `references/restore.md` |
 | to write down what was learned — "kbsave", "запиши в kb", end of a task | `references/save.md` |
 | **one named command** — `/kb check`, `/kb status`, `/kb brief`, `/kb list`, `/kb verify`, `/kb outline`, `/kb sync`, `/kb streams`, `/kb route`, `/kb local` | neither; see below |
+| a `⚠` line about the entry point, from any command that printed one | `references/entry-point.md`, in addition |
 
 Read only the one that applies. Everything each half needs beyond this page is
 in that file — the kinds, the writing rules, the briefing format.

@@ -309,6 +309,7 @@ kb local          # .git/info/exclude — заметки остаются зде
 kb/SKILL.md               роутинг + правила, общие для обеих половин
 kb/references/save.md     запись: дописать или новый файл, какой kind, заголовки
 kb/references/restore.md  чтение: сориентироваться, читать выборочно, брифинг
+kb/references/entry-point.md  только когда команда напечатала ⚠ про AGENTS.md
 kb/scripts/kb             CLI — одна копия, без зависимости от PATH
 ```
 

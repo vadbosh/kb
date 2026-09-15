@@ -18,6 +18,28 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.23.0
+
+- **The entry-point instructions load on demand, and the tool says when.** They
+  had grown to 1104 words inside `references/save.md` — a quarter of the file —
+  and were paid on every save, including the ones where nothing is wrong with
+  the entry point, which is most of them: `route` runs about once per project
+  and the block keeps itself current after that. Measured across releases, that
+  block is where a save went from 3722 words to 5138, a 38% rise since 4.15.4.
+
+  They now live in `references/entry-point.md`, and the condition for loading it
+  travels with the finding rather than sitting in prose: every command that
+  prints a `⚠` about `AGENTS.md` prints the filename beside it. Prose asking the
+  reader to notice a condition is the thing that gets skipped — an output line
+  arrives whether or not anyone was looking for it. A save with a clean entry
+  point now loads 4352 words instead of 5138, and a save with a finding loads
+  what it did before.
+
+- `release.sh` compared four files per installed copy, by name, and a fifth
+  reference file would not have been compared at all — a copy could differ in it
+  and still be reported as a match. It asks the source what it ships now. Same
+  defect as the prose that enumerates tool output, in a shell script.
+
 ## 4.22.1
 
 - `SKILL.md` carried the rule both halves share — "everything outside the

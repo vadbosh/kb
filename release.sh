@@ -53,9 +53,13 @@ copies() {
 		n=$((n + 1))
 		iv="$(grep -m1 '^version:' "$d/SKILL.md" | sed 's/version: *"//; s/"//')"
 		same=1
-		for f in SKILL.md references/save.md references/restore.md scripts/kb; do
+		# Enumerated by hand until a fourth reference file was added and this
+		# list did not hear about it -- a copy could then differ in that file
+		# and still be called a match. Ask the source what it ships.
+		while read -r f; do
 			cmp -s "$SRC/skills/kb/$f" "$d/$f" || same=0
-		done
+		done < <(cd "$SRC/skills/kb" && find . -type f ! -name '*.pyc' \
+			| sed 's|^\./||' | sort)
 		if [ "$iv" = "$v" ] && [ "$same" -eq 1 ]; then
 			continue
 		fi

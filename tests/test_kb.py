@@ -993,6 +993,25 @@ class Route(Base):
         self.assertIn("7.GRAFANA/CLAUDE.md 150", out)
         self.assertIn("budget 200", out)
 
+    def test_a_finding_names_the_file_that_says_what_to_do(self):
+        self.make_kb()
+        self.kb("route", expect=0)
+        big = self.proj / "CLAUDE.md"
+        big.write_text("\n".join(f"line {i}" for i in range(250)) + "\n",
+                       encoding="utf-8")
+        # The page of instructions is worth nothing on a save where the entry
+        # point is fine, so it loads on demand -- and the condition for loading
+        # it travels with the finding instead of sitting in prose nobody reads.
+        out = self.kb("route", expect=0).stdout
+        self.assertIn("budget 200", out)
+        self.assertIn("references/entry-point.md", out)
+
+    def test_a_clean_entry_point_names_no_file(self):
+        self.make_kb()
+        self.kb("route", expect=0)
+        self.assertNotIn("references/entry-point.md",
+                         self.kb("sync", expect=0).stdout)
+
     def test_a_subdirectory_under_the_budget_is_not_reported(self):
         self.make_kb()
         self.kb("route", expect=0)
