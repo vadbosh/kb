@@ -347,12 +347,18 @@ CLI also works on its own if you prefer driving it by hand.
 | `KB_DOC_DIR` | `$HOME/.kb-docs` | install target for the manual |
 | `KB_BIN_DIR` | `$HOME/.local/bin` · `%LOCALAPPDATA%\kb\bin` | install target for the optional PATH copy |
 
-A team writing notes in English sets `KB_LANG=en` once. Existing notes are
-unaffected — the setting only applies to text generated from then on. It governs
-the entry point too: the block kb generates inside `AGENTS.md` follows it, and
-the sections the assistant fills are written to match, so one stream never asks
-its reader to switch languages. Adding a
+**A kb remembers the language it was made in**, recorded in the `kb:begin`
+marker of its overview. Every later command reads it back, so two streams in two
+languages sit on one machine, and a kb cloned onto a machine set up differently
+keeps its own. `KB_LANG` decides for a kb that has no language yet; adding a
 language means adding one key to the `STRINGS` dict in the CLI.
+
+Pointing `KB_LANG` at an existing kb does not switch it, and `kb check` says so.
+Switching is not a setting: the marker and the table header would flip on the
+next sync, while the titles, the prose outside the markers and the filled
+sections of the entry point are written by hand and stay as they were — leaving
+the file half in each language. To switch for real: translate those three by
+hand, then `KB_LANG=<new> kb sync`.
 
 No path anywhere is hardcoded to a particular machine.
 

@@ -485,10 +485,44 @@ old paths.
 ## Language
 
 Tool diagnostics (`check` / `list` / `outline` / `status`) are English. Text the
-tool writes **into** the notes (the table header, the "current snapshot" line,
-the index skeleton) follows `KB_LANG`: `ru` by default, `KB_LANG=en kb ...` for
-English. A new language is one key in the `STRINGS` dict inside the CLI and
-nothing else.
+tool writes **into** the notes — the table header, the "current snapshot" line,
+the index skeleton, the generated block of `AGENTS.md` — follows the language of
+the kb itself. A new language is one key in the `STRINGS` dict inside the CLI
+and nothing else.
+
+**The language belongs to the kb, not to the machine.** It is recorded in the
+`kb:begin` marker of the overview when the directory is scaffolded, and read
+back by every command after that. Two streams in two languages therefore sit on
+one machine without interfering, and a kb cloned onto a machine set up
+differently keeps its own. `KB_LANG` decides for a kb that has no language
+recorded yet — a new one, or one made before this was so, which picks up the
+mark on its next `kb sync`.
+
+### Switching a kb from one language to another
+
+Pointing `KB_LANG` at an existing kb does not switch it, and `kb check` reports
+the attempt rather than acting on it. The reason is that only part of the file
+is the tool's to write:
+
+| What | Changes on `kb sync` |
+|---|---|
+| the marker, the table header, the "current snapshot" line, the block in `AGENTS.md` | yes |
+| the `title:` of every note | no — written by hand |
+| the prose outside the markers in `00-overview.md` | no |
+| the sections of the entry point somebody filled | no |
+| the body of every note | no |
+
+Flipping the setting alone therefore produces an English header over Russian
+titles. The order that works:
+
+```
+1. translate the `title:` of every note, the prose outside the markers, and the
+   filled sections of AGENTS.md
+2. KB_LANG=<new> kb sync        the generated parts follow, and the mark is rewritten
+3. kb check                     the index agrees with the front matter again
+```
+
+Step 1 is the whole job and no command does it; kb has no language migration.
 
 Skill trigger phrases are bilingual — both "запиши в kb" and "save to kb" work.
 The bodies of the skills are English, since an LLM is what reads them.

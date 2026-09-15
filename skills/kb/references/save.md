@@ -136,7 +136,10 @@ equals, which is how someone acts on a reversed decision.
   a save it buries the two or three the question is about under everything else.
   Whether a stream has a kb is `ls -d <dir>/kb`, per stream, and nothing wider.
 - **Write in the language the notes are written in**, not this file's. Titles and
-  bodies land in a document a human reads.
+  bodies land in a document a human reads. The kb records its own language in the
+  `kb:begin` marker of its overview — read it rather than guessing from the last
+  thing said in the conversation. Asked to switch a stream to another language:
+  that is a translation job, not a setting. `kb check` prints what it involves.
 - **No credentials.** Reference the mechanism (a secret in the cluster, an env
   var), never the value.
 - **Nothing that lives elsewhere** — reference it by path or URL. A copy goes

@@ -425,7 +425,7 @@ esac
 
 | Variable | Effect |
 |---|---|
-| `KB_LANG` | language of the text kb writes **into** the notes and into the generated block of `AGENTS.md`: `ru` (default) or `en`. Diagnostics stay English. |
+| `KB_LANG` | language for a kb that has none recorded yet: `ru` (default) or `en`. An existing kb keeps the language in its own `kb:begin` marker, and `check` reports a mismatch rather than switching. Diagnostics stay English. |
 | `KB_REGISTRY` | where the list of known kbs lives; default `~/.local/state/kb/registry.txt` |
 
 ```console

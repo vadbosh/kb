@@ -1426,5 +1426,46 @@ class Shipped(unittest.TestCase):
             ["a home-directory path that is not kb's own is named:"] + found))
 
 
+# ── the language belongs to the kb, not to the machine ──────────────────────
+
+class Language(Base):
+    def test_a_kb_records_the_language_it_was_made_in(self):
+        root = self.make_kb()          # the harness runs with KB_LANG=en
+        self.assertIn("kb:begin lang=en",
+                      (root / "00-overview.md").read_text(encoding="utf-8"))
+
+    def test_it_keeps_that_language_when_the_machine_says_otherwise(self):
+        root = self.make_kb()
+        self.write_note(root, "01-a.md", title="how it works")
+        # Two streams in two languages on one machine, and a kb cloned onto a
+        # machine set up differently: both need the kb to answer, not the env.
+        self.kb("sync", env={"KB_LANG": "ru"}, expect=0)
+        text = (root / "00-overview.md").read_text(encoding="utf-8")
+        self.assertIn("| what you need |", text)
+        self.assertNotIn("| что нужно |", text)
+
+    def test_a_kb_from_before_the_mark_gains_it_on_the_next_sync(self):
+        root = self.make_kb()
+        f = root / "00-overview.md"
+        f.write_text(f.read_text(encoding="utf-8").replace("kb:begin lang=en",
+                                                           "kb:begin"),
+                     encoding="utf-8")
+        self.write_note(root, "01-a.md", title="how it works")
+        self.kb("sync", expect=0)
+        self.assertIn("kb:begin lang=en", f.read_text(encoding="utf-8"))
+
+    def test_asking_for_another_language_reports_what_switching_costs(self):
+        root = self.make_kb()
+        self.fill_overview(root)
+        self.write_note(root, "01-a.md", title="how it works")
+        self.kb("sync", expect=0)
+        # A setting cannot translate a title or the prose outside the markers.
+        # Left silent, the file ends up half in each language.
+        res = self.kb("check", env={"KB_LANG": "ru"}, expect=3)
+        self.assertIn("these notes are en", res.stdout)
+        self.assertIn("title:", res.stdout)
+        self.assertEqual(self.kb("check").returncode, 0)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2 if "-v" in sys.argv else 1)

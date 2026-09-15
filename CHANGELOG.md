@@ -18,6 +18,28 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.26.0
+
+- **The language belongs to the kb, not to the machine.** `KB_LANG` was one
+  variable for every directory on the host, so two streams in two languages
+  could not coexist and a kb cloned onto a differently configured machine
+  changed language under its owner. It is recorded in the `kb:begin` marker of
+  the overview at scaffold time and read back by every command after that; a kb
+  made before this picks up the mark on its next `kb sync`. `KB_LANG` now
+  decides for a kb that has none.
+
+- **Pointing the variable at an existing kb is reported, not obeyed.** Only part
+  of the file is the tool's to write: the marker, the table header, the snapshot
+  line and the generated block flip on the next sync, while every `title:`, the
+  prose outside the markers and the filled sections of the entry point are
+  written by hand and stay as they were. Flipping the setting alone leaves an
+  English header over Russian titles. `check` prints the three things that have
+  to be translated first and the order to do it in — at the moment somebody
+  exports the variable, which is where that answer is acted on, rather than in a
+  manual they are not reading at the time.
+
+  There is no language migration command, and the finding says so.
+
 ## 4.25.0
 
 - **The page that says how to fill the entry point was unreachable at the one
