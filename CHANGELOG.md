@@ -18,6 +18,24 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.29.1
+
+- **A relative `--dir` left the project nameless.** `Path(".kb").parent` is
+  `Path(".")` and its name is the empty string, so an overview scaffolded that
+  way came out titled `# ` — carrying nothing, in the first line of the first
+  file anyone opens. `--dir .kb` is the ordinary way to type the second name
+  4.28.0 had just introduced, so the two shipped together and the second broke
+  the first. The root is resolved before anything is derived from its parent.
+
+- **A note could carry two `# ` headings.** `--body-file` dropped a body's own
+  heading only when it matched the title exactly; any other wording stayed and
+  the note had two, with the index showing one. kb writes the title heading
+  itself, so the body's is dropped whatever it says — and said out loud, because
+  dropping it silently would lose the only thing it carried.
+
+  Both found by a human reading the two files a save produces, on the release
+  that introduced them.
+
 ## 4.29.0
 
 - **`kb add --body-file <path|->` writes the note in one call.** The body had

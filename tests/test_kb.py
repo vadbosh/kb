@@ -296,6 +296,30 @@ class Add(Base):
                       (root / "01-note.md").read_text(encoding="utf-8"))
 
 
+    def test_a_relative_dir_still_names_the_project(self):
+        # `Path(".kb").parent` is `Path(".")`, whose name is the empty string —
+        # so the overview came out titled `# `, carrying nothing. `--dir .kb` is
+        # the ordinary way to type it, which is how this shipped.
+        self.kb("add", "note", "--kind", "recipe", "--title", "t",
+                "--dir", ".kb", expect=0)
+        first = (self.proj / ".kb" / "00-overview.md").read_text(
+            encoding="utf-8").splitlines()[0]
+        self.assertIn(self.proj.name, first)
+
+    def test_one_h1_per_note_whatever_the_body_says(self):
+        root = self.make_kb()
+        body = self.tmp / "body.md"
+        body.write_text("# its own heading\n\nText.\n", encoding="utf-8")
+        res = self.kb("add", "note", "--kind", "recipe", "--title", "a trap",
+                      "--body-file", str(body), expect=0)
+        text = (root / "01-note.md").read_text(encoding="utf-8")
+        self.assertEqual(len([l for l in text.splitlines()
+                              if l.startswith("# ")]), 1)
+        self.assertIn("# a trap", text)
+        # Dropping it silently would lose the only thing it said.
+        self.assertIn("its own heading", res.stderr)
+
+
 class Index(Base):
     def test_table_is_regenerated_from_front_matter(self):
         root = self.make_kb()

@@ -57,6 +57,20 @@ OVERVIEW = "00-overview.md"
 NOTES_DIRS = ("kb", ".kb")
 
 
+def absolute(root: Path) -> Path:
+    """Resolve without requiring the path to exist.
+
+    Everything derived from a parent breaks on a relative one: `Path(".kb")`
+    has `Path(".")` for a parent and the empty string for its name, which is
+    how an overview came out titled `# ` — the project name it should carry was
+    that empty string. `--dir .kb` is the ordinary way to type it.
+    """
+    try:
+        return root.resolve()
+    except OSError:
+        return Path(os.path.abspath(root))
+
+
 def is_nested(root: Path) -> bool:
     """Notes in a directory of their own, with the work stream around them.
 
@@ -462,7 +476,7 @@ class Note:
 
 def find_root(explicit: str | None, *, for_init: bool = False) -> Path:
     """Wrapper: every caller gets the kb's own language set before it renders."""
-    root = _find_root(explicit, for_init=for_init)
+    root = absolute(_find_root(explicit, for_init=for_init))
     set_lang(root)
     return root
 
@@ -929,6 +943,10 @@ def refuse_existing(root: Path) -> None:
 
 
 def write_skeleton(root: Path, title: str | None) -> Path:
+    # Resolved here and not only in the callers' wrapper: scaffolding happens
+    # inside `_ensure_root`, which returns before that wrapper runs, and the
+    # project name this function derives comes from the parent.
+    root = absolute(root)
     refuse_bad_root(root)
     refuse_existing(root)
     root.mkdir(parents=True, exist_ok=True)
@@ -964,7 +982,7 @@ def ensure_root(args) -> Path:
     """Wrapper: see `find_root`. Scaffolding happens inside, in `LANG_ENV`'s
     language, and reading the mark back afterwards is what makes the choice
     stick for every command that follows."""
-    root = _ensure_root(args)
+    root = absolute(_ensure_root(args))
     set_lang(root)
     return root
 
@@ -1081,8 +1099,17 @@ def cmd_add(args) -> int:
         # The heading is already there. A body that repeats it gives the reader
         # two `# ` lines and the index one title.
         stripped = body.lstrip()
-        if stripped.startswith(f"# {title}"):
-            body = stripped[len(f"# {title}"):].lstrip("\n")
+        if stripped.startswith("# "):
+            head, _, rest = stripped.partition("\n")
+            given = head[2:].strip()
+            body = rest.lstrip("\n")
+            # Dropping somebody's heading silently would lose the one thing it
+            # said. `--title` wins because it is the index row -- two titles for
+            # one note is the ambiguity refused everywhere else here.
+            if given != title:
+                print(f"note: dropped the body's own heading {given!r}; "
+                      f"the note is titled {title!r}, which is what the index "
+                      "shows", file=sys.stderr)
         fm += [body.rstrip("\n"), ""]
     else:
         # A kind says when a note expires; it never said what belongs in one, so
