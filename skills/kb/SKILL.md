@@ -1,7 +1,7 @@
 ---
 name: kb
 description: Read and write a project's kb/ work-notes — a Markdown knowledge base whose index is generated rather than maintained by hand. Handles phrases "kbsave", "kbrestore", "/kb", "запиши в kb", "запиши в заметки", "прочитай kb", "прочитай заметки", "восстанови контекст из kb", "save to kb", "read kb", "что в заметках", "задокументируй это", "оформи в kb". Use at the start of work to load the notes and see what changed, and at the end to persist findings, decisions, traps or a dated snapshot instead of leaving them in the conversation.
-version: "4.29.1"
+version: "4.30.0"
 ---
 
 # kb
@@ -77,8 +77,11 @@ kb route                                      AGENTS.md at the project root + a
 kb local                                      keep the notes out of git
 ```
 
-Resolve the notes directory from cwd: `./kb`, then `./.kb`. Not the project dir
-→ `--dir <path>`. Neither exists → `kb add` creates the first, no `init` needed.
+Resolve the notes directory from cwd: `./kb`, then `./.kb`, then the same two
+in every directory above — the walk stops at the repository root, or before
+`$HOME` when there is no repository. Working in a subdirectory is ordinary and
+its notes are the stream's, not a second kb. Neither name found anywhere above →
+`kb add` creates the first here, no `init` needed; `--dir <path>` overrides.
 
 `kb/` is an ordinary directory name, so a project may already have one. `kb add`
 refuses to scaffold into a directory it did not make — empty or not — and prints

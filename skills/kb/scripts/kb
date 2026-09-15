@@ -71,6 +71,31 @@ def absolute(root: Path) -> Path:
         return Path(os.path.abspath(root))
 
 
+def search_bases(cwd: Path):
+    """Directories to look in, nearest first — cwd, then up, the way git looks.
+
+    Work happens in a subdirectory of a project far more often than in its root,
+    and until this existed every command run from one reported that the project
+    had no notes at all. A session standing in `.git` found nothing either,
+    which is how it was noticed.
+
+    Bounded, because "walk to the root" would adopt a stranger's notes. The
+    repository root ends the walk when there is one: outside it is another
+    project. Without one the walk stops before `$HOME`, where a kb is refused
+    anyway — notes sitting directly in a home directory have nothing to be about.
+    """
+    home = Path.home().resolve()
+    git = find_git_dir(cwd)
+    stop = git.parent.resolve() if git else None
+    d = cwd
+    while True:
+        if d != home:
+            yield d
+        if d == stop or d == home or d.parent == d:
+            return
+        d = d.parent
+
+
 def is_nested(root: Path) -> bool:
     """Notes in a directory of their own, with the work stream around them.
 
@@ -498,16 +523,18 @@ def _find_root(explicit: str | None, *, for_init: bool = False) -> Path:
                 f"`kb init --dir {root}` starts one; "
                 "`kb list --prune` drops the entry if it moved")
         return root
-    cwd = Path.cwd()
-    for name in NOTES_DIRS:
-        if (cwd / name / OVERVIEW).exists():
-            return cwd / name
-    if (cwd / OVERVIEW).exists():
-        return cwd                      # flat layout: this dir IS the work stream
+    cwd = Path.cwd().resolve()
+    for base in search_bases(cwd):
+        for name in NOTES_DIRS:
+            if (base / name / OVERVIEW).exists():
+                return base / name
+        if (base / OVERVIEW).exists():
+            return base                 # flat layout: this dir IS the work stream
     if for_init:
         return cwd / NOTES_DIRS[0]
     names = " or ".join(f"./{n}" for n in NOTES_DIRS)
-    die(f"no {OVERVIEW} in {names} or . — run `kb init` first, or pass --dir")
+    die(f"no {OVERVIEW} in {names} or ., here or in any directory above — run "
+        "`kb init` first, or pass --dir")
 
 
 def dequote(value: str) -> str:
@@ -750,6 +777,14 @@ def refuse_outside(root: Path) -> None:
         return
     if target == cwd or cwd in target.parents:
         return
+    # The notes of the stream this session is standing INSIDE. Working in a
+    # subdirectory is the ordinary case, and the walk that finds the kb above
+    # cwd produced a path this check then called "outside" -- the one place the
+    # confinement was wrong, since nothing was reached across to. The bound is
+    # the same one the walk uses: an ancestor of cwd, never a sibling.
+    project = project_of(target)
+    if project == cwd or project in cwd.parents:
+        return
     die(f"{target} is outside {cwd}. `cd` there first. A script that must reach "
         "across directories sets KB_ALLOW_OUTSIDE=1, which says so out loud")
 
@@ -930,15 +965,24 @@ def refuse_existing(root: Path) -> None:
     entries = [e.name for e in root.iterdir() if not e.name.startswith(".")]
     held = f"holds {len(entries)} file(s)" if entries else "is empty"
     other = NOTES_DIRS[1] if root.name == NOTES_DIRS[0] else f"{root.name}-notes"
+    # Stated, not recommended. The first wording opened with "Put the notes in
+    # ./.kb instead", which is an imperative, and it was carried out twice
+    # without anyone being asked -- the tool's own words beat the skill's rule
+    # to ask, because they arrive closer to the moment of acting. A tool that
+    # cannot ask must at least not answer.
     lines = [f"{root} exists, {held}, and has no {OVERVIEW} — it is not a notes "
              "directory, and kb does not write into one it did not make.",
-             f"  Put the notes in ./{other} instead, and every command finds "
-             "them without --dir.",
-             f"  Or, if this directory IS for the notes: KB_ALLOW_EXISTING=1"]
+             "  This is a decision for the person, not for kb. The options:",
+             f"    ./{other}          a name kb also searches, so nothing needs "
+             "--dir afterwards",
+             f"    this directory     KB_ALLOW_EXISTING=1, if it is for the "
+             "notes after all",
+             "    somewhere else     --dir <path>, and every later command "
+             "needs it too"]
     if any(e.endswith(".md") for e in entries):
-        lines.append("  These look like notes already: `kb adopt` renames them "
-                     "into NN-slug.md and fills the front matter, previewing "
-                     "before it writes.")
+        lines.append("    `kb adopt`         if the files in here are already "
+                     "notes; it previews before it writes")
+    lines.append("  Ask which, then re-run. kb has no preference between them.")
     die("\n".join(lines))
 
 
@@ -963,10 +1007,16 @@ def write_skeleton(root: Path, title: str | None) -> Path:
     # repository, which is right for a team and wrong for a scratch stream, and
     # either way nobody chose it.
     if git_state(root) == "undecided":
-        print(f"note: {root} is in a git repository and not ignored — "
-              "committed by default.\n"
-              "  `kb local` keeps them on this machine (.git/info/exclude), "
-              "or commit them to share.", file=sys.stderr)
+        # A question, worded as one. As a "note:" it read as information and
+        # two sessions running applied an answer given earlier for a different
+        # directory instead of asking. Nothing here can force the asking; what
+        # it can do is stop sounding like something already settled.
+        print(f"UNANSWERED: {root} is in a git repository and nothing has been "
+              "decided about it.\n"
+              "  Left alone, `git add -A` commits the notes — a default nobody "
+              "chose.\n"
+              "  Ask the person which, then act: commit them to share, or "
+              "`kb local` to keep them on this machine.", file=sys.stderr)
     # Prose asking for this would not fire -- measured on this tool's own notes,
     # where four rewrites of an instruction produced four different failures. A
     # line in the output that the caller already reads does.
@@ -1005,10 +1055,14 @@ def _ensure_root(args) -> Path:
         # exist and `kb add` ended in a traceback.
         print(f"created {write_skeleton(root, None)}")
         return root
-    cwd = Path.cwd()
-    for name in NOTES_DIRS:
-        if (cwd / name / OVERVIEW).exists():
-            return cwd / name
+    cwd = Path.cwd().resolve()
+    # The same walk the reading side does. A save from a subdirectory belongs to
+    # the stream around it; creating a second kb there would split the notes in
+    # two, which is the thing this tool exists to stop.
+    for base in search_bases(cwd):
+        for name in NOTES_DIRS:
+            if (base / name / OVERVIEW).exists():
+                return base / name
     if (cwd / OVERVIEW).exists():
         die(f"notes are loose in this directory instead of {NOTES_DIRS[0]}/.\n"
             "  Run `kb adopt` first — it previews the move, then `--apply`.\n"

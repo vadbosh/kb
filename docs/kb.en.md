@@ -43,6 +43,12 @@ Nothing to prepare in advance — and nothing appears by itself either.
 **Launching the assistant does not create `kb/`.** The directory comes into
 existence the first time you type `/kb save`. Until then the project has none.
 
+**Notes are found from anywhere inside the project.** `./kb`, then `./.kb`,
+then the same two in every directory above, stopping at the repository root — or
+before `$HOME` when there is no repository. Work happens in a subdirectory more
+often than in a project root, and a save from one joins the stream around it
+rather than starting a second kb down there.
+
 **Unless the project already has a `kb/` of its own.** It is an ordinary
 directory name — source, a mount, a placeholder — so kb refuses to scaffold into
 one it did not make, empty or not, and says what it will not do:

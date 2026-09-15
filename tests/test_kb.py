@@ -320,6 +320,61 @@ class Add(Base):
         self.assertIn("its own heading", res.stderr)
 
 
+    def test_notes_are_found_from_a_subdirectory(self):
+        root = self.make_kb()
+        deep = self.proj / "src" / "deep"
+        deep.mkdir(parents=True)
+        # Work happens in a subdirectory far more often than in a project root,
+        # and every command run from one used to report no notes at all.
+        out = self.kb("status", cwd=deep, expect=0).stdout
+        self.assertIn(str(root), out)
+
+    def test_a_save_from_a_subdirectory_joins_the_stream(self):
+        root = self.make_kb()
+        sub = self.proj / "src"
+        sub.mkdir()
+        self.kb("add", "note", "--kind", "recipe", "--title", "t", cwd=sub,
+                expect=0)
+        # A second kb down there would split the notes in two.
+        self.assertTrue((root / "01-note.md").is_file())
+        self.assertFalse((sub / "kb").exists())
+
+    def test_the_walk_stops_at_the_repository_root(self):
+        outer = self.make_kb()
+        inner = self.proj / "vendor" / "other"
+        inner.mkdir(parents=True)
+        subprocess.run(["git", "init", "-q", "."], cwd=str(inner),
+                       capture_output=True,
+                       env={"HOME": str(self.home), "PATH": "/usr/bin:/bin"},
+                       timeout=60)
+        # Outside the repository is another project, whose notes are not ours.
+        res = self.kb("status", cwd=inner)
+        self.assertNotEqual(res.returncode, 0)
+        self.assertNotIn(str(outer), res.stdout)
+
+    def test_the_refusal_recommends_nothing(self):
+        (self.proj / "kb").mkdir()
+        err = self.kb("add", "n", "--kind", "recipe", "--title", "t").stderr
+        # "Put the notes in ./.kb instead" is an imperative, and it was carried
+        # out twice without anybody being asked: the tool's words arrive closer
+        # to the moment of acting than the skill's rule to ask.
+        self.assertIn("decision for the person", err)
+        self.assertIn("Ask which", err)
+        self.assertNotIn("instead,", err)
+
+    def test_the_git_question_is_worded_as_one(self):
+        subprocess.run(["git", "init", "-q", "."], cwd=str(self.proj),
+                       capture_output=True,
+                       env={"HOME": str(self.home), "PATH": "/usr/bin:/bin"},
+                       timeout=60)
+        err = self.kb("add", "n", "--kind", "recipe", "--title", "t",
+                      expect=0).stderr
+        # As "note:" it read as information, and two sessions running applied
+        # an answer given earlier for a different directory instead of asking.
+        self.assertIn("UNANSWERED", err)
+        self.assertIn("Ask the person", err)
+
+
 class Index(Base):
     def test_table_is_regenerated_from_front_matter(self):
         root = self.make_kb()
@@ -1193,7 +1248,7 @@ class GitState(Base):
     def test_a_new_kb_in_a_repo_says_the_choice_is_open(self):
         self.git("init", "-q", ".")
         res = self.kb("add", "a", "--kind", "reference", "--title", "a", expect=0)
-        self.assertIn("not ignored", res.stderr)
+        self.assertIn("nothing has been decided", res.stderr)
         self.assertIn("neither tracked nor ignored", self.kb("status").stdout)
 
     def test_local_excludes_the_notes_and_is_idempotent(self):

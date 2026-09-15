@@ -18,6 +18,37 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.30.0
+
+- **The notes are found from anywhere inside the project.** Discovery looked in
+  cwd and nowhere else, so every command run from a subdirectory reported that
+  the project had no notes at all — and work happens in a subdirectory far more
+  often than in a project root. Noticed when a session standing in `.git` found
+  nothing and worked around it by writing "run kb from the project root" into
+  the entry point, which is a note about a defect rather than a fix for one.
+
+  `./kb`, then `./.kb`, then the same two in every directory above. The walk is
+  bounded, because walking to the filesystem root would adopt a stranger's
+  notes: the repository root ends it when there is one, and without a repository
+  it stops before `$HOME`, where a kb is refused anyway. A save from a
+  subdirectory joins the stream around it instead of starting a second kb down
+  there.
+
+  The confinement check called that ancestor "outside cwd" and refused it — the
+  one place it was wrong, since nothing was reached across to. It accepts a
+  stream cwd is standing inside; a sibling is still refused.
+
+- **The tool stops answering questions it cannot ask.** The refusal on an
+  occupied directory opened with "Put the notes in ./.kb instead" — an
+  imperative — and it was carried out twice without anybody being asked, against
+  a skill rule that says to ask. The git question printed as `note:` and was
+  likewise treated as settled. Both now state the situation, list the options
+  without preferring one, and say the choice belongs to the person.
+
+  Prose lost to tool output four times in one day. That is recorded in
+  `kb/04-llm-failure-modes.md` with the mechanism: the command's words arrive at
+  the moment of deciding, the skill's rule was read ten turns earlier.
+
 ## 4.29.1
 
 - **A relative `--dir` left the project nameless.** `Path(".kb").parent` is
