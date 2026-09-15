@@ -18,6 +18,25 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.24.1
+
+- **Two tests now stand where discipline kept failing.** Examples lifted out of
+  a live session reached the shipped skill four times in two days, each time
+  written by whoever had just written the rule against it. `Shipped` asks two
+  questions of every file that installs: does any path named here exist on this
+  machine, and is any home-directory path one that is not kb's own.
+
+  The first catches the mechanism — a leak happens by copying what is in front
+  of the writer, and such a path resolves while an invented one does not. It has
+  a hole, found by the leak that prompted the test: a docstring pointed into a
+  home-directory tree that had been moved away the day before, so the path
+  resolved to nothing and read as an invented example. The second test covers
+  that hole by shape rather than by existence.
+
+  Both were exercised against planted leaks of each kind before being believed.
+
+- The docstring in question no longer names anybody's directory.
+
 ## 4.24.0
 
 - **The tool is for any subject, and it had stopped saying so.** kb wrote into

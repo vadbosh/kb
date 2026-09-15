@@ -1349,5 +1349,72 @@ class Sequence(Base):
         self.assertNotIn("01-now-2026-01-02.md", after)
 
 
+# ── nothing of this machine ships in a universal tool ───────────────────────
+
+class Shipped(unittest.TestCase):
+    """The skill installs into every assistant and runs on every subject.
+
+    An example lifted from whatever stream produced a rule steers every save in
+    every other one -- a directory from a live repository and a command from one
+    domain both reached the shipped files before this test existed. The leak
+    happens by copying something that is in front of the writer at the time, so
+    what catches it is asking whether the path is real here.
+    """
+
+    SHIPPED = sorted((REPO / "skills" / "kb").rglob("*"))
+    # The tool's own layout. Fixed, so naming it cannot rot: anything else
+    # under a home dotdir is somebody's directory rather than kb's.
+    OWN = ("/skills/kb", "/.local/bin", "/.local/state/kb", "/.kb-docs",
+           "/.local/share/opencode",
+           # System locations: an interpreter, a shell, a directory used to
+           # illustrate a check. Present on every machine, so naming one is not
+           # a copy of anything local.
+           "/usr/", "/bin/")
+    PATH_RE = __import__("re").compile(r"(~|\$HOME)?(/[A-Za-z0-9_.<>*-]+){2,}")
+
+    def paths_in(self, text):
+        for m in self.PATH_RE.finditer(text):
+            raw = m.group(0)
+            if any(o in raw for o in self.OWN):
+                continue
+            yield raw
+
+    def test_no_path_of_this_machine_is_named(self):
+        found = []
+        for f in self.SHIPPED:
+            if not f.is_file():
+                continue
+            for raw in self.paths_in(f.read_text(encoding="utf-8",
+                                                 errors="replace")):
+                p = Path(raw.replace("$HOME", "~")).expanduser()
+                if p.exists():
+                    found.append(f"{f.relative_to(REPO)}: {raw}")
+        self.assertEqual(found, [], "\n".join(
+            ["a path that exists on this machine is named in a shipped file:"]
+            + found))
+
+    def test_no_home_directory_of_somebody_else(self):
+        """`~/.claude/conventions/...` shipped once and this is what catches it.
+
+        The existence test above cannot: that directory had been moved away by
+        the time anyone looked, so the pointer to it resolved to nothing and
+        read as an invented example.
+        """
+        allowed = {"skills", "opencode", "kb", "bin", "state", "share"}
+        found = []
+        for f in self.SHIPPED:
+            if not f.is_file():
+                continue
+            for raw in self.paths_in(f.read_text(encoding="utf-8",
+                                                 errors="replace")):
+                if not raw.startswith(("~/.", "$HOME/.")):
+                    continue
+                parts = raw.split("/")
+                if len(parts) > 2 and parts[2] not in allowed:
+                    found.append(f"{f.relative_to(REPO)}: {raw}")
+        self.assertEqual(found, [], "\n".join(
+            ["a home-directory path that is not kb's own is named:"] + found))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2 if "-v" in sys.argv else 1)

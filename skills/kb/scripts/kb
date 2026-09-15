@@ -1273,8 +1273,8 @@ def checkable_paths(text: str) -> set[str]:
     `~/…` counts as absolute and is expanded before testing. It was excluded at
     first as shell syntax rather than a path, which let the one shape people
     actually write for a file in their home directory through unchecked: a
-    pointer to `~/.claude/conventions/…` outlived the directory by a day and
-    was found by a human reading the file, not by this.
+    pointer into a home-directory tree outlived that tree by a day and was
+    found by a human reading the file, not by this.
     """
     out = set()
     for raw in re.findall(r"`(~?/[A-Za-z0-9._/-]{6,})`", text):
