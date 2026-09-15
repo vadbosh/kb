@@ -50,7 +50,7 @@ What its verdict lines mean:
 `verify` also reports on the project's entry point, under its own heading. Those
 findings are conditions, not events — each stays wrong until fixed:
 
-- **empty sections** → the save half fills these from the session that wrote the
+- **sections nobody has answered** → the save half fills these from the session that wrote the
   notes; seeing them here means that never happened. Name the file and say
   `/kb save` answers them. This half writes nothing, and inventing a check
   command for work you have not done is how a wrong one gets executed.

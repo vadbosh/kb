@@ -1409,16 +1409,6 @@ def cmd_verify(args) -> int:
     # into the context window at the start of every session, so it is the one
     # file here where length is a running cost rather than a one-off.
     entry = route_findings(root)
-    # `route` leaves the slots it cannot fill -- the check commands, the
-    # definition of done -- and says so once, in the turn that created the file.
-    # Nobody sees that message again, so an entry point that promises an agent a
-    # way to verify its work and then holds a comment instead is exactly the
-    # silent rot the rest of this command exists to find.
-    unfilled = [f"{stream / n}" for n in (ROUTE_FILE, CLAUDE_FILE)
-                if stream and (stream / n).is_file()
-                and "<!-- kb:fill" in (stream / n).read_text(
-                    encoding="utf-8", errors="replace")]
-
     if dead:
         print(f"paths that do not resolve ({len(dead)}) — some may live in a "
               "container or on another host, check by hand:")
@@ -1450,15 +1440,7 @@ def cmd_verify(args) -> int:
               "somebody fixes it,\n  and `route` said so only in the turn that "
               "wrote the file.")
 
-    if unfilled:
-        print(f"\nthe entry point still has empty sections ({len(unfilled)}):")
-        for f in unfilled:
-            print(f"  {f}")
-        print("  An agent reads this file before touching the project. A heading "
-              "with no answer\n  under it is worse than no heading: fill the "
-              "kb:fill slots or delete them.")
-
-    if not dead and not aging and not moved and not entry and not unfilled:
+    if not dead and not aging and not moved and not entry:
         print("nothing suspicious: every checkable path resolves, no note is "
               "past its re-check age, and no work has outrun the notes")
         return 0
@@ -1594,6 +1576,15 @@ def route_findings(root: Path, *, on_write: bool = False) -> list[str]:
         # project, so this may go unseen. That is the trade accepted for it.
         out.append(f"{root.name}/ is committed while {target.name} is not — the "
                    "notes reach a clone and nothing there points at them")
+    # The instructions for filling these live in the page named beside every
+    # finding, and that page loads on demand. Without this condition the page
+    # was unreachable at the one moment it is needed: `route` creates the slots
+    # and prints nothing, so a first save filled them from memory and repeated
+    # the two mistakes the page exists to prevent. Measured twice, on the same
+    # stream, by a human who had followed the procedure correctly.
+    if "<!-- kb:fill" in text:
+        out.append(f"{target.name} has sections nobody has answered yet — fill "
+                   "them from this session, do not hand them back")
     total, parts = route_weight(project)
     if total > ROUTE_BUDGET:
         out.append(f"{total} lines of context every session ({', '.join(parts)}), "

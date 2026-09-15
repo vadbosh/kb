@@ -938,14 +938,14 @@ class Route(Base):
         # `route` says this once, in the turn that wrote the file, and nobody
         # sees that message again.
         res = self.kb("verify", expect=3)
-        self.assertIn("empty sections", res.stdout)
+        self.assertIn("nobody has answered", res.stdout)
         agents = self.proj / "AGENTS.md"
         text = agents.read_text(encoding="utf-8")
         while "<!-- kb:fill" in text:
             start = text.index("<!-- kb:fill")
             text = text[:start] + "answered" + text[text.index("-->", start) + 3:]
         agents.write_text(text, encoding="utf-8")
-        self.assertNotIn("empty sections", self.kb("verify").stdout)
+        self.assertNotIn("nobody has answered", self.kb("verify").stdout)
 
     def test_route_does_not_make_verify_report_its_own_output_as_work(self):
         root = self.make_kb()
@@ -956,7 +956,7 @@ class Route(Base):
         # The two files kb just wrote are newer than every note by construction,
         # so counting them would make `route` guarantee this finding.
         out = self.kb("verify").stdout
-        self.assertNotIn("AGENTS.md", out.split("empty sections")[0])
+        self.assertNotIn("AGENTS.md", out.split("the entry point")[0])
         self.assertNotIn("work went on", out)
 
     def test_the_budget_follows_imports(self):
@@ -992,6 +992,16 @@ class Route(Base):
         self.assertIn("component/", out)
         self.assertIn("component/CLAUDE.md 150", out)
         self.assertIn("budget 200", out)
+
+    def test_route_reports_the_slots_it_just_created(self):
+        self.make_kb()
+        # The instructions for filling them load on demand, gated on a finding.
+        # With no finding here the page was unreachable at the one moment it is
+        # needed, and two rules written into it were broken twice in a row by a
+        # human following the procedure correctly.
+        out = self.kb("route", expect=0).stdout
+        self.assertIn("nobody has answered", out)
+        self.assertIn("references/entry-point.md", out)
 
     def test_a_finding_names_the_file_that_says_what_to_do(self):
         self.make_kb()
@@ -1253,7 +1263,7 @@ class Sequence(Base):
         # in the repositories that found this — so no commit hook sees it either.
         res = self.kb("verify", expect=3)
         self.assertIn(str(gone), res.stdout)
-        self.assertIn("AGENTS.md", res.stdout.split("empty sections")[0])
+        self.assertIn("AGENTS.md", res.stdout.split("the entry point")[0])
         self.assertTrue(root.is_dir())
 
     def test_a_home_relative_path_is_checked(self):

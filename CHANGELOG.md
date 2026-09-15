@@ -18,6 +18,28 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.25.0
+
+- **The page that says how to fill the entry point was unreachable at the one
+  moment it is needed.** 4.23.0 moved those instructions out of `save.md` and
+  gated them on a `⚠`, which is right for every condition except the one 4.22.0
+  had just added: a fresh `route` creates three empty slots and prints nothing,
+  because nothing is wrong. So the save that must fill them is the save that
+  cannot see the rules for filling them.
+
+  Measured, not reasoned: the same stream was saved twice after the rules
+  shipped, by a human following the procedure exactly, and both times the entry
+  point came out with a command copied from a note and a line duplicating the
+  generated block — the two things those rules forbid. The second run reported
+  it plainly: no `⚠` was printed, so the page was never opened.
+
+  Creating the slots is a condition now, reported by `route_findings()` like
+  every other, which means `route` announces it in the turn that writes the
+  file and `sync` and `verify` keep announcing it until the slots are answered.
+  `verify` had carried its own copy of this check; it is gone — one
+  implementation, three callers, the lesson of 4.19.3 applied to the check that
+  had escaped it.
+
 ## 4.24.2
 
 - **A filled slot could repeat what the generated block says a few lines below

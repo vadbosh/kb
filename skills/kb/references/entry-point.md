@@ -2,8 +2,14 @@
 
 Loaded on demand. `kb sync` — and therefore every save — prints a `⚠` line per
 condition and names this file beside them; `kb route` does the same when it
-writes. No `⚠`, no reason to be here: on a save where the entry point is fine
-this page is worth nothing, and `route` runs about once per project.
+writes. **Creating the slots is itself one of those conditions**, so a first
+`route` reports them in the same breath and this page arrives with them. It was
+not always so: for two releases the page was reachable only from a *problem*,
+and a fresh entry point has none — so the rules below went unread at the one
+moment they apply, twice in a row, by a human following the procedure exactly.
+
+No `⚠`, no reason to be here: on a save where the entry point is fine this page
+is worth nothing, and `route` runs about once per project.
 
 The conditions are conditions, not events. Each stays wrong until somebody fixes
 it, and fixing them is yours.
@@ -30,8 +36,8 @@ invention:
 The pull is strongest where the stream's subject *is* commands — a kb of
 recipes, queries or procedures. Copying one of those up into the entry point
 puts a second copy of it in a file loaded every session, and a copy goes stale
-while the original does not. That is the rule
-that governs a note; it governs here too. Name the note instead.
+while the original does not. That is the rule that governs a note; it governs
+here too. Name the note instead.
 
 The question that separates them: **after running it, do I know whether the
 work is in good shape?** `kb check` answers that, and so does whatever this
@@ -62,8 +68,9 @@ Never write a command that changes anything. The same rule as a note's check
 block, and for the same reason: an agent told to brief and not to act read one
 and ran it.
 
-`verify` keeps reporting empty sections until they are answered, so a slot left
-behind is not quietly forgotten — it is a finding every session from now on.
+`route`, `sync` and `verify` all ask the same function, so an unanswered slot
+is reported at the moment of writing and at the start of every session after —
+not quietly forgotten, and not announced once in a turn nobody revisits.
 
 ## Act on what the entry point reports, do not just relay it
 
