@@ -335,7 +335,7 @@ CLI also works on its own if you prefer driving it by hand.
 | `kb hook --install` | git pre-commit that refuses a commit on exit 4 |
 | `kb route` | `AGENTS.md` at the project root so agents find the notes without kb; `CLAUDE.md` imports it |
 | `kb local [--dry-run]` | keep the notes on this machine (`.git/info/exclude`) |
-| `--dir X` | operate on X instead of `./kb` |
+| `--dir X` | operate on X instead of `./kb` or `./.kb` |
 
 ---
 

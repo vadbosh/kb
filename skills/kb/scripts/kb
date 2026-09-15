@@ -47,6 +47,30 @@ from datetime import date
 from pathlib import Path
 
 OVERVIEW = "00-overview.md"
+
+# Two names, searched in this order; the first is what gets created. The second
+# exists because `kb/` is an ordinary directory name and a project may already
+# have one -- source, a placeholder, anything. kb does not write into a
+# directory it did not make, so the notes need somewhere else to go, and a name
+# nobody searches for is not an alternative: every later command would need
+# `--dir` and nothing remembers it between sessions.
+NOTES_DIRS = ("kb", ".kb")
+
+
+def is_nested(root: Path) -> bool:
+    """Notes in a directory of their own, with the work stream around them.
+
+    The other layout is flat -- the directory IS the stream. Written out ten
+    times as `root.name == "kb"` before the second name existed; one of those
+    ten left unchanged would compute the project as the notes directory itself
+    and send the entry point, the exclude rule and the work scan into it.
+    """
+    return root.name in NOTES_DIRS
+
+
+def project_of(root: Path) -> Path:
+    """The work stream this kb belongs to. The kb itself, when the layout is flat."""
+    return root.parent if is_nested(root) else root
 MARK_BEGIN = "<!-- kb:begin"          # prefix only; the rest of the line is a note
 MARK_END = "<!-- kb:end -->"
 
@@ -461,13 +485,15 @@ def _find_root(explicit: str | None, *, for_init: bool = False) -> Path:
                 "`kb list --prune` drops the entry if it moved")
         return root
     cwd = Path.cwd()
-    if (cwd / "kb" / OVERVIEW).exists():
-        return cwd / "kb"
+    for name in NOTES_DIRS:
+        if (cwd / name / OVERVIEW).exists():
+            return cwd / name
     if (cwd / OVERVIEW).exists():
         return cwd                      # flat layout: this dir IS the work stream
     if for_init:
-        return cwd / "kb"
-    die(f"no {OVERVIEW} in ./kb or . — run `kb init` first, or pass --dir")
+        return cwd / NOTES_DIRS[0]
+    names = " or ".join(f"./{n}" for n in NOTES_DIRS)
+    die(f"no {OVERVIEW} in {names} or . — run `kb init` first, or pass --dir")
 
 
 def dequote(value: str) -> str:
@@ -726,7 +752,7 @@ def refuse_bad_root(root: Path) -> None:
     The test is the containing directory, since the layout puts notes in
     `<dir>/kb`. Refusing is cheap; the fix is one `mkdir` away.
     """
-    target = root.parent if root.name == "kb" else root
+    target = project_of(root)
     try:
         target = target.resolve()
     except OSError:
@@ -822,7 +848,8 @@ def is_stream(d: Path) -> bool:
     inside it, so testing only for a loose overview pruned the notes and left
     the entry point beside them still reading as the parent's work.
     """
-    return (d / OVERVIEW).is_file() or (d / "kb" / OVERVIEW).is_file()
+    return ((d / OVERVIEW).is_file()
+            or any((d / n / OVERVIEW).is_file() for n in NOTES_DIRS))
 
 
 def git_ignored_children(stream: Path) -> set[Path]:
@@ -864,12 +891,50 @@ def git_ignores(path: Path) -> bool:
         return False
 
 
+def allow_existing() -> bool:
+    """The human said this directory is for the notes after all."""
+    return os.environ.get("KB_ALLOW_EXISTING") == "1"
+
+
+def refuse_existing(root: Path) -> None:
+    """Never scaffold into a directory somebody else made.
+
+    `kb` is an ordinary name and a project may already have one: source, a
+    placeholder, a mount. The old test was "is there an overview here" and the
+    answer for such a directory is no, so the scaffold went in beside whatever
+    was there -- measured on a directory holding two source files, which then
+    held two source files and an index. Nothing was overwritten and that is not
+    the point: the directory was somebody's, and kb took it without asking.
+
+    Empty counts as taken. An empty directory somebody made is a placeholder for
+    the thing they are about to put in it, and "it was empty" is not consent.
+    """
+    if not root.exists() or allow_existing():
+        return
+    if (root / OVERVIEW).is_file():
+        return                          # already a kb; this is not scaffolding
+    entries = [e.name for e in root.iterdir() if not e.name.startswith(".")]
+    held = f"holds {len(entries)} file(s)" if entries else "is empty"
+    other = NOTES_DIRS[1] if root.name == NOTES_DIRS[0] else f"{root.name}-notes"
+    lines = [f"{root} exists, {held}, and has no {OVERVIEW} — it is not a notes "
+             "directory, and kb does not write into one it did not make.",
+             f"  Put the notes in ./{other} instead, and every command finds "
+             "them without --dir.",
+             f"  Or, if this directory IS for the notes: KB_ALLOW_EXISTING=1"]
+    if any(e.endswith(".md") for e in entries):
+        lines.append("  These look like notes already: `kb adopt` renames them "
+                     "into NN-slug.md and fills the front matter, previewing "
+                     "before it writes.")
+    die("\n".join(lines))
+
+
 def write_skeleton(root: Path, title: str | None) -> Path:
     refuse_bad_root(root)
+    refuse_existing(root)
     root.mkdir(parents=True, exist_ok=True)
     overview = root / OVERVIEW
     overview.write_text(S("skeleton").format(
-        title=title or (root.parent.name if root.name == "kb" else root.name),
+        title=title or (project_of(root).name if is_nested(root) else root.name),
         today=date.today().isoformat(),
         block=render_block([]),
     ), encoding="utf-8")
@@ -887,7 +952,7 @@ def write_skeleton(root: Path, title: str | None) -> Path:
     # Prose asking for this would not fire -- measured on this tool's own notes,
     # where four rewrites of an instruction produced four different failures. A
     # line in the output that the caller already reads does.
-    project = root.parent if root.name == "kb" else root
+    project = project_of(root)
     if not (project / ROUTE_FILE).exists():
         print(f"note: nothing at {project / ROUTE_FILE} points at these notes, so "
               "only someone\n  who already knows they exist will ever read them. "
@@ -923,19 +988,25 @@ def _ensure_root(args) -> Path:
         print(f"created {write_skeleton(root, None)}")
         return root
     cwd = Path.cwd()
-    if (cwd / "kb" / OVERVIEW).exists():
-        return cwd / "kb"
+    for name in NOTES_DIRS:
+        if (cwd / name / OVERVIEW).exists():
+            return cwd / name
     if (cwd / OVERVIEW).exists():
-        die("notes are loose in this directory instead of kb/.\n"
+        die(f"notes are loose in this directory instead of {NOTES_DIRS[0]}/.\n"
             "  Run `kb adopt` first — it previews the move, then `--apply`.\n"
-            "  Creating kb/ now would split the notes across two places.")
-    root = cwd / "kb"
+            f"  Creating {NOTES_DIRS[0]}/ now would split the notes across two "
+            "places.")
+    # No silent fallback to the second name. Choosing it is a decision about
+    # somebody else's directory, and the tool making it quietly is the failure
+    # this whole guard exists to stop -- `write_skeleton` refuses and names the
+    # alternative, the human answers, the caller passes `--dir`.
+    root = cwd / NOTES_DIRS[0]
     print(f"created {write_skeleton(root, None)}")
     return root
 
 
 def cmd_init(args) -> int:
-    root = Path(args.dir) if args.dir else Path.cwd() / "kb"
+    root = Path(args.dir) if args.dir else Path.cwd() / NOTES_DIRS[0]
     if (root / OVERVIEW).exists():
         die(f"{root / OVERVIEW} already exists — nothing to do")
     if (Path.cwd() / OVERVIEW).exists() and not args.dir:
@@ -1017,7 +1088,7 @@ def route_drift(root: Path, notes: list[Note]) -> tuple[Path, str] | None:
     None covers three cases that are not drift: no entry point was ever written,
     it is a file kb does not manage (no markers), or it is already current.
     """
-    project = root.parent if root.name == "kb" else root
+    project = project_of(root)
     target = project / ROUTE_FILE
     if not target.is_file():
         return None
@@ -1375,7 +1446,7 @@ def cmd_verify(args) -> int:
     # that no longer resolves sends the reader to a directory somebody moved.
     # Two of them survived a sweep of the notes and the code because they sat in
     # a `CLAUDE.md` -- which git ignored, so no commit hook saw them either.
-    project = root.parent if root.name == "kb" else root
+    project = project_of(root)
     dead: dict[str, set[str]] = {}
     for path in ([n.path for n in notes] + [root / OVERVIEW]
                  + route_files(project)):
@@ -1418,7 +1489,7 @@ def cmd_verify(args) -> int:
     gap_hours = 0.0
     # Flat layout -- the directory IS the work stream -- has nothing to compare:
     # the notes and the work are the same files. Skipped, not silently passed.
-    stream = root.parent if root.name == "kb" else None
+    stream = root.parent if is_nested(root) else None
     if stream and stream.is_dir():
         try:
             since = max(f.stat().st_mtime for f in root.glob("*.md"))
@@ -1599,7 +1670,7 @@ def route_findings(root: Path, *, on_write: bool = False) -> list[str]:
     not events: a pointer committed while its notes are not stays wrong until
     somebody fixes it. `verify` asks this on every restore.
     """
-    project = root.parent if root.name == "kb" else root
+    project = project_of(root)
     target = project / ROUTE_FILE
     if not target.is_file():
         return []                       # no entry point is a choice, not a fault
@@ -1824,7 +1895,7 @@ def cmd_route(args) -> int:
     """
     root = find_root(args.dir)
     refuse_outside(root)
-    project = root.parent if root.name == "kb" else root
+    project = project_of(root)
     refuse_outside(project)
     notes = load_notes(root)
     block = render_route_block(root, project, notes)
@@ -1921,7 +1992,7 @@ def cmd_local(args) -> int:
     # created is worse than not creating it. Only files kb wrote are touched:
     # an `AGENTS.md` without the markers belongs to somebody, and a `CLAUDE.md`
     # holding anything but the import does too.
-    project = root.parent if root.name == "kb" else root
+    project = project_of(root)
     wants = [f"/{rel}/"]
     for name in (ROUTE_FILE, CLAUDE_FILE):
         f = project / name
@@ -2372,8 +2443,8 @@ def cmd_adopt(args) -> int:
 
     # Notes belong in a directory of their own, never loose in the project root —
     # that is the whole convention. A legacy layout is MIGRATED, not blessed.
-    moving = root.name != "kb" and not args.in_place
-    target = root / "kb" if moving else root
+    moving = not is_nested(root) and not args.in_place
+    target = root / NOTES_DIRS[0] if moving else root
     if moving:
         print(f"── kb adopt: {root} → {target} ──")
         print(f"  move into {target.name}/: {OVERVIEW} + "

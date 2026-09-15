@@ -18,6 +18,36 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.28.0
+
+- **kb no longer writes into a directory it did not make.** `kb` is an ordinary
+  directory name and a project may already have one — source, a mount, a
+  placeholder. The old test was "is there an overview here", the answer for such
+  a directory is no, and the scaffold went in beside whatever was there.
+  Measured on a directory holding two source files, which afterwards held two
+  source files and an index. Nothing was overwritten, and that is not the point:
+  the directory belonged to somebody and the tool took it without asking.
+
+  Empty counts as taken. A directory somebody made is a placeholder for what
+  they are about to put in it, and "it was empty" is not consent.
+
+  The refusal names the alternatives and writes nothing. There is no silent
+  fallback to another name either — choosing one is a decision about somebody
+  else's directory, and making it quietly is the failure the guard exists to
+  stop.
+
+- **A second name, `.kb`, is searched.** A name nobody searches for is not an
+  alternative: every later command would need `--dir` and nothing remembers it
+  between sessions. Discovery is `./kb`, then `./.kb`, then the flat layout.
+
+  The predicate deciding nested-from-flat was written out ten times as
+  `root.name == "kb"`. One copy left unchanged would compute the project as the
+  notes directory itself and send the entry point, the exclude rule and the
+  work-ahead scan inside it. It is one function now, asked by all ten.
+
+  `kb local` already derived its pattern from the real path, so it excludes
+  whichever name is in use, with `AGENTS.md` and `CLAUDE.md` beside it.
+
 ## 4.27.0
 
 - **`kb local` covers the file that points at the notes, not just the notes.**

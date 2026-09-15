@@ -114,7 +114,7 @@ Every block below is real output, not an illustration.
 ```console
 $ ls -a
 $ kb status
-kb: no 00-overview.md in ./kb or . — run `kb init` first, or pass --dir
+kb: no 00-overview.md in ./kb or ./.kb or . — run `kb init` first, or pass --dir
 $ echo $?
 1
 ```

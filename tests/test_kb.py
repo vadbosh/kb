@@ -1208,7 +1208,10 @@ class Sequence(Base):
         root = self.aged_kb()
         del root
         nested = self.proj / "sub"
-        (nested / "kb").mkdir(parents=True)
+        nested.mkdir(parents=True)
+        # Not `mkdir(nested / "kb")`: kb refuses to scaffold into a directory
+        # somebody else made, and creating it here made the setup a test of
+        # that refusal instead of the thing it is named after.
         self.kb("init", cwd=nested, expect=0)
         (nested / "AGENTS.md").write_text("pointer\n", encoding="utf-8")
         # A kb inside a kb is another subject, not evidence the parent moved on.
@@ -1480,6 +1483,89 @@ class Language(Base):
         self.assertIn("these notes are en", res.stdout)
         self.assertIn("title:", res.stdout)
         self.assertEqual(self.kb("check").returncode, 0)
+
+
+# ── the notes directory is not automatically ours ───────────────────────────
+
+class NotesDir(Base):
+    """`kb` is an ordinary directory name and a project may already have one.
+
+    Measured on a directory holding two source files: the scaffold went in
+    beside them and kb treated the directory as its own from then on. Nothing
+    was overwritten, which is not the point -- the directory belonged to
+    somebody and the tool took it without asking.
+    """
+
+    def test_it_refuses_a_directory_somebody_else_made(self):
+        (self.proj / "kb").mkdir()
+        (self.proj / "kb" / "main.go").write_text("package kb\n", encoding="utf-8")
+        res = self.kb("add", "note", "--kind", "reference", "--title", "t")
+        self.assertEqual(res.returncode, 1)
+        self.assertIn("does not write into one it did not make", res.stderr)
+        self.assertFalse((self.proj / "kb" / "00-overview.md").exists())
+
+    def test_empty_is_taken_too(self):
+        # An empty directory somebody made is a placeholder for the thing they
+        # are about to put in it. "It was empty" is not consent.
+        (self.proj / "kb").mkdir()
+        res = self.kb("add", "note", "--kind", "reference", "--title", "t")
+        self.assertEqual(res.returncode, 1)
+        self.assertIn("is empty", res.stderr)
+
+    def test_the_human_can_say_it_is_for_the_notes(self):
+        (self.proj / "kb").mkdir()
+        self.kb("add", "note", "--kind", "reference", "--title", "t",
+                env={"KB_ALLOW_EXISTING": "1"}, expect=0)
+        self.assertTrue((self.proj / "kb" / "00-overview.md").is_file())
+
+    def test_markdown_inside_names_adopt(self):
+        (self.proj / "kb").mkdir()
+        (self.proj / "kb" / "notes.md").write_text("# mine\n", encoding="utf-8")
+        self.assertIn("kb adopt", self.kb(
+            "add", "n", "--kind", "reference", "--title", "t").stderr)
+
+    def test_dir_does_not_bypass_it(self):
+        # `--dir src` with a typo is the same situation as somebody else's kb/.
+        (self.proj / "src").mkdir()
+        (self.proj / "src" / "main.go").write_text("x\n", encoding="utf-8")
+        res = self.kb("add", "n", "--kind", "reference", "--title", "t",
+                      "--dir", "src")
+        self.assertEqual(res.returncode, 1)
+        self.assertFalse((self.proj / "src" / "00-overview.md").exists())
+
+    def test_the_second_name_is_found_without_dir(self):
+        (self.proj / "kb").mkdir()
+        (self.proj / "kb" / "main.go").write_text("x\n", encoding="utf-8")
+        self.kb("add", "note", "--kind", "reference", "--title", "t",
+                "--dir", ".kb", expect=0)
+        # A name nobody searches for is not an alternative: every later command
+        # would need --dir, and nothing remembers it between sessions.
+        self.assertIn("/.kb", self.kb("status", expect=0).stdout)
+
+    def test_the_entry_point_still_goes_to_the_project_root(self):
+        (self.proj / "kb").mkdir()
+        self.kb("add", "note", "--kind", "reference", "--title", "t",
+                "--dir", ".kb", expect=0)
+        self.kb("route", expect=0)
+        # The predicate that decides nested-or-flat was written out ten times
+        # before the second name existed. One copy left unchanged would compute
+        # the project as the notes directory and write the pointer inside it.
+        self.assertTrue((self.proj / "AGENTS.md").is_file())
+        self.assertFalse((self.proj / ".kb" / "AGENTS.md").exists())
+
+    def test_local_excludes_the_name_actually_used(self):
+        subprocess.run(["git", "init", "-q", "."], cwd=str(self.proj),
+                       capture_output=True,
+                       env={"HOME": str(self.home), "PATH": "/usr/bin:/bin"},
+                       timeout=60)
+        (self.proj / "kb").mkdir()
+        self.kb("add", "note", "--kind", "reference", "--title", "t",
+                "--dir", ".kb", expect=0)
+        self.kb("local", expect=0)
+        exclude = (self.proj / ".git" / "info" / "exclude").read_text(
+            encoding="utf-8")
+        self.assertIn("/.kb/", exclude)
+        self.assertNotIn("/kb/", exclude.replace("/.kb/", ""))
 
 
 if __name__ == "__main__":

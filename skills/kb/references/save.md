@@ -178,6 +178,24 @@ the context is whole. Then there is never more than one.
   report. `./kb` is the answer; the directory was chosen when the session was
   started there.
 
+**`kb/` may already belong to the project.** It is an ordinary directory name —
+source, a mount, a placeholder — so `kb add` refuses to scaffold into one it did
+not make, empty or not, and prints the alternatives. That refusal is not a dead
+end and not homework: the note is in front of you and one answer finishes it.
+
+Put it as one question with the default first, then write immediately:
+
+- **`./.kb`** — the second name kb searches, so every later command finds the
+  notes with no `--dir` and nothing has to remember the choice. Re-run with
+  `--dir .kb`
+- **that directory is for the notes after all** — re-run with
+  `KB_ALLOW_EXISTING=1`
+- **the files in it are notes already** — `kb adopt`, which previews the rename
+  and the front matter before writing
+
+Any other name works and none of them are searched, so the answer is a stream
+that needs `--dir` on every command forever. Do not offer one.
+
 **A kb created this turn inside a git repository needs one question, once.** `kb`
 prints `not ignored — committed by default` when it scaffolds; that default was
 chosen by `git add -A`, not by anybody. Put it to the human with the harness's

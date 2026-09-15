@@ -43,6 +43,22 @@ Nothing to prepare in advance — and nothing appears by itself either.
 **Launching the assistant does not create `kb/`.** The directory comes into
 existence the first time you type `/kb save`. Until then the project has none.
 
+**Unless the project already has a `kb/` of its own.** It is an ordinary
+directory name — source, a mount, a placeholder — so kb refuses to scaffold into
+one it did not make, empty or not, and says what it will not do:
+
+```
+kb: ./kb exists, holds 4 file(s), and has no 00-overview.md — it is not a notes
+directory, and kb does not write into one it did not make.
+  Put the notes in ./.kb instead, and every command finds them without --dir.
+  Or, if this directory IS for the notes: KB_ALLOW_EXISTING=1
+```
+
+Empty counts as taken: a directory somebody made is a placeholder for what they
+are about to put in it. `./.kb` is the second name kb searches, so choosing it
+costs nothing afterwards — no `--dir` on later commands, nothing to remember.
+The entry point still goes to the **project root**, not inside the notes.
+
 ```
 $ cd /path/to/project
 $ claude
@@ -356,7 +372,7 @@ time someone edits an ignore rule.
 | `kb hook --install` | git pre-commit that refuses a commit on exit 4 |
 | `kb route` | `AGENTS.md` at the project root + a `CLAUDE.md` that imports it |
 | `kb local [--dry-run]` | keep the notes out of git (`.git/info/exclude`) |
-| `--dir X` | operate on X instead of `./kb` |
+| `--dir X` | operate on X instead of `./kb` or `./.kb` |
 
 `kb check` exits 3 on drift and **4 when a credential is found in a note**. What
 the scan covers and what it cannot is in

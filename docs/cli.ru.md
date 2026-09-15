@@ -111,7 +111,7 @@ ln -s ~/.claude/skills/kb/scripts/kb ~/.local/bin/kb
 ```console
 $ ls -a
 $ kb status
-kb: no 00-overview.md in ./kb or . — run `kb init` first, or pass --dir
+kb: no 00-overview.md in ./kb or ./.kb or . — run `kb init` first, or pass --dir
 $ echo $?
 1
 ```
