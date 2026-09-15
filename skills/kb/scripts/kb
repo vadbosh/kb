@@ -17,21 +17,24 @@ So the index table lives inside a MANAGED BLOCK and is regenerated from each
 file's front matter. Prose outside the block is never touched — that is the
 whole point: the human keeps writing, the table stops rotting.
 
-    kb init                 scaffold ./kb with an empty overview
-    kb add pipeline --kind reference --title "how the pipeline works"
-    kb sync                 regenerate the index table from front matter
-    kb check                report drift, exit 3 if any (cheap, no writes)
-    kb status               human summary
-    kb adopt                retrofit front matter + markers onto an existing dir
+The subcommands are listed by `kb --help`, and only there: a second copy here
+went half stale within a month, naming six of the fourteen.
 
 Layouts, both supported:
     ./kb/00-overview.md     normal: notes live in a subdirectory of a project
     ./00-overview.md        flat: the directory IS the work stream (scratch dirs)
 
+Supported to read and to write, never started by accident: a stream directory
+exists before its notes do, and kb does not scaffold into a directory it did not
+make. So a flat kb comes from `adopt --in-place` on notes already sitting there,
+or from KB_ALLOW_EXISTING=1 on a directory meant to hold them.
+
 Exit codes:
     0 — done / clean
-    1 — error
+    1 — error (a refusal counts: `route` on a file it did not write, `streams`
+        with no transcript to read)
     3 — drift found (`kb check` only)
+    4 — a credential is in a note (`kb check` only) — reported, never edited
 """
 import argparse
 import contextlib
@@ -766,8 +769,11 @@ def refuse_outside(root: Path) -> None:
     -- a cron `check` across every kb -- but writing elsewhere is the same
     wander with the same silence.
 
-    No override, on purpose. A script that must write elsewhere does `cd` first,
-    which states where it works instead of hiding it in an argument.
+    One override, and it is an environment variable rather than a flag:
+    `KB_ALLOW_OUTSIDE=1`. A flag is typed in the moment and reads as part of the
+    command; a variable has to be set around the whole run, which is what a cron
+    line or a wrapper script does and what a session does not do by accident.
+    The error message names it, so the way out is never a guess.
     """
     if os.environ.get("KB_ALLOW_OUTSIDE") == "1":
         return
@@ -875,15 +881,21 @@ def git_state(root: Path) -> str | None:
     if find_git_dir(root) is None:
         return None
     overview = str((root / OVERVIEW).resolve())
+    # Both commands run IN the notes directory, not above it. `root.parent` was
+    # the same place for the nested layout and one directory too high for the
+    # flat one: a stream that is itself the repository root put git outside the
+    # work tree, both calls exited 128, and committed notes were reported as
+    # "nobody has chosen yet". `find_git_dir(root)` already proved root is
+    # inside a repository, so root is always a safe cwd.
     try:
         tracked = subprocess.run(
             ["git", "ls-files", "--error-unmatch", "--", overview],
-            cwd=root.parent, capture_output=True, timeout=10)
+            cwd=root, capture_output=True, timeout=10)
         if tracked.returncode == 0:
             return "versioned"
         ignored = subprocess.run(
             ["git", "check-ignore", "-q", "--", str(root.resolve())],
-            cwd=root.parent, capture_output=True, timeout=10)
+            cwd=root, capture_output=True, timeout=10)
     except (OSError, subprocess.SubprocessError):
         return None
     return "local" if ignored.returncode == 0 else "undecided"
@@ -958,6 +970,13 @@ def refuse_existing(root: Path) -> None:
     Empty counts as taken. An empty directory somebody made is a placeholder for
     the thing they are about to put in it, and "it was empty" is not consent.
     """
+    # Before anything else, and before the override: `--dir` pointing at a FILE
+    # reached `iterdir()` and ended in a NotADirectoryError traceback, and with
+    # KB_ALLOW_EXISTING=1 it would reach `mkdir` and fail there instead. A wrong
+    # path is an ordinary typo and deserves a sentence, not a stack.
+    if root.exists() and not root.is_dir():
+        die(f"{root} is a file, not a directory — --dir names the directory the "
+            "notes live in")
     if not root.exists() or allow_existing():
         return
     if (root / OVERVIEW).is_file():
@@ -970,18 +989,23 @@ def refuse_existing(root: Path) -> None:
     # without anyone being asked -- the tool's own words beat the skill's rule
     # to ask, because they arrive closer to the moment of acting. A tool that
     # cannot ask must at least not answer.
+    options = [
+        (f"./{other}", "a name kb also searches, so nothing needs --dir "
+                       "afterwards"),
+        ("this directory", "KB_ALLOW_EXISTING=1, if it is for the notes after "
+                           "all"),
+        ("somewhere else", "--dir <path>, and every later command needs it too"),
+    ]
+    if any(e.endswith(".md") for e in entries):
+        options.append(("`kb adopt`", "if the files in here are already notes; "
+                                      "it previews before it writes"))
     lines = [f"{root} exists, {held}, and has no {OVERVIEW} — it is not a notes "
              "directory, and kb does not write into one it did not make.",
-             "  This is a decision for the person, not for kb. The options:",
-             f"    ./{other}          a name kb also searches, so nothing needs "
-             "--dir afterwards",
-             f"    this directory     KB_ALLOW_EXISTING=1, if it is for the "
-             "notes after all",
-             "    somewhere else     --dir <path>, and every later command "
-             "needs it too"]
-    if any(e.endswith(".md") for e in entries):
-        lines.append("    `kb adopt`         if the files in here are already "
-                     "notes; it previews before it writes")
+             "  This is a decision for the person, not for kb. The options:"]
+    # Padded to a column instead of by hand: the hand-spaced version lined up
+    # for one value of `other` and for no other, and this text is quoted in the
+    # documentation, where a ragged column reads as a defect in the tool.
+    lines += [f"    {name:<16} {why}" for name, why in options]
     lines.append("  Ask which, then re-run. kb has no preference between them.")
     die("\n".join(lines))
 
@@ -1105,6 +1129,21 @@ def cmd_add(args) -> int:
                 "edited in place, not re-declared — open it.\n"
                 "  A charter that turned out wrong is reversed by a `decision` "
                 "that says why, then the charter is edited to match.")
+    # A `supersedes:` name with a typo disables the mechanism in silence: the
+    # index skips a reference it cannot resolve, so no `⤺` ever appears, and
+    # `check` reads the same name as a retired file and therefore allows links
+    # to it. Asked here and nowhere later, because after the replacement the
+    # file is SUPPOSED to be gone -- this is the one moment it must be present.
+    if args.supersedes:
+        known = {n.name for n in notes}
+        gone = [r for r in args.supersedes.replace(",", " ").split()
+                if r.strip() and r not in known]
+        if gone:
+            have = ", ".join(sorted(known)) or "no notes yet"
+            die(f"--supersedes names {', '.join(gone)}, which is not in {root}.\n"
+                f"  Here: {have}\n"
+                "  A name that does not resolve is never reported again: the "
+                "index drops the mark and `check` treats the name as retired.")
     # Gaps are never reused: a number that once pointed at a file may still be
     # referenced from a commit message, another note, or somewhere outside.
     num = max((n.num for n in notes), default=0) + 1
@@ -1700,13 +1739,7 @@ def cmd_hook(args) -> int:
     """
     root = find_root(args.dir)
     refuse_outside(root)
-    git_dir = None
-    p = root.resolve()
-    while p != p.parent:
-        if (p / ".git").is_dir():
-            git_dir = p / ".git"
-            break
-        p = p.parent
+    git_dir = find_git_dir(root)
     if not git_dir:
         die(f"{root} is not inside a git repository — nothing to hook into.\n"
             "  `kb check` still runs at the end of every save; that is the check\n"
@@ -1773,7 +1806,12 @@ def route_findings(root: Path, *, on_write: bool = False) -> list[str]:
         return []                       # no entry point is a choice, not a fault
     out = []
     text = target.read_text(encoding="utf-8", errors="replace")
-    if MARK_BEGIN not in text:
+    # The same question `route` itself asks, asked the same way. A substring
+    # test answered "the markers are there" for a file that merely mentions
+    # `kb:begin` in its prose, while `route` -- which needs both markers, in
+    # order -- refused to write. Two answers to one question, and the finding
+    # went missing exactly where it was true.
+    if replace_block(text, "") is None:
         out.append(f"{target.name} has no kb:begin/kb:end markers, so nothing "
                    "keeps it current — add them where the pointer belongs")
     claude = project / CLAUDE_FILE
@@ -2066,6 +2104,18 @@ def cmd_local(args) -> int:
     if git_dir is None:
         die(f"{root} is not inside a git repository — nothing to exclude from")
 
+    repo = git_dir.parent
+    # The flat layout put directly on a repository root has nothing to exclude:
+    # the pattern for "this directory" relative to itself is `/./`, which git
+    # does not understand and which was written out verbatim. There is no
+    # pattern that means "the whole repository", so the fix is not a better
+    # pattern -- it is saying that this arrangement and `kb local` do not meet.
+    if absolute(root) == absolute(repo):
+        die(f"{root} IS the repository root — there is no exclude rule for a "
+            "whole repository, so the notes here cannot be kept out of git.\n"
+            "  Either move them into a directory of their own (`kb adopt` "
+            f"offers {NOTES_DIRS[0]}/), or keep this repository private.")
+
     state = git_state(root)
     if state == "versioned":
         die(f"{root / OVERVIEW} is already tracked. An exclude rule would change "
@@ -2079,7 +2129,6 @@ def cmd_local(args) -> int:
     # fired and the file had to be edited by hand. The command is about the
     # decision, not about one directory, so it checks all of it every time and
     # says "nothing to do" only when all of it is already listed.
-    repo = git_dir.parent
     rel = os.path.relpath(root.resolve(), repo.resolve()).replace(os.sep, "/")
     exclude = git_dir / "info" / "exclude"
     existing = exclude.read_text(encoding="utf-8") if exclude.exists() else ""

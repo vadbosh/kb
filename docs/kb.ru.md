@@ -51,13 +51,16 @@
 
 **Если только `kb/` уже не занят самим проектом.** Имя обычное — исходники,
 точка монтирования, заготовка, — поэтому kb отказывается писать в каталог,
-который создал не он, пустой или нет, и прямо говорит, чего делать не станет:
+который создал не он, пустой или нет, и возвращает выбор человеку:
 
 ```
-kb: ./kb exists, holds 4 file(s), and has no 00-overview.md — it is not a notes
-directory, and kb does not write into one it did not make.
-  Put the notes in ./.kb instead, and every command finds them without --dir.
-  Or, if this directory IS for the notes: KB_ALLOW_EXISTING=1
+kb: /path/to/project/kb exists, holds 4 file(s), and has no 00-overview.md — it is
+not a notes directory, and kb does not write into one it did not make.
+  This is a decision for the person, not for kb. The options:
+    ./.kb            a name kb also searches, so nothing needs --dir afterwards
+    this directory   KB_ALLOW_EXISTING=1, if it is for the notes after all
+    somewhere else   --dir <path>, and every later command needs it too
+  Ask which, then re-run. kb has no preference between them.
 ```
 
 Пустой считается занятым: каталог, который кто-то создал, — это заготовка под
@@ -478,6 +481,12 @@ kb list --prune            # убрать записи, у которых про
 команды `add` и `init` откажутся работать — иначе в одном каталоге окажется два
 набора заметок. Обход:
 `adopt --in-place`, только если снаружи ссылаются на старые пути.
+
+Поэтому плоская раскладка не заводится случайно. Каталог потока существует
+раньше заметок, а в каталог, который создал не он, kb не пишет; остаётся два
+пути — `adopt --in-place` для заметок, которые уже там лежат, и
+`KB_ALLOW_EXISTING=1` для каталога, который для них и заведён. Дальше такой kb
+читается и пишется как любой другой.
 
 ---
 

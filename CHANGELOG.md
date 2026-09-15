@@ -18,6 +18,51 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.31.0
+
+Seven defects from a review of the whole tool, each reproduced before it was
+fixed and each now covered by a test that failed on the old binary.
+
+- **A flat kb on a repository root reported committed notes as undecided.** Both
+  `git` calls ran in `root.parent`, which for the flat layout is the directory
+  *above* the stream — outside the work tree when the stream is the repository
+  root. Both exited 128, and `kb status` answered "neither tracked nor ignored"
+  about notes that were in the last commit. They run in the notes directory now.
+
+- **`kb local` wrote the pattern `/./` in the same situation.** The path of the
+  notes relative to the repository was `.`, and the rule went into
+  `.git/info/exclude` meaning nothing. There is no pattern for "the whole
+  repository", so the command refuses and says why instead of writing one.
+
+- **`--dir <file>` ended in a `NotADirectoryError` traceback.** A path that is
+  not a directory is an ordinary typo; it gets a sentence.
+
+- **`--supersedes` accepted a name that is not there, and nothing ever said
+  so.** The index drops a reference it cannot resolve, so no `⤺` appeared, and
+  `check` read the same name as a retired file and allowed links to it — one
+  typo turned the whole mechanism off in silence. The name is checked when the
+  note is created, which is the only moment it must exist.
+
+- **`verify` missed a missing managed block when the prose mentioned
+  `kb:begin`.** It tested for the marker as a substring while `route` — which
+  needs both markers, in order — refused to write to the same file. Two answers
+  to one question; both ask `replace_block` now.
+
+- The refusal to scaffold into somebody's directory listed its options with
+  hand-typed spacing, which lined up for one option name and no other. That text
+  is quoted in the manual, where a ragged column reads as a defect.
+
+- The module docstring said the override in `refuse_outside` does not exist,
+  listed six of the fourteen subcommands, and omitted exit 4. The command list
+  is gone — `--help` has it and does not go stale — and the two facts are
+  corrected.
+
+- **Documentation.** The manual showed the 4.29 refusal text, including the
+  imperative "Put the notes in ./.kb instead" that 4.30.0 removed on purpose;
+  both versions now show what the tool actually prints. Both also say what the
+  flat layout costs to start: a stream directory exists before its notes, so it
+  takes `adopt --in-place` or `KB_ALLOW_EXISTING=1`.
+
 ## 4.30.3
 
 - The briefing headings were translated afresh on every run, so the same section

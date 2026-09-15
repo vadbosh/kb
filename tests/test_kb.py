@@ -164,6 +164,23 @@ class Guards(Base):
         self.assertNotEqual(res.returncode, 0)
         self.assertIn("PATH", res.stderr)
 
+    def test_dir_pointing_at_a_file_is_refused(self):
+        """`--dir <file>` reached `iterdir()` and ended in a traceback."""
+        f = self.proj / "afile"
+        f.write_text("x\n", encoding="utf-8")
+        res = self.kb("add", "n", "--kind", "reference", "--title", "t",
+                      "--dir", str(f))
+        self.assertEqual(res.returncode, 1)
+        self.assertIn("is a file, not a directory", res.stderr)
+        self.assertNotIn("Traceback", res.stderr)
+        # The override says "this directory is for the notes"; it cannot say
+        # that about a file, so it must not turn the refusal into a `mkdir`
+        # failure one frame later.
+        res = self.kb("add", "n", "--kind", "reference", "--title", "t",
+                      "--dir", str(f), env={"KB_ALLOW_EXISTING": "1"})
+        self.assertEqual(res.returncode, 1)
+        self.assertIn("is a file, not a directory", res.stderr)
+
     def test_system_directory_refused(self):
         res = self.kb("init", cwd="/tmp")
         self.assertNotEqual(res.returncode, 0)
@@ -246,6 +263,24 @@ class Add(Base):
         self.assertIn("already promises the reader", res.stderr)
         self.assertFalse((self.proj / "kb" / "02-b.md").exists(),
                          "refused but created the file anyway")
+
+    def test_supersedes_must_name_a_file_that_is_here(self):
+        """A typo used to disable the mechanism without one message: the index
+        drops a reference it cannot resolve, and `check` reads the same name as
+        a retired file and allows links to it."""
+        self.kb("add", "one", "--kind", "decision", "--title", "one", expect=0)
+        res = self.kb("add", "two", "--kind", "decision", "--title", "two",
+                      "--supersedes", "01-nope.md")
+        self.assertEqual(res.returncode, 1)
+        self.assertIn("01-nope.md", res.stderr)
+        self.assertFalse((self.proj / "kb" / "02-two.md").exists())
+
+    def test_supersedes_a_file_that_is_here_is_accepted_and_marked(self):
+        self.kb("add", "one", "--kind", "decision", "--title", "one", expect=0)
+        self.kb("add", "two", "--kind", "decision", "--title", "two",
+                "--supersedes", "01-one.md", expect=0)
+        overview = (self.proj / "kb" / "00-overview.md").read_text(encoding="utf-8")
+        self.assertIn("⤺", overview)
 
     def test_a_different_title_is_fine(self):
         self.make_kb()
@@ -1033,6 +1068,17 @@ class Route(Base):
         self.assertIn("lines of context every session", self.kb("route", expect=0).stdout)
         self.assertIn("lines of context every session", self.kb("verify", expect=3).stdout)
 
+    def test_prose_naming_the_marker_is_not_a_managed_block(self):
+        """`route` needs both markers in order; `verify` tested for the first as
+        a substring, so a file that merely mentions `kb:begin` in its text got
+        "nothing suspicious" while `route` refused to write to it."""
+        self.make_kb()
+        (self.proj / "AGENTS.md").write_text(
+            "# p\n\nsee `<!-- kb:begin` in the marker docs\n", encoding="utf-8")
+        self.assertIn("no managed block", self.kb("route", expect=1).stdout)
+        res = self.kb("verify", expect=3)
+        self.assertIn("no kb:begin/kb:end markers", res.stdout)
+
     def test_scaffolding_says_the_project_root_has_no_pointer(self):
         # The condition for the automatic `route` arrives in the output of the
         # command the caller already ran, not in prose it has to remember.
@@ -1271,6 +1317,25 @@ class GitState(Base):
         # print success and change nothing.
         self.assertIn("already tracked", res.stderr)
         self.assertIn("git: tracked", self.kb("status").stdout)
+
+    def test_a_flat_kb_at_the_repository_root_sees_its_own_commits(self):
+        """Both git calls ran in `root.parent`, which for a flat layout on a
+        repository root is outside the work tree: exit 128 twice, and committed
+        notes were reported as "nobody has chosen yet"."""
+        self.git("init", "-q", ".")
+        self.kb("init", "--dir", ".", env={"KB_ALLOW_EXISTING": "1"}, expect=0)
+        self.git("add", "-A")
+        self.git("commit", "-qm", "notes")
+        self.assertIn("git: tracked", self.kb("status", expect=0).stdout)
+
+    def test_local_refuses_a_flat_kb_at_the_repository_root(self):
+        """There is no exclude pattern for a whole repository. The relative path
+        is `.`, and the rule written out was the meaningless `/./`."""
+        self.git("init", "-q", ".")
+        self.kb("init", "--dir", ".", env={"KB_ALLOW_EXISTING": "1"}, expect=0)
+        res = self.kb("local", "--dry-run", expect=1)
+        self.assertIn("IS the repository root", res.stderr)
+        self.assertNotIn("/./", res.stdout)
 
     def test_outside_a_repository_there_is_no_question(self):
         self.make_kb()

@@ -51,13 +51,16 @@ rather than starting a second kb down there.
 
 **Unless the project already has a `kb/` of its own.** It is an ordinary
 directory name — source, a mount, a placeholder — so kb refuses to scaffold into
-one it did not make, empty or not, and says what it will not do:
+one it did not make, empty or not, and hands the choice back:
 
 ```
-kb: ./kb exists, holds 4 file(s), and has no 00-overview.md — it is not a notes
-directory, and kb does not write into one it did not make.
-  Put the notes in ./.kb instead, and every command finds them without --dir.
-  Or, if this directory IS for the notes: KB_ALLOW_EXISTING=1
+kb: /path/to/project/kb exists, holds 4 file(s), and has no 00-overview.md — it is
+not a notes directory, and kb does not write into one it did not make.
+  This is a decision for the person, not for kb. The options:
+    ./.kb            a name kb also searches, so nothing needs --dir afterwards
+    this directory   KB_ALLOW_EXISTING=1, if it is for the notes after all
+    somewhere else   --dir <path>, and every later command needs it too
+  Ask which, then re-run. kb has no preference between them.
 ```
 
 Empty counts as taken: a directory somebody made is a placeholder for what they
@@ -488,6 +491,12 @@ Notes always live in `kb/`. If `00-overview.md` sits loose in the directory root
 `add` and `init` refuse to run — otherwise one directory ends up holding two sets
 of notes. Escape hatch: `adopt --in-place`, only when something outside links the
 old paths.
+
+A flat layout is therefore never started by accident. A stream directory always
+exists before the notes do, and kb does not scaffold into a directory it did not
+make, so the two ways in are `adopt --in-place` on notes that are already there,
+and `KB_ALLOW_EXISTING=1` on a directory that is meant to hold them. Both are
+read and written like any other kb afterwards.
 
 ---
 
