@@ -2072,10 +2072,13 @@ def cmd_local(args) -> int:
             "nothing — git does not apply them to files it already tracks.\n"
             "  `git rm -r --cached` the directory first, and decide what to do "
             "about the history: the notes are already in it.")
-    if state == "local":
-        print(f"{root} is already ignored by git — nothing to do")
-        return 0
-
+    # No early return on "the notes are already excluded". Run before `route`
+    # there is no entry point yet, so only the notes get a rule; run again
+    # afterwards and this branch used to answer "nothing to do" while the
+    # pointer sat there for the next `git add -A`. The mismatch finding then
+    # fired and the file had to be edited by hand. The command is about the
+    # decision, not about one directory, so it checks all of it every time and
+    # says "nothing to do" only when all of it is already listed.
     repo = git_dir.parent
     rel = os.path.relpath(root.resolve(), repo.resolve()).replace(os.sep, "/")
     exclude = git_dir / "info" / "exclude"
@@ -2103,7 +2106,7 @@ def cmd_local(args) -> int:
 
     missing = [w for w in wants if w not in listed]
     if not missing:
-        print(f"{exclude} already lists {', '.join(wants)}")
+        print(f"{exclude} already lists {', '.join(wants)} — nothing to do")
         return 0
     if args.dry_run:
         print(f"would append {', '.join(missing)} to {exclude}")

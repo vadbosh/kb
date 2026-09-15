@@ -1259,7 +1259,7 @@ class GitState(Base):
         self.assertIn("/kb/", exclude.splitlines())
         self.assertIn("git: excluded", self.kb("status").stdout)
         res = self.kb("local", expect=0)
-        self.assertIn("already ignored", res.stdout)
+        self.assertIn("nothing to do", res.stdout)
 
     def test_local_refuses_once_the_notes_are_tracked(self):
         self.git("init", "-q", ".")
@@ -1454,6 +1454,27 @@ class Sequence(Base):
         for pattern in ("/kb/", "/AGENTS.md", "/CLAUDE.md"):
             self.assertIn(pattern, exclude)
         self.assertNotIn("is not excluded while", self.kb("route", expect=0).stdout)
+
+    def test_local_before_route_still_covers_the_entry_point_later(self):
+        self.git("init", "-q", ".")
+        self.aged_kb()
+        # Run before `route` there is no entry point yet, so only the notes get
+        # a rule. Run again afterwards and the command used to answer "already
+        # ignored — nothing to do" while the pointer sat there for the next
+        # `git add -A`; the mismatch finding then fired and somebody edited
+        # .git/info/exclude by hand.
+        self.kb("local", expect=0)
+        self.kb("route", expect=0)
+        out = self.kb("local", expect=0).stdout
+        self.assertIn("/AGENTS.md", out)
+        exclude = (self.proj / ".git" / "info" / "exclude").read_text(
+            encoding="utf-8")
+        for pattern in ("/kb/", "/AGENTS.md", "/CLAUDE.md"):
+            self.assertIn(pattern, exclude)
+        self.assertNotIn("is not excluded while",
+                         self.kb("route", expect=0).stdout)
+        # And only once everything is listed does it say there is nothing to do.
+        self.assertIn("nothing to do", self.kb("local", expect=0).stdout)
 
     def test_local_leaves_a_file_it_did_not_write_alone(self):
         self.git("init", "-q", ".")

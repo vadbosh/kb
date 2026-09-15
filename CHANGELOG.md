@@ -18,6 +18,20 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.30.1
+
+- **`kb local` answered "nothing to do" while half the decision was unmade.**
+  Run before `route` there is no entry point yet, so only the notes got a rule;
+  run again afterwards, an early return on "the notes are already excluded" sent
+  it home before it looked at `AGENTS.md`. The pointer stayed for the next
+  `git add -A`, the mismatch finding fired, and somebody edited
+  `.git/info/exclude` by hand — which is what 4.27.0 exists to prevent, defeated
+  by the order the two commands happened to run in.
+
+  The command is about the decision, not about one directory: it checks all
+  three every time, appends what is missing, and says there is nothing to do
+  only when all three are listed.
+
 ## 4.30.0
 
 - **The notes are found from anywhere inside the project.** Discovery looked in
