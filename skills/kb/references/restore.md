@@ -93,8 +93,10 @@ resume rather than assuming the context is fresh.
 ## kb: <path>   (<N> files, snapshot <NN-state-YYYY-MM-DD>)
 
 ## What this is
-<one line from the charter: what the work is for, and what it will not do.
- Omit the whole section when there is no charter — do not infer one>
+<one line: what the work is for, and what it will not do. From the charter when
+ there is one, otherwise from the overview paragraph, which answers the same
+ question and was written by a human. Omit the section only when neither says —
+ the rule is against inventing a purpose, not against quoting the one on disk>
 
 ## State
 <2-4 lines from the current state file>

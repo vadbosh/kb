@@ -129,6 +129,27 @@ shipped_leaks() {
 	return $found
 }
 
+# Every section here must have the tag it promises. The file says a tag carries
+# its section, so `git tag -n99 v4.1.0` answers "what changed" -- which is false
+# for a version that was written up and then folded into the next one. That
+# happened once: a 4.26.1 section survived the work shipping as 4.27.0, and the
+# release check never looked, because it only ever verified the CURRENT version.
+sections_tagged() {
+	local v missing=0
+	while read -r v; do
+		git -C "$SRC" rev-parse -q --verify "refs/tags/v$v" >/dev/null && continue
+		[ "$missing" -eq 0 ] && echo "  changelog sections with no tag:"
+		missing=$((missing + 1))
+		echo "    $v"
+	done < <(grep -oE '^## [0-9]+\.[0-9]+\.[0-9]+' "$LOG" | cut -d' ' -f2)
+	if [ "$missing" -gt 0 ]; then
+		echo "                    a section describes a release; without the tag"
+		echo "                    it describes one that never happened"
+		return 1
+	fi
+	echo "  changelog sections:  every one has its tag"
+}
+
 # Run the tool on a COPY of a live kb, in the order a session actually uses it.
 #
 # Every check above this line compares a record with a record. The unit tests
@@ -263,6 +284,7 @@ check() {
 	}
 	[ -n "$leaks" ] || echo "  shipped files:    nothing local named in them"
 
+	sections_tagged || problems=1
 	copies "$v" || problems=1
 	smoke || problems=1
 

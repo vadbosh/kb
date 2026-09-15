@@ -18,6 +18,20 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.30.2
+
+- **"What this is" was forbidden where the answer was sitting on disk.** The
+  briefing format said to take that line from the charter and to omit the
+  section when there is none — "do not infer one". A kb without a charter has
+  the same answer in its overview, written by a human, and dropping it leaves
+  the reader nothing saying where they have landed. The rule is against
+  inventing a purpose, not against quoting the one that exists.
+
+- A `4.26.1` section had survived in the changelog after that work shipped as
+  `4.27.0`, describing a release that never happened. `release.sh check` looked
+  the other way only — tags with no section — so this direction was never
+  examined. It checks both now, which was verified by planting one.
+
 ## 4.30.1
 
 - **`kb local` answered "nothing to do" while half the decision was unmade.**
@@ -141,8 +155,6 @@ looks authoritative, and nothing says which is right.
   Only files kb wrote are touched: an `AGENTS.md` without the markers belongs to
   somebody, and a `CLAUDE.md` holding anything but the import does too. Both are
   left alone and said so.
-
-## 4.26.1
 
 - **The mismatch finding said "committed" about a file that was untracked, in a
   repository with no commits at all.** What the check actually asks is whether
