@@ -28,7 +28,7 @@ links, dates, secrets — never a sentence with the world.
 
 The real case: tests were added, a note describing them was written, the `state`
 was updated, and a third note kept saying "there are no tests — see the state".
-That note is the one the index recommends for "I am about to change the code",
+That note is the one the index recommends for "I am about to change this",
 so the stale line went straight to the reader who would act on it.
 
 **Grep the subject of what you just changed, across the whole kb, before
@@ -64,8 +64,8 @@ hand:
   **Assume it will be run.** An assistant told to brief and not to act read a
   note's check block and executed it anyway — harmless there, because the
   commands only read. So the block holds read-only commands and nothing else:
-  a `terraform apply`, a `kubectl delete`, a migration, a deploy is *described*
-  in prose and never written as a line someone can lift and run
+  anything that applies, deletes, deploys or migrates is *described* in prose
+  and never written as a line someone can lift and run
 - **what breaks silently** — the invariant nobody would guess from reading
 
 If an answer is missing, either write it now or **name it in the report as
@@ -116,7 +116,7 @@ A `charter` is the one a snapshot cannot stand in for. A `state` says where the
 work stands and a `plan` says what comes next; neither says what the work is
 *for* or what it will not do, so a rejected direction gets proposed again by
 whoever arrives next. There is one per kb — `add` refuses a second, because two
-charters split the answer to "what are we building" with nothing to pick
+charters split the answer to "what is this for" with nothing to pick
 between them. Wrong direction is reversed by a `decision` that says why, and
 then the charter is edited to match.
 
@@ -141,7 +141,7 @@ equals, which is how someone acts on a reversed decision.
   var), never the value.
 - **Nothing that lives elsewhere** — reference it by path or URL. A copy goes
   stale silently, a link does not. Documentation next to code included: it is
-  edited together with the code.
+  kept beside the thing it describes and edited together with it.
 
 ## Step 1 — which work streams did this session touch?
 
@@ -204,9 +204,9 @@ with `multiSelect` in Claude Code), otherwise a numbered list. **One line per
 stream** — what came out of it, and whether its kb exists:
 
 ```
-1. ~/src/api      auth rewritten, two bugs fixed   → kb/ exists
-2. ~/src/deploy   rollout script + smoke test      → kb/ (new)
-3. workstation    editor and shell config          → no home yet
+1. ~/work/alpha   two problems traced and fixed    → kb/ exists
+2. ~/work/beta    a procedure worked out end to end → kb/ (new)
+3. the workshop   no directory of its own           → no home yet
 ```
 
 Do not argue the case for each — a paragraph per stream turns a two-second
@@ -252,7 +252,7 @@ not "what is this called":
 good   what is done and what is still open right now
 good   traps and ready-to-run verification commands
 bad    State as of 2026-08-05      (repeats the filename)
-bad    Fluent-bit                  (a noun, answers nothing)
+bad    <component name>            (a noun, answers nothing)
 ```
 
 ## Step 4 — write the body
@@ -274,8 +274,8 @@ of a run earlier in the session. `check` and `verify` cannot help: they prove th
 notes agree with each other, never that a sentence about the world is true, and a
 false note is read with the same confidence as the rest. Two to watch:
 
-- a `grep` matching inside a comment reads as "the code uses it" — re-run against
-  executable lines only
+- a match found inside a quotation, a comment or an example reads as a fact
+  about the thing itself — look at where the match actually sits
 - an assertion that happens to be true is still unverified; next time it is not
 
 Not checkable from here — a live cluster, another host, a stopped service? **Say
@@ -297,7 +297,7 @@ nothing.
 is read as the current count by whoever ran the command and got 65 — the one
 place a reader is looking at the number and the claim together. Describe the
 shape of a good result, not its size: `OK`, `clean`, `no drift`, an empty
-output. That sentence stays true through every release; a count survives one.
+output. That sentence stays true through every change; a count survives one.
 
 **A `decision` needs one step more: search for an existing answer first.**
 Another tool or project may have solved it already. A decision justified by "this
@@ -391,7 +391,7 @@ Without those the reader cannot tell whether a subject was considered and
 rejected, or never noticed:
 
 ```
-kb: ~/src/api      +1 decision (04-why-x.md), edited 03-traps.md, synced
-kb: ~/src/deploy   nothing written — no kb yet, your call
-kb: workstation    skipped, nothing durable
+kb: ~/work/alpha   +1 decision (04-why-x.md), edited 03-traps.md, synced
+kb: ~/work/beta    nothing written — no kb yet, your call
+kb: the workshop   skipped, nothing durable
 ```

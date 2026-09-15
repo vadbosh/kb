@@ -980,7 +980,7 @@ class Route(Base):
         self.kb("route", expect=0)
         # Neither file breaks the budget alone. The host loads both when the
         # session starts in the component directory, and that sum was nobody's.
-        comp = self.proj / "7.GRAFANA"
+        comp = self.proj / "component"
         comp.mkdir()
         (comp / "CLAUDE.md").write_text(
             "\n".join(f"line {i}" for i in range(150)) + "\n", encoding="utf-8")
@@ -989,8 +989,8 @@ class Route(Base):
                                + "\n".join(f"pad {i}" for i in range(80)) + "\n",
                                encoding="utf-8")
         out = self.kb("route", expect=0).stdout
-        self.assertIn("7.GRAFANA/", out)
-        self.assertIn("7.GRAFANA/CLAUDE.md 150", out)
+        self.assertIn("component/", out)
+        self.assertIn("component/CLAUDE.md 150", out)
         self.assertIn("budget 200", out)
 
     def test_a_finding_names_the_file_that_says_what_to_do(self):

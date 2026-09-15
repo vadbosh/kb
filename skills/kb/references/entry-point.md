@@ -23,19 +23,20 @@ invention:
 | Slot | Where the answer comes from |
 |---|---|
 | what this work is, and its boundaries | the overview paragraph — one sentence of it |
-| the commands | what checks **this work**: the test runner, the linter, `kb check` |
+| the commands | what checks **this work** — whatever answers "is it in good shape": `kb check` always, plus whatever this stream is checked by |
 | what proves it done | the shape of a good result from those commands — `OK`, empty output, no drift |
 
-**The commands slot holds what checks the work, not what the work is about.** A
-stream of `tcpdump` recipes had its own `tcpdump` line copied up into the entry
-point, where it was a second copy of a command the note already carried, in a
-file loaded every session. A copy goes stale and the original does not — the
-same rule that governs a note, and it governs here too. Name the note instead;
-what belongs in this slot is `kb check`, the test command, the linter.
+**The commands slot holds what checks the work, not what the work is about.**
+The pull is strongest where the stream's subject *is* commands — a kb of
+recipes, queries or procedures. Copying one of those up into the entry point
+puts a second copy of it in a file loaded every session, and a copy goes stale
+while the original does not. That is the rule
+that governs a note; it governs here too. Name the note instead.
 
 The question that separates them: **after running it, do I know whether the
-work is in good shape?** `kb check` answers that. `tcpdump -i any …` is the
-subject being written about, and its output says nothing about the notes.
+work is in good shape?** `kb check` answers that, and so does whatever this
+stream is verified by. A command the notes are *about* answers something else
+entirely, however central it is to the subject.
 
 **Write the entry point in the language the notes are written in.** The
 generated block already follows `KB_LANG`; matching it by hand keeps one reader
@@ -50,9 +51,9 @@ names no command has no honest answer to the commands slot, and guessing one
 puts a command into a file an agent will execute. Leave that slot's comment in
 place, say which slot and why, and fill the rest.
 
-Never write a command that changes anything — `apply`, `delete`, a deploy, a
-migration. The same rule as a note's check block, and for the same reason: an
-agent told to brief and not to act read one and ran it.
+Never write a command that changes anything. The same rule as a note's check
+block, and for the same reason: an agent told to brief and not to act read one
+and ran it.
 
 `verify` keeps reporting empty sections until they are answered, so a slot left
 behind is not quietly forgotten — it is a finding every session from now on.
@@ -86,7 +87,7 @@ nothing — it only makes the entry point look shorter.
 | What the text is | Where it goes | When it loads |
 |---|---|---|
 | routing: what this work is, the check commands, the definition of done | stays in `AGENTS.md` | every session — that is what it is for |
-| a convention tied to a file type ("when touching `.tf`…") | `.claude/rules/<topic>.md` with `paths:` frontmatter | only when a matching file is read |
+| a convention tied to one kind of file ("when touching a `<ext>` file…") | `.claude/rules/<topic>.md` with `paths:` frontmatter | only when a matching file is read |
 | a repeatable procedure shared across projects | a skill | when the model judges it relevant |
 | something true of this stream only | a note in `kb/`, named from `AGENTS.md` | when someone opens it |
 | anything reached by `@path` | **nowhere** — an import is expanded at launch, so the lines are paid for wherever they are written | every session |

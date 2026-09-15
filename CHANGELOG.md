@@ -18,6 +18,34 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.24.0
+
+- **The tool is for any subject, and it had stopped saying so.** kb wrote into
+  every project's `AGENTS.md` that "tests are the recorded expectation, the code
+  is the actual implementation" — a sentence with no meaning for a kb of
+  recipes, a case file, a renovation or a diet. The generated block now names
+  only kb's own kinds: a `decision` is the intent, an active `plan` is a change
+  not finished, a `state` is how things stood on its own date, and how they
+  stand now is answered by a check rather than a note. Both languages.
+
+  The commands slot said "how to bring it up and how to check it"; bringing a
+  thing up is deployment. It asks what checks that the work is in good shape.
+
+- **The skill prose carried the same bias, and worse, it carried examples
+  lifted from whatever stream produced the rule.** A `tcpdump` line and a
+  component directory from a live repository had been written into a tool that
+  installs into three assistants and runs on every project — an example from
+  one domain steers every save in every other. Removed, together with the
+  product names and the software-shaped illustrations that had accumulated
+  around them: a test runner, a linter, a release, "about to change the code",
+  "documentation next to code", two example streams named after source
+  directories.
+
+  This class has a history in this repository: real paths leaking into examples
+  was recorded three times in two days, in the documentation. This time it
+  reached the shipped skill, and the author of the rule was the one who broke
+  it.
+
 ## 4.23.1
 
 - **The commands slot in the entry point is for what checks the work, not what
