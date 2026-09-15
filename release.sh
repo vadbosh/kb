@@ -181,13 +181,21 @@ smoke() {
 		rc=1
 	fi
 
-	# Step 3: notes excluded, pointer not. Each half is defensible alone and
-	# only the pair is broken, which is why no single-command test finds it
-	# (fixed in 4.16.2).
+	# Step 3: `local` settles the notes and the file pointing at them together.
+	# Until 4.27.0 it excluded only the notes, so the pointer stayed for the
+	# next `git add -A` and `route` then reported a mismatch the tool had made
+	# itself. Each half is defensible alone, which is why no single-command
+	# test finds it -- this is the sequence that does.
 	(cd "$proj" && "$SRC/skills/kb/scripts/kb" local >/dev/null 2>&1) || true
+	for f in kb AGENTS.md CLAUDE.md; do
+		if ! grep -q "/$f" "$proj/.git/info/exclude" 2>/dev/null; then
+			echo "  smoke:            local left $f out of .git/info/exclude"
+			rc=1
+		fi
+	done
 	out="$(cd "$proj" && "$SRC/skills/kb/scripts/kb" route 2>&1 || true)"
-	if ! printf '%s' "$out" | grep -q 'is committed while'; then
-		echo "  smoke:            route stays silent on a committed pointer to excluded notes"
+	if printf '%s' "$out" | grep -q 'is not excluded while'; then
+		echo "  smoke:            route reports a mismatch local should have settled"
 		rc=1
 	fi
 
