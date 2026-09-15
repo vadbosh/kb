@@ -2483,7 +2483,37 @@ def _opencode_sessions(limit: int):
     return out
 
 
+def here_stream() -> str:
+    """The directory this session is standing in, and its notes if it has any.
+
+    Printed before the transcript tally and never taken from it. `streams` reads
+    what was typed, so a stream nobody named is a stream it cannot see -- and
+    the one directory that is certainly in scope is the one the session is
+    working in. Measured on a real save: the sweep listed skill paths, transcript
+    files and `~/.local/bin`, and not the directory the notes were written to,
+    because nobody had typed its name. Whoever relayed that list had to work
+    around the tool to reach the obvious answer.
+    """
+    cwd = Path.cwd().resolve()
+    found = None
+    for base in search_bases(cwd):
+        for name in NOTES_DIRS:
+            if (base / name / OVERVIEW).exists():
+                found = base / name
+                break
+        if found:
+            break
+    if found is None and (cwd / OVERVIEW).exists():
+        found = cwd                     # flat layout: the directory IS the kb
+    if found is None:
+        return f"  here: {cwd} — no kb yet"
+    n = len(load_notes(found))
+    where = found if found == cwd else os.path.relpath(found, cwd)
+    return f"  here: {cwd} — kb at {where} ({n} note(s))"
+
+
 def cmd_streams(args) -> int:
+    print(here_stream())
     sources, texts = [], []
     for harness, path in _newest_transcripts(args.sessions):
         got = list(_user_messages(path))

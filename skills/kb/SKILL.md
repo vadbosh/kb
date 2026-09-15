@@ -1,7 +1,7 @@
 ---
 name: kb
 description: Read and write a project's kb/ work-notes — a Markdown knowledge base whose index is generated rather than maintained by hand. Handles phrases "kbsave", "kbrestore", "/kb", "запиши в kb", "запиши в заметки", "прочитай kb", "прочитай заметки", "восстанови контекст из kb", "save to kb", "read kb", "что в заметках", "задокументируй это", "оформи в kb". Use at the start of work to load the notes and see what changed, and at the end to persist findings, decisions, traps or a dated snapshot instead of leaving them in the conversation.
-version: "4.32.1"
+version: "4.33.0"
 ---
 
 # kb
@@ -71,7 +71,8 @@ kb brief                                      overview + current snapshot, verba
                                               output speaks for itself; you say what it means
 kb outline [file]                             section map — where the seams are
 kb list                                       every kb known on this machine
-kb streams                                    directories this session touched
+kb streams                                    where this session stands, then the
+                                              directories it touched
 kb route                                      AGENTS.md at the project root + a
                                               CLAUDE.md that imports it
 kb local                                      keep the notes out of git
@@ -91,7 +92,9 @@ the alternatives; `references/save.md` says what to do with that refusal.
 other command answers for a single directory, so running one and stopping
 silently decides the session had one subject. `kb streams` answers the other
 question — which directories came up — by reading the transcript rather than
-trusting recall.
+trusting recall. Its first line is the directory the session is standing in,
+taken from the filesystem: extraction cannot return a path nobody typed, and the
+session's own is regularly one of those.
 
 ## The one rule both halves share
 

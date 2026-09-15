@@ -161,6 +161,11 @@ kb streams                directories mentioned, commonest first
 kb streams --sessions 3   when the work spans more than the current one
 ```
 
+Its first line — `here:` — is the directory this session is standing in, taken
+from the filesystem and not from the transcript. The rest is extraction: a
+directory nobody typed the name of cannot appear, and the session's own is
+regularly one of those.
+
 It extracts **paths**, not prose — a tenth of the cost, and the question is
 which directories anyway. No transcript found → it says so, and the list is
 yours to give, with the fact that it came from memory said out loud.

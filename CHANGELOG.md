@@ -18,6 +18,17 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.33.0
+
+- **`kb streams` did not name the directory the session was standing in.** It
+  reads the transcript, so it can only return a path somebody typed — and the
+  session's own directory is regularly not one of those. Measured on a real
+  save: the sweep listed `/root/.claude`, `~/.local/bin`, transcript files and
+  a paper URL, and not `/555`, which is where the notes were being written. The
+  first line is now `here: <cwd> — kb at <dir> (N note(s))`, or `no kb yet`,
+  taken from the filesystem and printed before anything the transcript gave,
+  including when there is no transcript at all.
+
 ## 4.32.1
 
 - **`check` was thirteen independent questions in one body of 178 lines**, in an

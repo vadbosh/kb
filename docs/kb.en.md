@@ -374,7 +374,7 @@ time someone edits an ignore rule.
 | `kb sync` | rebuild the index table from front matter |
 | `kb add <slug> --kind <k> --title "..."` | new file + front matter + rebuild |
 | `kb list [--scan DIR] [--prune]` | every known kb: where it lives, what is inside |
-| `kb streams [--sessions N]` | directories this session touched, read from the transcript |
+| `kb streams [--sessions N]` | where this session stands, then which directories it touched — read from the transcript |
 | `kb outline [file]` | section map with weights — where the seams are |
 | `kb init [--title ...]` | index skeleton only |
 | `kb adopt [--apply] [--in-place]` | migrate an existing hand-made directory |

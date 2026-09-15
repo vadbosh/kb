@@ -917,6 +917,21 @@ class Transcripts(Base):
         self.assertIn("no transcript", res.stdout)
         self.assertIn("from memory", res.stdout)
 
+    def test_the_directory_of_this_session_is_named_without_a_transcript(self):
+        """Measured on a real save: the sweep listed skill paths and transcript
+        files, and not the directory the notes were written to, because nobody
+        had typed its name. It is not an extraction — it is where we stand."""
+        root = self.make_kb()
+        self.write_note(root, "01-a.md")
+        res = self.kb("streams")
+        self.assertIn(f"here: {self.proj.resolve()}", res.stdout)
+        self.assertIn("kb at kb", res.stdout)
+        self.assertIn("1 note(s)", res.stdout)
+
+    def test_that_line_says_when_there_is_no_kb(self):
+        res = self.kb("streams")
+        self.assertIn(f"here: {self.proj.resolve()} — no kb yet", res.stdout)
+
 
 # ── parsing ─────────────────────────────────────────────────────────────────
 

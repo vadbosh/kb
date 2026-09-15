@@ -229,6 +229,7 @@ store — and pulls out the **directories** mentioned, not the prose.
 
 ```console
 $ kb streams
+  here: /srv/gateway — kb at .kb (4 note(s))
   read: claude ×1
 
    21  ~/src/api
@@ -238,6 +239,11 @@ $ kb streams
   mentioning no path (93) — work with no directory does not appear above at all:
     • have a look at the journal, there may be mysql errors
 ```
+
+The first line is not from the transcript. A directory nobody typed the name of
+cannot be extracted from what was typed, and the session's own directory is
+routinely one of those — it was the one the notes were being written to, and it
+was missing from the list.
 
 Paths rather than messages on purpose: the question is which directories, and it
 costs about a tenth as much to answer that way.
@@ -394,7 +400,7 @@ The choice is not stored anywhere. `kb status` asks git and prints
 | `kb sync` | rebuild the index table from front matter |
 | `kb outline [file]` | section map with weights; no argument means every file over 400 lines |
 | `kb list [--scan DIR] [--prune]` | every kb known on this machine |
-| `kb streams [--sessions N]` | directories this session touched, read from the transcript |
+| `kb streams [--sessions N]` | where this session stands, then which directories it touched — read from the transcript |
 | `kb init [--title ...]` | the index skeleton alone |
 | `kb adopt [--apply] [--in-place]` | retrofit hand-written notes: numbers unnumbered `.md`, adds front matter, builds the index |
 | `kb hook` | install a git pre-commit that refuses a commit holding a credential |
