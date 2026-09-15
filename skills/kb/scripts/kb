@@ -37,7 +37,6 @@ Exit codes:
     4 — a credential is in a note (`kb check` only) — reported, never edited
 """
 import argparse
-import contextlib
 import io
 import json
 import os
@@ -444,8 +443,7 @@ def find_secrets(root: Path, notes: list) -> tuple[list[str], str]:
     """Returns (findings, one line describing what was actually checked)."""
     found = []
     for n in notes:
-        for i, line in enumerate(
-                n.path.read_text(encoding="utf-8", errors="replace").split("\n"), 1):
+        for i, line in enumerate(n.text.split("\n"), 1):
             for what in scan_line(line):
                 found.append(f"{n.name}:{i}: looks like {what}")
 
@@ -480,6 +478,13 @@ class Note:
     updated: str
     supersedes: str
     has_fm: bool
+    # The file as it was read. `load_notes` has it in hand already, and without
+    # it every consumer opened the same file again: the link check, the
+    # unanswered-section check and the secret scan read each note three times
+    # over inside one `check`, and `brief` -- which runs check and verify -- paid
+    # for all of it twice more. A note is rewritten by `add` and `adopt`, both of
+    # which reload afterwards, so nothing here reads a stale copy.
+    text: str = ""
     lines: int = 0
     chars: int = 0
 
@@ -623,6 +628,7 @@ def load_notes(root: Path) -> list[Note]:
                      date.fromtimestamp(path.stat().st_mtime).isoformat()),
             supersedes=meta.get("supersedes", ""),
             has_fm=bool(meta),
+            text=text,
             lines=text.count("\n") + 1,
             chars=len(text),
         ))
@@ -1279,12 +1285,34 @@ def cmd_sync(args) -> int:
     return 0
 
 
-def cmd_check(args) -> int:
-    root = find_root(args.dir)
-    refuse_outside(root)
-    overview = root / OVERVIEW
-    text = overview.read_text(encoding="utf-8")
-    notes = load_notes(root)
+@dataclass
+class CheckResult:
+    """What `check` found, before anybody prints it.
+
+    The split exists for `brief`, which needs both verdicts and the detail under
+    them. It used to get them by running the two commands with stdout
+    redirected into a buffer, which made one command's output another's input:
+    anything written to stderr escaped the capture, the root was resolved and
+    the notes loaded three times over, and the printing could not be changed
+    without breaking the reuse.
+    """
+    problems: list[str]
+    secrets: list[str]
+    coverage: str
+    count: int
+
+    @property
+    def code(self) -> int:
+        # Secrets win the exit code even when there are problems too: a stale
+        # table and a private key in a note are not the same kind of news, and
+        # anything automating this needs to tell them apart.
+        if self.secrets:
+            return 4
+        return 3 if self.problems else 0
+
+
+def check_problems(root: Path, notes: list[Note]) -> CheckResult:
+    text = (root / OVERVIEW).read_text(encoding="utf-8")
     problems = []
 
     # Switching a kb's language is not a setting change. The mark and the table
@@ -1330,8 +1358,7 @@ def cmd_check(args) -> int:
     # renamed, superseded or split -- the moments the overview survives
     # untouched because `sync` rewrites it from front matter either way.
     for n in notes:
-        body = n.path.read_text(encoding="utf-8")
-        for ref in sorted(linked_files(body) - known - retired):
+        for ref in sorted(linked_files(n.text) - known - retired):
             if ref != n.name:
                 problems.append(f"{n.name} links a missing file: {ref}")
 
@@ -1356,7 +1383,7 @@ def cmd_check(args) -> int:
     # to take it from, and "what this stream is" resolved to a TODO comment.
     # Reported here rather than asked for in prose -- prose was asked four times.
     for n in notes:
-        if "<!-- kb:fill" in n.path.read_text(encoding="utf-8"):
+        if "<!-- kb:fill" in n.text:
             problems.append(
                 f"{n.name}: a section is still empty — fill it or delete it, "
                 "an unanswered heading is worse than none")
@@ -1428,35 +1455,46 @@ def cmd_check(args) -> int:
         problems.append(f"{len(baks)} *.bak.* file(s) — the index is generated now, "
                         "these are safe to delete once you have checked them")
 
-    # Secrets are reported apart from the rest and carry their own exit code: a
-    # stale table and a private key in a note are not the same kind of news, and
-    # anything automating this needs to tell them apart.
     secrets, coverage = find_secrets(root, notes)
+    return CheckResult(problems, secrets, coverage, len(notes))
 
-    if not problems and not secrets:
-        print(f"clean: {len(notes)} files, index current")
-        print(f"secrets: none found — checked with {coverage}")
-        if "only" in coverage:
-            print("         install gitleaks or trufflehog for the full ruleset")
+
+def print_check(res: CheckResult, out=None) -> int:
+    """`out=None` is stdout, which is what `print` does with `file=None` anyway.
+    `brief` passes a buffer instead of redirecting the stream underneath."""
+    if res.code == 0:
+        print(f"clean: {res.count} files, index current", file=out)
+        print(f"secrets: none found — checked with {res.coverage}", file=out)
+        if "only" in res.coverage:
+            print("         install gitleaks or trufflehog for the full ruleset",
+                  file=out)
         return 0
 
-    if problems:
-        print(f"{len(problems)} problem(s):")
-        for p in problems:
-            print(f"  - {p}")
+    if res.problems:
+        print(f"{len(res.problems)} problem(s):", file=out)
+        for p in res.problems:
+            print(f"  - {p}", file=out)
 
-    if secrets:
-        print(f"\nSECRETS ({len(secrets)}) — checked with {coverage}:")
-        for hit in secrets:
-            print(f"  ! {hit}")
+    if res.secrets:
+        print(f"\nSECRETS ({len(res.secrets)}) — checked with {res.coverage}:",
+              file=out)
+        for hit in res.secrets:
+            print(f"  ! {hit}", file=out)
         print("\n  Do not quietly rewrite the file: if it is under version control the"
               "\n  value is already in history, and a silent edit hides that. Tell the"
               "\n  human what was found and where, then rotate the credential."
-              "\n  A short generic password in a sentence is caught by nothing here.")
+              "\n  A short generic password in a sentence is caught by nothing here.",
+              file=out)
         return 4
 
-    print(f"\nsecrets: none found — checked with {coverage}")
+    print(f"\nsecrets: none found — checked with {res.coverage}", file=out)
     return 3
+
+
+def cmd_check(args) -> int:
+    root = find_root(args.dir)
+    refuse_outside(root)
+    return print_check(check_problems(root, load_notes(root)))
 
 
 def scan_for_kbs(root: Path) -> list[Path]:
@@ -1558,16 +1596,21 @@ def checkable_paths(text: str) -> set[str]:
     return out
 
 
-def cmd_verify(args) -> int:
-    """Suspicions, not errors — deliberately separate from `check`.
+@dataclass
+class VerifyResult:
+    dead: dict[str, set[str]]
+    aging: list
+    moved: list[Path]
+    gap_hours: float
+    entry: list[str]
 
-    `check` is binary and mechanical: exit 3 means go fix it. This is
-    probabilistic — a flagged path may live inside a container, on another host,
-    or be an illustration. Merging the two would drown an exact signal in guesses.
-    """
-    root = find_root(args.dir)
-    refuse_outside(root)
-    notes = load_notes(root)
+    @property
+    def code(self) -> int:
+        return 3 if (self.dead or self.aging or self.moved or self.entry) else 0
+
+
+def verify_findings(root: Path, notes: list[Note]) -> VerifyResult:
+    """Everything `verify` suspects, with nothing printed. See `cmd_verify`."""
     today = date.today()
 
     # The overview is scanned too, and it is the file that needed it most. Its
@@ -1584,14 +1627,17 @@ def cmd_verify(args) -> int:
     # a `CLAUDE.md` -- which git ignored, so no commit hook saw them either.
     project = project_of(root)
     dead: dict[str, set[str]] = {}
-    for path in ([n.path for n in notes] + [root / OVERVIEW]
-                 + route_files(project)):
-        if not path.is_file():
-            continue
-        text = path.read_text(encoding="utf-8", errors="replace")
+    # The notes are already in memory; only the two files that are not notes are
+    # opened here.
+    sources = [(n.name, n.text) for n in notes]
+    for path in [root / OVERVIEW] + route_files(project):
+        if path.is_file():
+            sources.append(
+                (path.name, path.read_text(encoding="utf-8", errors="replace")))
+    for name, text in sources:
         for p in checkable_paths(text):
             if not Path(p).expanduser().exists():
-                dead.setdefault(p, set()).add(path.name)
+                dead.setdefault(p, set()).add(name)
 
     aging = []
     for n in notes:
@@ -1623,6 +1669,9 @@ def cmd_verify(args) -> int:
     # checkout moves them -- so this stays a suspicion and never a `check`.
     moved: list[Path] = []
     gap_hours = 0.0
+    # Collected by the same traversal that looks for work, and handed to
+    # `route_findings` so the project tree is walked once instead of twice.
+    chains: list[tuple[Path, int, list[str]]] | None = None
     # Flat layout -- the directory IS the work stream -- has nothing to compare:
     # the notes and the work are the same files. Skipped, not silently passed.
     stream = root.parent if is_nested(root) else None
@@ -1631,44 +1680,42 @@ def cmd_verify(args) -> int:
             since = max(f.stat().st_mtime for f in root.glob("*.md"))
         except (OSError, ValueError):
             since = None
-        seen = 0
+        seen, capped = 0, False
         if since:
-            ignored = git_ignored_children(stream)
-            for dirpath, dirnames, filenames in os.walk(stream, onerror=lambda e: None):
-                dirnames[:] = [d for d in dirnames
-                               if d not in SCAN_SKIP and not d.startswith(".")
-                               and Path(dirpath) / d != root
-                               # Another stream's notes are not this stream's
-                               # work. A nested kb reported its own overview and
-                               # entry point as evidence that the parent had
-                               # moved on, which is true of neither.
-                               and not is_stream(Path(dirpath) / d)
-                               # Generated output is not work either. A backup
-                               # pipeline rewrote 201 files under an ignored
-                               # directory on every run, so its notes could
-                               # never stop looking stale. Only asked where git
-                               # can answer -- most streams here are not
-                               # repositories, and that stays as it was.
-                               and (Path(dirpath) / d).resolve() not in ignored]
+            chains = []
+            for here, filenames in walk_stream(stream):
+                if here != stream and {CLAUDE_FILE, LOCAL_FILE} & set(filenames):
+                    total, parts = route_weight(stream, here)
+                    if total > ROUTE_BUDGET:
+                        chains.append((here, total, parts))
                 for name in filenames:
                     # kb writes these itself. Counting them as work that outran
                     # the notes made `route` guarantee a false positive on the
                     # very next `verify`, naming the two files it had just
                     # created. They are a pointer to the notes rather than the
                     # work, and they have findings of their own further down.
-                    if Path(dirpath) == stream and name in (ROUTE_FILE, CLAUDE_FILE):
+                    if here == stream and name in (ROUTE_FILE, CLAUDE_FILE):
                         continue
                     seen += 1
                     if seen > 20000 or len(moved) > 200:
+                        capped = True
                         break
-                    p = Path(dirpath) / name
+                    p = here / name
                     try:
                         if p.stat().st_mtime > since + UNWRITTEN_HOURS * 3600:
                             moved.append(p)
                     except OSError:
                         pass
-                if seen > 20000 or len(moved) > 200:
+                if capped:
                     break
+            # Stopping early leaves the budgets half-collected, and a finding
+            # that disappears because the walk was cut short is worse than the
+            # second walk it would have cost. Hand back nothing and let
+            # `route_findings` do its own, which has no cap.
+            if capped:
+                chains = None
+            else:
+                chains.sort(key=lambda r: -r[1])
         if moved:
             newest = max(p.stat().st_mtime for p in moved)
             gap_hours = (newest - since) / 3600
@@ -1676,45 +1723,61 @@ def cmd_verify(args) -> int:
     # The entry point is not a note and is not read on demand: it is expanded
     # into the context window at the start of every session, so it is the one
     # file here where length is a running cost rather than a one-off.
-    entry = route_findings(root)
-    if dead:
-        print(f"paths that do not resolve ({len(dead)}) — some may live in a "
-              "container or on another host, check by hand:")
-        for p in sorted(dead):
-            print(f"  ✗ {p}")
-            print(f"      cited in: {', '.join(sorted(dead[p]))}")
-    if aging:
-        print(f"\nnot revisited in a while ({len(aging)}) — not necessarily "
-              "wrong, just unverified:")
-        for age, n in sorted(aging, reverse=True):
-            print(f"  {age:>4}d  {n.name}  ({n.kind}, updated {n.updated})")
-    if moved:
-        newest = sorted(moved, key=lambda p: -p.stat().st_mtime)[:5]
-        print(f"\nwork went on for {gap_hours:.0f}h after the last note was "
-              f"written ({len(moved)} file(s)):")
+    entry = route_findings(root, chains=chains)
+    return VerifyResult(dead, aging, moved, gap_hours, entry)
+
+
+def print_verify(res: VerifyResult, out=None) -> int:
+    if res.dead:
+        print(f"paths that do not resolve ({len(res.dead)}) — some may live in a "
+              "container or on another host, check by hand:", file=out)
+        for p in sorted(res.dead):
+            print(f"  ✗ {p}", file=out)
+            print(f"      cited in: {', '.join(sorted(res.dead[p]))}", file=out)
+    if res.aging:
+        print(f"\nnot revisited in a while ({len(res.aging)}) — not necessarily "
+              "wrong, just unverified:", file=out)
+        for age, n in sorted(res.aging, reverse=True):
+            print(f"  {age:>4}d  {n.name}  ({n.kind}, updated {n.updated})", file=out)
+    if res.moved:
+        newest = sorted(res.moved, key=lambda p: -p.stat().st_mtime)[:5]
+        print(f"\nwork went on for {res.gap_hours:.0f}h after the last note was "
+              f"written ({len(res.moved)} file(s)):", file=out)
         for p in newest:
-            print(f"  {p}")
-        if len(moved) > len(newest):
-            print(f"  … and {len(moved) - len(newest)} more")
+            print(f"  {p}", file=out)
+        if len(res.moved) > len(newest):
+            print(f"  … and {len(res.moved) - len(newest)} more", file=out)
         print("  Every other check compares the notes with each other, so they "
               "stay clean while\n  describing a state the work has left. Read "
-              "what changed; if it matters, it\n  belongs in a note.")
+              "what changed; if it matters, it\n  belongs in a note.", file=out)
 
-    if entry:
-        print(f"\nthe entry point at the project root ({len(entry)}):")
-        for f in entry:
-            print(f"  ⚠ {f}")
+    if res.entry:
+        print(f"\nthe entry point at the project root ({len(res.entry)}):", file=out)
+        for f in res.entry:
+            print(f"  ⚠ {f}", file=out)
         print("  These are conditions, not events: each one stays wrong until "
               "somebody fixes it,\n  and `route` said so only in the turn that "
-              "wrote the file.")
+              "wrote the file.", file=out)
 
-    if not dead and not aging and not moved and not entry:
+    if res.code == 0:
         print("nothing suspicious: every checkable path resolves, no note is "
-              "past its re-check age, and no work has outrun the notes")
+              "past its re-check age, and no work has outrun the notes", file=out)
         return 0
     print("\nAdvisory only. Whether a fact about a live cluster still holds "
-          "cannot be answered here — only by a human or a command.")
+          "cannot be answered here — only by a human or a command.", file=out)
     return 3
+
+
+def cmd_verify(args) -> int:
+    """Suspicions, not errors — deliberately separate from `check`.
+
+    `check` is binary and mechanical: exit 3 means go fix it. This is
+    probabilistic — a flagged path may live inside a container, on another host,
+    or be an illustration. Merging the two would drown an exact signal in guesses.
+    """
+    root = find_root(args.dir)
+    refuse_outside(root)
+    return print_verify(verify_findings(root, load_notes(root)))
 
 
 HOOK_BODY = """#!/bin/sh
@@ -1792,7 +1855,8 @@ ROUTE_BUDGET = 200
 ENTRY_POINT_HINT = "what to do about these: references/entry-point.md"
 
 
-def route_findings(root: Path, *, on_write: bool = False) -> list[str]:
+def route_findings(root: Path, *, on_write: bool = False,
+                   chains: list | None = None) -> list[str]:
     """Everything wrong with the entry point, for whoever asks.
 
     `route` reported these in the turn that wrote the file and nowhere else, so
@@ -1864,7 +1928,10 @@ def route_findings(root: Path, *, on_write: bool = False) -> list[str]:
     # A component directory pays for its own instruction file plus every one
     # above it. Reported after the root so the cheaper fix is read first: the
     # root line is in every chain, and shortening it shortens all of them.
-    chains = route_chains(project)
+    # `verify` collects these in the walk it is doing anyway and passes them in;
+    # everybody else pays for the walk here.
+    if chains is None:
+        chains = route_chains(project)
     for here, n, parts in chains[:3]:
         rel = os.path.relpath(here, project).replace(os.sep, "/")
         out.append(f"a session started in {rel}/ loads {n} lines "
@@ -1960,6 +2027,35 @@ def route_weight(project: Path, start: Path | None = None) -> tuple[int, list[st
     return total, parts
 
 
+def walk_stream(project: Path):
+    """The work tree of one stream: `(directory, filenames)`, pruned once.
+
+    Two callers wanted the same traversal with the same exclusions -- the
+    subdirectory budgets here, and "the work outran the notes" in `verify` --
+    and each had written its own. Running both meant walking the project twice
+    and asking git twice which children it ignores, per `verify`; worse, the two
+    prune lists had to be kept identical by hand, and a directory excluded from
+    one was already counted by the other.
+    """
+    ignored = git_ignored_children(project)
+    for dirpath, dirnames, filenames in os.walk(project, onerror=lambda e: None):
+        here = Path(dirpath)
+        dirnames[:] = [d for d in dirnames
+                       if d not in SCAN_SKIP and not d.startswith(".")
+                       # Another stream's notes are not this stream's work, and
+                       # its entry point is that stream's budget. A nested kb
+                       # reported its own overview as evidence that the parent
+                       # had moved on, which is true of neither.
+                       and not is_stream(here / d)
+                       # Generated output is not work either. A backup pipeline
+                       # rewrote 201 files under an ignored directory on every
+                       # run, so its notes could never stop looking stale. Only
+                       # asked where git can answer -- most streams here are not
+                       # repositories, and that stays as it was.
+                       and (here / d).resolve() not in ignored]
+        yield here, filenames
+
+
 def route_chains(project: Path) -> list[tuple[Path, int, list[str]]]:
     """Per subdirectory with its own instruction file, what a session there loads.
 
@@ -1970,14 +2066,7 @@ def route_chains(project: Path) -> list[tuple[Path, int, list[str]]]:
     neither file broke on its own, and a human found it by reading.
     """
     out = []
-    ignored = git_ignored_children(project)
-    for dirpath, dirnames, filenames in os.walk(project, onerror=lambda e: None):
-        here = Path(dirpath)
-        dirnames[:] = [d for d in dirnames
-                       if d not in SCAN_SKIP and not d.startswith(".")
-                       # Another stream's entry point is that stream's budget.
-                       and not is_stream(here / d)
-                       and (here / d).resolve() not in ignored]
+    for here, filenames in walk_stream(project):
         if here == project or not ({CLAUDE_FILE, LOCAL_FILE} & set(filenames)):
             continue
         total, parts = route_weight(project, here)
@@ -2440,10 +2529,13 @@ def cmd_brief(args) -> int:
     # whether these notes still describe the work. Their verdict goes above the
     # notes, the detail only when there is any: a stale kb must never read like
     # a current one just because nobody typed the last command.
+    # The root is resolved and the notes loaded once for all three answers. The
+    # previous shape ran the two commands with stdout redirected into a buffer,
+    # which did the whole job three times over and quietly dropped anything they
+    # wrote to stderr.
     checks = io.StringIO()
-    with contextlib.redirect_stdout(checks):
-        rc_check = cmd_check(args)
-        rc_verify = cmd_verify(args)
+    rc_check = print_check(check_problems(root, notes), out=checks)
+    rc_verify = print_verify(verify_findings(root, notes), out=checks)
     detail = checks.getvalue().strip()
     if rc_check == 4:
         print("# check: A CREDENTIAL IS IN THE NOTES — see below; do not edit "
@@ -2482,12 +2574,12 @@ def cmd_brief(args) -> int:
             print(f"{charter.lines} lines (~{charter.ktokens}k tokens) — too big to "
                   f"inline here. Open it: {charter.path}")
         else:
-            print(charter.path.read_text(encoding="utf-8").rstrip())
+            print(charter.text.rstrip())
         print()
 
     if cur:
         print(f"───── {cur.name} " + "─" * max(0, 60 - len(cur.name)))
-        print(cur.path.read_text(encoding="utf-8").rstrip())
+        print(cur.text.rstrip())
         print()
 
     shown = {n.name for n in (cur, charter) if n}

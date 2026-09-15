@@ -18,6 +18,32 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.32.0
+
+Internal: what the commands compute is now separate from what they print. No
+output changed — the old binary and this one produce identical bytes for
+`check`, `verify`, `brief` and `status`, on a clean kb and on a broken one.
+
+- **`brief` ran `check` and `verify` as commands with stdout redirected into a
+  buffer.** Each resolved the root and loaded every note again, so one briefing
+  did the whole job three times; anything written to stderr escaped the capture
+  entirely. The two now return `CheckResult` and `VerifyResult`, the printing
+  lives in `print_check`/`print_verify` with an `out=` parameter, and `brief`
+  loads the notes once. Measured on this repository, 17 notes: `brief` 1.45s →
+  1.18s.
+
+- **A note was read up to four times per `check`** — once to load it, then again
+  for links, for unanswered sections and for the secret scan. `Note` carries the
+  text it was parsed from.
+
+- **The project tree was walked twice by `verify`** and git asked twice which
+  children it ignores, because the traversal in `verify` and the one in
+  `route_chains` were separate copies of the same prune rules. One `walk_stream`
+  serves both; `verify` collects the subdirectory budgets as it goes and hands
+  them to `route_findings`. When the traversal stops at its cap the budgets are
+  incomplete, so it hands back nothing and the second walk happens — a finding
+  lost to an early exit would be worse than the walk it saved.
+
 ## 4.31.0
 
 Seven defects from a review of the whole tool, each reproduced before it was
