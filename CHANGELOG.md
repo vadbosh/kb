@@ -18,6 +18,23 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.34.0
+
+- **The save half prescribed stdin for the note body, and stdin means a
+  heredoc.** `kb add --body-file -` was the one shape named, chosen to write the
+  note in a single call. The cost nobody had counted: a heredoc stacks three
+  layers of quoting — the shell's, the heredoc's, and whatever the text itself
+  contains — and the text here is the note. Measured in one day elsewhere on this
+  machine: a closing fence inside a literal, a `$` expanded because the heredoc
+  was unquoted, and escaping artefacts while passing a program through. Three
+  corrupted bodies, none of which said so.
+
+  Both shapes are named now, with the condition between them: a body carrying a
+  backtick, a `$`, a quote or a fenced block is written to a file first — by the
+  editing tool, where no shell is involved — and passed as `--body-file <path>`.
+  `-` stays for plain prose. One extra call against a note that is read for
+  years and whose mangled line is never noticed again.
+
 ## 4.33.0
 
 - **`kb streams` did not name the directory the session was standing in.** It

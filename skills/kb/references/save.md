@@ -283,12 +283,26 @@ bad    <component name>            (a noun, answers nothing)
 
 ## Step 4 — write the body
 
-**Have the body ready and pass it: `kb add … --body-file -`, text on stdin.**
-The note is written once, with its front matter. Creating it empty and then
-overwriting it whole is two tool calls, and in a long session a tool call costs
-the whole context again — measured on one save: sixteen calls against a context
-of about 105 000 tokens, against roughly 800 tokens for the longest section of
-this file. Shortening prose is not where the cost is.
+**Have the body ready and pass it in one call: `kb add … --body-file <path>`,
+or `--body-file -` with the text on stdin.** The note is written once, with its
+front matter. Creating it empty and then overwriting it whole is two tool calls,
+and in a long session a tool call costs the whole context again — measured on
+one save: sixteen calls against a context of about 105 000 tokens, against
+roughly 800 tokens for the longest section of this file. Shortening prose is not
+where the cost is.
+
+**Which of the two, and this is not a matter of taste.** `-` means stdin, and
+stdin means a heredoc, which stacks three layers of quoting: the shell's, the
+heredoc's, and whatever the text itself contains. Measured on one day: a closing
+fence inside a literal, a `$` expanded because the heredoc was unquoted, and
+`'"'"'` artefacts while passing a program through — three corrupted bodies, none
+of which announced itself. A note is read for years; a mangled line in it is
+never noticed again.
+
+So: **anything with a backtick, a `$`, a quote or a fenced block goes to a file
+first** — write it with the editing tool, where no shell is involved, then
+`kb add --body-file /tmp/<slug>.md`. That is one extra call and no quoting at
+all. Keep `-` for a body that is plain prose. Notes about code almost never are.
 
 It also removes a trap that had to be warned about instead: a file a command has
 just created exists, has never been read, and looks new — and a `Write` over it

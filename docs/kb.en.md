@@ -201,7 +201,10 @@ The skill handles all of it:
      about different things
 3. picks the `kind`, writes a `title` from the reader's side ("what do I need",
    not "what is this document called")
-4. `kb add --body-file -` — front matter and body in one write → `kb sync` → `kb check`
+4. `kb add --body-file <path>` — front matter and body in one write → `kb sync`
+   → `kb check`. The body goes through a file whenever it carries a backtick, a
+   `$`, a quote or a fenced block; `-` reads stdin, and stdin means a heredoc,
+   which mangles exactly that
 5. reports in counts: `+1 decision (04-why-x-target.md), edited 03-traps.md`
 
 Nothing worth keeping → it says `Nothing durable for kb.` and creates no empty
