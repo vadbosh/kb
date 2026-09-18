@@ -229,3 +229,9 @@ __marimo__/
 # Paths that belong to this machine, read by release.sh — a mirror of the skill
 # that install.sh does not write to. Never in a public repository.
 .release.local
+
+# Findings from a cold review — `review-YYYY-MM-DD-<object>.md`, written by the
+# `audit` skill. A work order for whoever fixes the items, true on its date and
+# meaningless after they land; what it produced belongs in CHANGELOG.md and in
+# the notes, which is where a reader looks.
+review-*.md
