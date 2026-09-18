@@ -412,7 +412,7 @@ says so.
 A finding exits **4**, distinct from 3 for ordinary drift, so a hook or a
 pipeline can tell "the table is stale" from "there is a key in a note".
 
-### What it does not catch
+### What the scan does not catch
 
 An entropy pass was written for this and then removed. On two real note
 directories it produced four findings, all four false: a file path, a config

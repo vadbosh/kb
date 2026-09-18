@@ -18,6 +18,15 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.34.4
+
+- Заголовок `### What it does not catch` в английской README назван предметом —
+  `### What the scan does not catch`. Русская версия («Чего проверка не ловит»)
+  предмет называла с самого начала, то есть пара разошлась, а не обе отстали.
+  Нашла это новая проверка «Заголовок называет предмет» в скиле `ru-tech-docs`:
+  заголовок читают из оглавления, где предыдущей строки нет. Якорей на прежний
+  текст не было.
+
 ## 4.34.3
 
 - **Long sentences cut by count, not by ear.** A sentence past thirty words in
