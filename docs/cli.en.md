@@ -561,8 +561,8 @@ that — see the last section.
 
 ## What the CLI will not do for you
 
-It does not decide **what** to write, whether a fact belongs in an existing file
-or a new one, or which `kind` fits. That is judgement, and it lives in the skill
+The CLI does not decide **what** to write, whether a fact belongs in an existing
+file or a new one, or which `kind` fits. That is judgement, and it lives in the skill
 — which is the argument for driving kb through an assistant when you have one.
 Without one, those decisions are yours; the guidance is in
 [the manual](kb.en.md).

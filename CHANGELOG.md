@@ -18,6 +18,16 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.34.2
+
+- A sweep of the Russian documentation for the defect found in another
+  repository — a pronoun or a count whose referent the reader has to
+  reconstruct. Fifty-nine candidates, one real: "Чего CLI за вас не сделает"
+  was followed by "Он не решает…", where the subject exists only in the
+  heading. Both versions name the CLI instead. Everything else the greps
+  surfaced was a count the text goes on to enumerate, or a pronoun whose
+  subject is one line above.
+
 ## 4.34.1
 
 - **Documentation caught up with two releases of behaviour.** Both READMEs said
