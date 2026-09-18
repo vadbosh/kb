@@ -347,8 +347,8 @@ straight after `CLAUDE.md` in the same directory.
 
 A session started in a subdirectory loads that directory's `CLAUDE.md` **on top
 of** every ancestor's, so the same root file is charged again in every chain.
-That sum belongs to no single file, which is why it went unmeasured: a component
-at 124 lines under a root at 100 overran the budget while neither file broke it
+That sum belongs to no single file, which is why it went unmeasured. A component
+at 124 lines under a root at 100 overran the budget; neither file broke it
 alone.
 
 kb never shortens any of them — it prints the numbers and leaves the decision to
@@ -407,10 +407,15 @@ The choice is not stored anywhere. `kb status` asks git and prints
 | `kb route` | write `AGENTS.md` at the project root pointing at the notes, plus a one-line `CLAUDE.md` that imports it |
 | `kb local [--dry-run]` | keep the notes out of git, via `.git/info/exclude` |
 
-Flags: `--dir <path>` anywhere, `--supersedes <file>` on `add`, `--no-sync` on
-`add` to skip the reindex, `--body-file <path|->` on `add` to write the body in
-the same call instead of creating the note empty and editing it afterwards. With
-a body the section skeleton is skipped — the headings are yours.
+Flags:
+
+- `--dir <path>` — on any command;
+- `--supersedes <file>` — on `add`;
+- `--no-sync` — on `add`, to skip the reindex;
+- `--body-file <path|->` — on `add`, to write the body in the same call instead
+  of creating the note empty and editing it afterwards.
+
+With a body the section skeleton is skipped — the headings are yours.
 
 ### Exit codes
 
@@ -552,8 +557,8 @@ everyone works the same way.
 ### What this list deliberately does not include
 
 Writing notes by hand, day to day. Typing `kb add --kind --title` every time you
-learn something is work an assistant does better, because the interesting part
-is judgement: append or start a new file, which `kind` fits, how to phrase the
+learn something is work an assistant does better. The interesting part is
+judgement: append or start a new file, which `kind` fits, how to phrase the
 title for a reader rather than for yourself. The CLI does not attempt any of
 that — see the last section.
 

@@ -390,10 +390,13 @@ time someone edits an ignore rule.
 the scan covers and what it cannot is in
 [README](../README.md#credentials).
 
-`kb check` catches: a stale table, links to deleted files, an `updated` that is
-not a date, whitespace in a filename, files without front
-matter, `.md` outside the `NN-slug.md` scheme, leftover `.bak`, **files past the
-size threshold**.
+`kb check` catches:
+
+- a stale table and links to deleted files;
+- an `updated` that is not a date;
+- whitespace in a filename and files without front matter;
+- `.md` outside the `NN-slug.md` scheme and leftover `.bak`;
+- **files past the size threshold**.
 
 ### File size
 
@@ -500,9 +503,12 @@ old paths.
 
 A flat layout is therefore never started by accident. A stream directory always
 exists before the notes do, and kb does not scaffold into a directory it did not
-make, so the two ways in are `adopt --in-place` on notes that are already there,
-and `KB_ALLOW_EXISTING=1` on a directory that is meant to hold them. Both are
-read and written like any other kb afterwards.
+make. Two ways in remain:
+
+- `adopt --in-place` — on notes that are already there;
+- `KB_ALLOW_EXISTING=1` — on a directory that is meant to hold them.
+
+Both are read and written like any other kb afterwards.
 
 ---
 

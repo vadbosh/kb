@@ -22,10 +22,12 @@ While there are few files, the list and the files agree.
 
 Then files get added, renamed, split. Each of those changes means editing the
 list by hand. One day the list stops being edited. From that point the list and
-the files disagree, and it looks like this: the "current status" section keeps a
-date no one refreshed, links lead to files that moved long ago, and a stack of
-`00-overview.md.bak.*` builds up beside the directory — one copy per attempt to
-put the list back in order.
+the files disagree, and it looks like this:
+
+- the "current status" section keeps a date nobody refreshed;
+- links lead to files that moved long ago;
+- a stack of `00-overview.md.bak.*` grows beside the directory — one copy per
+  attempt to put the list back in order.
 
 We built a skill that solves this. It has three mechanisms. The first two keep
 the list from falling behind the files. The third fixes nothing: it shows you
@@ -146,9 +148,9 @@ git clone https://github.com/vadbosh/kb && cd kb
 powershell -ExecutionPolicy Bypass -File .\install.ps1
 ```
 
-Both check Python before touching anything and stop with a coloured, actionable
-message if it is missing or not on PATH — a common outcome on Windows when
-"Add python.exe to PATH" was left unticked during setup.
+Both check Python before touching anything. If Python is missing or not on PATH,
+the installer stops and prints in colour what to do. On Windows that happens
+often: "Add python.exe to PATH" was left unticked during setup.
 
 Everything lands in one directory per assistant:
 
@@ -167,10 +169,10 @@ Only assistant directories that already exist are written to; `--skills-dir
 `cp -r skills/kb <skills-dir>/` — the skill is self-contained.
 
 Re-running an installer is a genuine no-op for unchanged files. A file it does
-replace is copied aside as `<file>.bak.<timestamp>` **only when that content is
-not already in the repository** — a hand edit is the one thing `git checkout`
-cannot give back, and a copy of anything else is a copy of something already
-recoverable.
+replace is copied aside as `<file>.bak.<timestamp>` — but **only when that
+content is not already in the repository**. A hand edit is the one thing
+`git checkout` cannot give back; a copy of anything else would save what is
+already recoverable.
 
 ---
 
@@ -188,11 +190,15 @@ What you MUST do, in order:
 The directory is `kb/`, unless the project already has one of its own — `kb` is
 an ordinary name, and a directory of source, a mount or a placeholder may
 already be sitting there. Then kb refuses to write into a directory it did not
-make, empty or not, and hands you the choice: `./.kb`, which it searches too and
-which therefore needs nothing afterwards; this directory after all, with
-`KB_ALLOW_EXISTING=1`; or somewhere else with `--dir`, which every later command
-then needs as well. From the second session on it makes no difference — the
-notes are found from anywhere inside the project, by either name.
+make — empty or not — and hands you the choice:
+
+- **`./.kb`** — the second name kb searches, so nothing has to be passed
+  afterwards;
+- **this directory after all** — re-run with `KB_ALLOW_EXISTING=1`;
+- **somewhere else** — `--dir <path>`, which every later command then needs too.
+
+From the second session on it makes no difference: the notes are found from
+anywhere inside the project, by either name.
 
 After that, two commands are the whole workflow:
 
@@ -233,9 +239,9 @@ kb adopt --apply
 
 It moves the notes into `kb/`, adds front matter, inserts the managed markers and
 builds the table. Titles are **harvested from your existing table**, not invented
-from each `# H1` — the phrasing a human wrote for a reader answers "what do I
-need", a document title does not, and losing it would defeat the point. Every
-touched file is backed up first.
+from each `# H1`. The phrasing a human wrote for a reader answers "what do I
+need"; a document title does not. Lose it and the point of the move is gone.
+Every touched file is backed up first.
 
 ### Making the notes findable without kb
 
@@ -289,7 +295,7 @@ time.
 
 ---
 
-## What it deliberately does not do
+## What kb deliberately does not do
 
 - **No auto-splitting of long files.** Size is reported, never enforced. A long
   coherent reference is a good file; where to cut is a question of meaning.
@@ -364,10 +370,10 @@ keeps its own. `KB_LANG` decides for a kb that has no language yet; adding a
 language means adding one key to the `STRINGS` dict in the CLI.
 
 Pointing `KB_LANG` at an existing kb does not switch it, and `kb check` says so.
-Switching is not a setting: the marker and the table header would flip on the
-next sync, while the titles, the prose outside the markers and the filled
-sections of the entry point are written by hand and stay as they were — leaving
-the file half in each language. To switch for real: translate those three by
+Switching is not a setting. The next sync flips the marker and the table header.
+The titles, the prose outside the markers and the filled sections of the entry
+point are written by hand and stay as they were. The file ends up half in each
+language. To switch for real: translate those three by
 hand, then `KB_LANG=<new> kb sync`.
 
 No path anywhere is hardcoded to a particular machine.
@@ -477,12 +483,15 @@ python3 tests/test_kb.py Guards   # one group
 Each run gets a temporary directory with its own `HOME` and its own
 `KB_REGISTRY`, so real notes and the real registry are never touched.
 
-What is covered is either a guard the tool exists to enforce — writing outside
-the current directory, into `$HOME`, into a directory on `PATH` — or a bug that
-shipped once, with its version named in the test. What is deliberately **not**
-covered is whether a note is *useful*: that was attempted, measured against
-nineteen real notes, and abandoned, because no mechanical signal separated the
-adequate ones from the inadequate.
+A test covers one of two things:
+
+- **a guard the tool exists to enforce** — writing outside the current
+  directory, into `$HOME`, into a directory on `PATH`;
+- **a bug that shipped once** — its version is named in the test.
+
+What is deliberately **not** covered is whether a note is *useful*: that was
+attempted, measured against nineteen real notes, and abandoned, because no
+mechanical signal separated the adequate ones from the inadequate.
 
 ---
 

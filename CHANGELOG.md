@@ -18,6 +18,21 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.34.3
+
+- **Long sentences cut by count, not by ear.** A sentence past thirty words in
+  Russian is nearly always a list joined by semicolons: the reader reaches the
+  end without the beginning. Nine of them were measured across both READMEs and
+  both manuals, and each was cut in both languages at once — the installer's
+  Python check, the backup rule, where `adopt` takes its titles from, what
+  `KB_LANG` does not switch, what a test covers, what `kb check` catches, the
+  `CLAUDE.md` budget sum, the flag list, and why day-to-day writing is not a CLI
+  job. Four of them became bullet lists, which is what a semicolon list wanted
+  to be.
+- Two headings that opened with a pronoun now name the subject: "Чего kb
+  намеренно не делает", "What kb deliberately does not do". No anchor pointed
+  at the old text.
+
 ## 4.34.2
 
 - A sweep of the Russian documentation for the defect found in another
