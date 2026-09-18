@@ -18,6 +18,17 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.34.1
+
+- **Documentation caught up with two releases of behaviour.** Both READMEs said
+  step three creates `kb/`, full stop, which stopped being the whole truth in
+  4.28.0: a project may already own that name, and kb then refuses and hands the
+  choice back — `./.kb`, this directory with `KB_ALLOW_EXISTING=1`, or somewhere
+  else with `--dir`. Both manuals still opened their layout section with "notes
+  always live in `kb/`". Neither said that from the second session on the name
+  makes no difference, because discovery searches both from anywhere inside the
+  project.
+
 ## 4.34.0
 
 - **The save half prescribed stdin for the note body, and stdin means a

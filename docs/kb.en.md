@@ -490,7 +490,10 @@ kb list --scan /projects   # pick up kbs created before the registry, or by hand
 kb list --prune            # drop entries whose index disappeared
 ```
 
-Notes always live in `kb/`. If `00-overview.md` sits loose in the directory root,
+Notes live in `kb/`, or in `.kb/` when the first name was taken — both are
+searched, in that order, from the working directory and every directory above.
+Any other name works too and none of them are searched, so it needs `--dir` on
+every command from then on. If `00-overview.md` sits loose in the directory root,
 `add` and `init` refuse to run — otherwise one directory ends up holding two sets
 of notes. Escape hatch: `adopt --in-place`, only when something outside links the
 old paths.

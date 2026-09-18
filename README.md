@@ -181,9 +181,18 @@ What you MUST do, in order:
 1. **Install** — `./install.sh` (Linux/macOS) or `.\install.ps1` (Windows). See
    [Install](#install).
 2. **`cd` into your project** and start your assistant there.
-3. **Type `/kb save`.** This is the step that creates `kb/` and writes the first
-   note. Before it, the project has no `kb/` — launching the assistant does not
-   create one, and that is normal.
+3. **Type `/kb save`.** This is the step that creates the notes directory and
+   writes the first note. Before it, the project has none — launching the
+   assistant does not create one, and that is normal.
+
+The directory is `kb/`, unless the project already has one of its own — `kb` is
+an ordinary name, and a directory of source, a mount or a placeholder may
+already be sitting there. Then kb refuses to write into a directory it did not
+make, empty or not, and hands you the choice: `./.kb`, which it searches too and
+which therefore needs nothing afterwards; this directory after all, with
+`KB_ALLOW_EXISTING=1`; or somewhere else with `--dir`, which every later command
+then needs as well. From the second session on it makes no difference — the
+notes are found from anywhere inside the project, by either name.
 
 After that, two commands are the whole workflow:
 
