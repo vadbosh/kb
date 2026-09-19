@@ -434,7 +434,7 @@ stops being read within days.
 
 So **a short generic password sitting in a sentence is caught by nothing here** —
 not by the built-in patterns, not by gitleaks, not by trufflehog. The author of
-gitleaks says as much about `MyServiceToken="secret123"`. This lowers the risk;
+gitleaks says as much about `MyServiceToken=EXAMPLE_VALUE`. This lowers the risk;
 it does not replace not writing credentials down.
 
 ### Testing the scan

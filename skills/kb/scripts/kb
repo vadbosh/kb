@@ -412,7 +412,7 @@ SCAN_SKIP = {".git", "node_modules", ".terraform", ".venv", "__pycache__",
 # stops being read within days — the same lesson `verify` was built on.
 #
 # What none of this catches: a short generic password sitting in a sentence.
-# The gitleaks author says as much about `MyServiceToken="secret123"`. This
+# The gitleaks author says as much about `MyServiceToken=EXAMPLE_VALUE`. This
 # lowers risk; it does not replace not writing secrets down.
 SECRET_PATTERNS = [
     ("AWS access key",      re.compile(r"\bAKIA[0-9A-Z]{16}\b")),

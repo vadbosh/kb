@@ -18,6 +18,18 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.37.1
+
+- **The example value beside `MyServiceToken=` is a name now, not a
+  secret-shaped string.** The sentence about what pattern scanners miss quoted
+  a value with the shape of a short token, next to a label saying "token" —
+  which is exactly what a redactor is built to mask, so every read and every
+  edit of `README.md` and `skills/kb/scripts/kb` raised a credential warning,
+  on this machine and on the four installed copies. The point of the sentence
+  is that a generic value slips through; `EXAMPLE_VALUE` makes it without
+  looking like the thing it describes. The Russian README already said this
+  without the literal.
+
 ## 4.37.0
 
 - **`kb sync --lang <xx>` switches a kb's language, and until now nothing
