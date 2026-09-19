@@ -18,6 +18,28 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.37.0
+
+- **`kb sync --lang <xx>` switches a kb's language, and until now nothing
+  did.** Four documents described the procedure as "translate by hand, then
+  `KB_LANG=<new> kb sync`", and that never worked: `set_lang` reads the mark
+  before the variable, so the sync rewrote the file in the language it already
+  had and reported nothing. The flag is the only thing that outranks the mark.
+  It rewrites the mark and everything generated, and leaves the titles, the
+  prose outside the markers and the filled sections of the entry point
+  untouched — those are the human's, and translating them is still the whole
+  job. A language the CLI has no strings for is refused with the list of the
+  ones it has, so the command meant to fix a dishonest mark cannot create one.
+- **`kb check` reports a mark it cannot render.** `lang=de` with no `de` key
+  produces English text under a German claim; that is deliberate, since it is
+  what lets the key arrive later with nothing to migrate, but it was invisible.
+  The finding names both ways out.
+- Why a flag rather than making `KB_LANG` win: a switch is decided once, while
+  a variable that outranked the mark would make every command's language depend
+  on the shell it was run from — which is the behaviour the mark was introduced
+  to end.
+- Tests: 155 → 158.
+
 ## 4.36.0
 
 - **`LANG_DEFAULT` is `en`.** A kb that names no language — no `KB_LANG`, no

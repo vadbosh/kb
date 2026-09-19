@@ -1724,6 +1724,45 @@ class Language(Base):
         self.kb("sync", cwd=d, env={"KB_LANG": "en"}, expect=0)
         self.assertIn("kb:begin lang=en", f.read_text(encoding="utf-8"))
 
+    def test_sync_lang_is_what_actually_switches_a_kb(self):
+        # Four documents described switching as "translate by hand, then
+        # KB_LANG=<new> kb sync". That never worked: set_lang reads the mark
+        # first, so the variable never got a turn and sync rewrote the file in
+        # the old language, silently. The flag is the procedure the prose had
+        # been promising since the mark was introduced.
+        root = self.make_kb()          # the harness runs with KB_LANG=en
+        self.write_note(root, "01-a.md", title="how it works")
+        self.kb("sync", "--lang", "ru", expect=0)
+        text = (root / "00-overview.md").read_text(encoding="utf-8")
+        self.assertIn("kb:begin lang=ru", text)
+        self.assertIn("| что нужно |", text)
+        # The title is the human's, and switching a language does not translate
+        # it -- which is the whole reason the switch is not a setting.
+        self.assertIn("how it works", text)
+
+    def test_sync_lang_refuses_a_language_it_cannot_render(self):
+        # The alternative is a kb marked for a language whose text the CLI
+        # cannot produce, created on purpose by the command meant to fix
+        # exactly that state.
+        root = self.make_kb()
+        res = self.kb("sync", "--lang", "de", expect=1)
+        self.assertIn("no such language: de", res.stderr + res.stdout)
+        self.assertIn("kb:begin lang=en",
+                      (root / "00-overview.md").read_text(encoding="utf-8"))
+
+    def test_check_reports_a_mark_the_cli_cannot_render(self):
+        # KB_LANG=de is allowed to scaffold: the mark is a request, and it is
+        # what lets a `de` key arrive later with nothing to migrate. Until it
+        # does, the file names a language it is not written in, and check is
+        # where that becomes visible instead of being discovered by a reader.
+        d = self.tmp / "de-mark"
+        d.mkdir()
+        self.kb("add", "start", "--kind", "state", "--title", "Wo die Arbeit steht",
+                cwd=d, env={"KB_LANG": "de"}, expect=0)
+        res = self.kb("check", cwd=d, env={"KB_LANG": "de"}, expect=3)
+        self.assertIn("marked lang=de", res.stdout)
+        self.assertIn("kb sync --lang en", res.stdout)
+
     def test_asking_for_another_language_reports_what_switching_costs(self):
         root = self.make_kb()
         self.fill_overview(root)

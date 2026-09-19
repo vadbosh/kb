@@ -382,11 +382,11 @@ frame is an ordinary outcome, not a defect. Writing in Russian means
 own marker and the default stops applying to it.
 
 Pointing `KB_LANG` at an existing kb does not switch it, and `kb check` says so.
-Switching is not a setting. The next sync flips the marker and the table header.
-The titles, the prose outside the markers and the filled sections of the entry
-point are written by hand and stay as they were. The file ends up half in each
-language. To switch for real: translate those three by
-hand, then `KB_LANG=<new> kb sync`.
+The mark outranks the variable, and always has. Switching is `kb sync --lang
+<xx>`, which rewrites the mark and everything generated — the titles, the prose
+outside the markers and the filled sections of the entry point are written by
+hand and stay as they were. So translate those three first, or the file ends up
+half in each language.
 
 No path anywhere is hardcoded to a particular machine.
 

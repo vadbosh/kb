@@ -397,7 +397,7 @@ The choice is not stored anywhere. `kb status` asks git and prints
 | `kb brief` | the overview and the current snapshot verbatim, and why that snapshot is the current one |
 | `kb check` | mechanical drift and credentials |
 | `kb verify` | advisory: vanished paths, notes nobody has revisited, work that outran the notes |
-| `kb sync` | rebuild the index table from front matter |
+| `kb sync [--lang XX]` | rebuild the index table from front matter; `--lang` also switches the kb's language |
 | `kb outline [file]` | section map with weights; no argument means every file over 400 lines |
 | `kb list [--scan DIR] [--prune]` | every kb known on this machine |
 | `kb streams [--sessions N]` | where this session stands, then which directories it touched — read from the transcript |
@@ -412,6 +412,10 @@ Flags:
 - `--dir <path>` — on any command;
 - `--supersedes <file>` — on `add`;
 - `--no-sync` — on `add`, to skip the reindex;
+- `--lang <xx>` — on `sync`, the one thing that outranks the mark: it rewrites
+  the mark and everything generated, and leaves the titles, the prose outside
+  the markers and the filled sections of the entry point alone. A language the
+  CLI has no strings for is refused, with the list of the ones it has;
 - `--body-file <path|->` — on `add`, to write the body in the same call instead
   of creating the note empty and editing it afterwards.
 

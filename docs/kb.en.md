@@ -396,6 +396,8 @@ the scan covers and what it cannot is in
 - an `updated` that is not a date;
 - whitespace in a filename and files without front matter;
 - `.md` outside the `NN-slug.md` scheme and leftover `.bak`;
+- a mark naming a language the CLI cannot render — the file claims one
+  language and is written in another;
 - **files past the size threshold**.
 
 ### File size
@@ -568,8 +570,9 @@ is how such a kb is stamped English on purpose.
 The mark keeps the language that was asked for: `KB_LANG=de` records
 `lang=de` and renders English, so the day a `de` key lands in `STRINGS` the kb
 speaks German on its next `kb sync` with nothing to migrate. The cost is that
-until then the file names a language it is not written in, and `kb check` does
-not report the contradiction.
+until then the file names a language it is not written in. Since 4.37.0
+`kb check` reports that contradiction and names the two ways out: add the key
+to `STRINGS`, or `kb sync --lang en` so the mark says what the file does.
 
 ### Switching a kb from one language to another
 
@@ -585,17 +588,24 @@ is the tool's to write:
 | the sections of the entry point somebody filled | no |
 | the body of every note | no |
 
-Flipping the setting alone therefore produces an English header over Russian
-titles. The order that works:
+Switching the generated half alone therefore produces an English header over
+Russian titles. The order that works:
 
 ```
 1. translate the `title:` of every note, the prose outside the markers, and the
    filled sections of AGENTS.md
-2. KB_LANG=<new> kb sync        the generated parts follow, and the mark is rewritten
+2. kb sync --lang <new>         the generated parts follow, and the mark is rewritten
 3. kb check                     the index agrees with the front matter again
 ```
 
 Step 1 is the whole job and no command does it; kb has no language migration.
+
+Step 2 was written as `KB_LANG=<new> kb sync` until 4.37.0, and that did
+nothing: `set_lang` reads the mark before the variable, so the sync rewrote the
+file in the language it already had and said so nowhere. The flag exists
+because a switch is a decision taken once, and a variable that outranked the
+mark would make every other command's language depend on the shell it was run
+from.
 
 Skill trigger phrases are bilingual — both "запиши в kb" and "save to kb" work.
 The bodies of the skills are English, since an LLM is what reads them.
