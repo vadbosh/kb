@@ -404,17 +404,29 @@ secrets: none found — checked with built-in patterns only
          install gitleaks or trufflehog for the full ruleset
 ```
 
-**Layer 1, always** — fifteen patterns, no install, works everywhere. Twelve
+**Layer 1, always** — nineteen patterns, no install, works everywhere. Fifteen
 match a shape with an unmistakable prefix or header: AWS access keys, GitHub,
-Slack, Google, Stripe, OpenAI-family and Atlassian tokens, PEM private keys,
-JWTs, passwords inside connection URLs, `IDENTIFIED BY '…'` in SQL.
+GitLab, Slack, Google, Stripe, Tavily, OpenAI-family and Atlassian tokens, PEM
+private keys, JWTs, passwords inside connection URLs, `IDENTIFIED BY '…'` in
+SQL.
 
-Three more require **the variable name and the value shape together**, because
+Four more require **the variable name and the value shape together**, because
 the secret itself has no prefix — an AWS secret access key is forty characters of
-base64 and nothing else. `aws_secret_access_key = <40 base64>` has no innocent
-reading; a bare forty-character token has many. Each of these was measured
+base64 and nothing else, and a Huawei or OpenStack one is the same problem.
+`aws_secret_access_key = <40 base64>` has no innocent reading; a bare
+forty-character token has many. Each of these was measured
 against both live note directories before being added: zero matches, so they do
 not collide with ordinary text.
+
+**The list is kept in step with [env2hell](https://github.com/vadbosh/env2hell)
+by hand, and that is a deliberate cost.** env2hell's own transcript scanner
+calls its redactor instead of copying the patterns, because a copy drifts
+within a release. kb cannot do that: it installs on its own, uses the standard
+library only, and runs on machines where env2hell is not present. So the two
+lists are compared by a person, and each import lands with a test naming the
+shape — including the shapes that must *not* fire. That is what caught
+`zai-sk-glm-4-6-turbo-preview` being read as an OpenAI key here long after
+env2hell had fixed it.
 
 **Layer 2, when present** — `gitleaks`, `trufflehog` or `detect-secrets`,
 whichever is found on PATH first, run over the same directory. Roughly 150 rules

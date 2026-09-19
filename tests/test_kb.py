@@ -649,6 +649,43 @@ class Secrets(Base):
         self.assertFalse(kb_cli.scan_line("the password is stored in Vault"))
         self.assertFalse(kb_cli.scan_line("see `/etc/kubernetes/admin.conf`"))
 
+    def test_the_provider_prefixes_ported_from_env2hell(self):
+        # Three prefixes this scanner did not have. Measured before adding: a
+        # note carrying all three was reported clean by the built-in patterns,
+        # and only the external scanner saw them -- which is not installed
+        # everywhere and is explicitly layer 2.
+        #
+        # Assembled from parts rather than written out, because a correctly
+        # shaped key in a test file is a real finding to every scanner that
+        # later touches this repository, invented or not.
+        body = "AbCdEfGhIj1234567890"
+        self.assertTrue(kb_cli.scan_line("token: " + "glpat-" + body))
+        self.assertTrue(kb_cli.scan_line("key: " + "tvly-" + body))
+        self.assertTrue(kb_cli.scan_line("auth " + "ATATT" + "3xFfGF0" + body))
+
+    def test_a_model_name_is_not_an_openai_key(self):
+        # `\b` in front of `sk-` matched inside `zai-sk-glm-...`: the character
+        # before `sk` is a hyphen and a word boundary sits there too, so a
+        # model name read as a key. The lookbehind is what fixed it; the real
+        # shape has a space, a quote, `=`, `:` or the line start in front.
+        self.assertFalse(kb_cli.scan_line("model: zai-sk-glm-4-6-turbo-preview-edition"))
+        self.assertFalse(kb_cli.scan_line("see also anthropic-sk-naming-conventions-doc"))
+        # ...and the key itself still goes.
+        self.assertTrue(kb_cli.scan_line("key: " + "sk-" + "ant-" + "A1b2C3d4E5f6G7h8I9j0"))
+        self.assertTrue(kb_cli.scan_line("sk-" + "A1b2C3d4E5f6G7h8I9j0"))
+
+    def test_a_cloud_key_with_no_prefix_is_caught_by_its_name(self):
+        # 20 upper-case characters and 40 of base62 are also a git SHA and half
+        # the identifiers in ordinary output, so the name has to carry it --
+        # the same trade already made for aws_secret_access_key.
+        val = "A1b2C3d4E5f6G7h8I9j0A1b2C3d4E5f6G7h8I9j0"
+        self.assertTrue(kb_cli.scan_line("HW_SECRET_ACCESS_KEY = " + val))
+        self.assertTrue(kb_cli.scan_line("os_secret_key: " + val))
+        # The name alone is not a finding, and neither is a SHA of that shape
+        # with an ordinary name beside it.
+        self.assertFalse(kb_cli.scan_line("set HW_SECRET_ACCESS_KEY in the cluster"))
+        self.assertFalse(kb_cli.scan_line("commit = " + val))
+
 
 # ── the rest of the commands ────────────────────────────────────────────────
 

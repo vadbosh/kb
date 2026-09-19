@@ -418,14 +418,23 @@ SECRET_PATTERNS = [
     ("AWS access key",      re.compile(r"\bAKIA[0-9A-Z]{16}\b")),
     ("GitHub token",        re.compile(r"\b(?:ghp|gho|ghs|ghu|ghr)_[A-Za-z0-9]{36,}\b")),
     ("GitHub fine-grained", re.compile(r"\bgithub_pat_[A-Za-z0-9_]{22,}\b")),
+    ("GitLab token",        re.compile(r"\bglpat-[A-Za-z0-9_-]{20,}")),
     ("Slack token",         re.compile(r"\bxox[baprs]-[A-Za-z0-9-]{10,}")),
+    ("Tavily key",          re.compile(r"\btvly-[A-Za-z0-9-]{10,}")),
     ("private key",         re.compile(r"-----BEGIN (?:RSA |EC |OPENSSH |PGP )?PRIVATE KEY-----")),
     ("JWT",                 re.compile(r"\beyJ[A-Za-z0-9_-]{10,}\.eyJ[A-Za-z0-9_-]{10,}\.")),
     ("password in a URL",   re.compile(r"://[^/\s:@]+:[^/\s@]{3,}@")),
     ("Google API key",      re.compile(r"\bAIza[A-Za-z0-9_-]{35}\b")),
     ("Stripe key",          re.compile(r"\b(?:sk|rk)_live_[A-Za-z0-9]{20,}\b")),
-    ("OpenAI-family key",  re.compile(r"\bsk-(?:or-v1-|proj-|ant-)?[A-Za-z0-9-]{20,}")),
+    # `\b` is not enough in front of `sk-`: in a model name like
+    # `zai-sk-glm-4-6-turbo-preview` the character before `sk` is a hyphen, and
+    # a word boundary sits there too -- so the whole name read as a key. What
+    # actually precedes a key is a space, a quote, `=`, `:` or the start of the
+    # line, which is what this lookbehind says. Ported from env2hell's
+    # `bin/secrets-redact`, where the same false positive was found first.
+    ("OpenAI-family key",  re.compile(r"(?<![A-Za-z0-9_-])sk-(?:or-v1-|proj-|ant-)?[A-Za-z0-9-]{20,}")),
     ("Atlassian token",    re.compile(r"\bat-[A-Za-z0-9]{30,}")),
+    ("Atlassian token",    re.compile(r"\bATATT[A-Za-z0-9_=.-]{20,}")),
     ("SQL password",       re.compile(r"IDENTIFIED\s+BY\s+['\"][^'\"]{6,}['\"]", re.I)),
 ]
 
@@ -441,6 +450,19 @@ SECRET_PATTERNS = [
 SECRET_ASSIGNMENTS = [
     ("AWS secret access key",
      re.compile(r"""aws_secret_access_key\s*[=:]\s*['"]?[A-Za-z0-9/+=]{40}""", re.I)),
+    # Huawei and OpenStack the same way, and for the same reason: their access
+    # key is 20 characters of upper case and digits, the secret 40 of base62 --
+    # shapes that equally describe a git SHA or a build identifier, so no
+    # prefix rule can take them. The variable name is the only reliable signal
+    # and it sits right there. env2hell's `bin/secrets-redact` carries the same
+    # pair of names in its label tier.
+    # The name is "vendor prefix, anything, key" rather than a list of exact
+    # spellings: the live variable is `HW_SECRET_ACCESS_KEY`, where `secret`
+    # and `access_key` are both present and neither sits next to the `=`. A
+    # rule written from the two words alone matches neither.
+    ("Huawei or OpenStack key",
+     re.compile(r"""\b(?:hw|huawei|huaweicloud|os)[_-][a-z_]*keys?"""
+                r"""\s*[=:]\s*['"]?[A-Za-z0-9/+=]{20,}""", re.I)),
     ("secret in an assignment",
      re.compile(r"""\b(?:api[_-]?key|secret[_-]?key|access[_-]?token|auth[_-]?token"""
                 r"""|client[_-]?secret|password|passwd)\s*[=:]\s*['"][^'"]{8,}['"]""",
