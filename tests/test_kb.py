@@ -649,7 +649,7 @@ class Secrets(Base):
         self.assertFalse(kb_cli.scan_line("the password is stored in Vault"))
         self.assertFalse(kb_cli.scan_line("see `/etc/kubernetes/admin.conf`"))
 
-    def test_the_provider_prefixes_ported_from_env2hell(self):
+    def test_gitlab_tavily_and_current_atlassian_tokens(self):
         # Three prefixes this scanner did not have. Measured before adding: a
         # note carrying all three was reported clean by the built-in patterns,
         # and only the external scanner saw them -- which is not installed

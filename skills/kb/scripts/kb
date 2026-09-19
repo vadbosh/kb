@@ -430,8 +430,7 @@ SECRET_PATTERNS = [
     # `zai-sk-glm-4-6-turbo-preview` the character before `sk` is a hyphen, and
     # a word boundary sits there too -- so the whole name read as a key. What
     # actually precedes a key is a space, a quote, `=`, `:` or the start of the
-    # line, which is what this lookbehind says. Ported from env2hell's
-    # `bin/secrets-redact`, where the same false positive was found first.
+    # line, which is what this lookbehind says.
     ("OpenAI-family key",  re.compile(r"(?<![A-Za-z0-9_-])sk-(?:or-v1-|proj-|ant-)?[A-Za-z0-9-]{20,}")),
     ("Atlassian token",    re.compile(r"\bat-[A-Za-z0-9]{30,}")),
     ("Atlassian token",    re.compile(r"\bATATT[A-Za-z0-9_=.-]{20,}")),
@@ -454,8 +453,7 @@ SECRET_ASSIGNMENTS = [
     # key is 20 characters of upper case and digits, the secret 40 of base62 --
     # shapes that equally describe a git SHA or a build identifier, so no
     # prefix rule can take them. The variable name is the only reliable signal
-    # and it sits right there. env2hell's `bin/secrets-redact` carries the same
-    # pair of names in its label tier.
+    # and it sits right there.
     # The name is "vendor prefix, anything, key" rather than a list of exact
     # spellings: the live variable is `HW_SECRET_ACCESS_KEY`, where `secret`
     # and `access_key` are both present and neither sits next to the `=`. A

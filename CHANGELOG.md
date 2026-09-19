@@ -18,6 +18,18 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.38.1
+
+- **No references to another repository.** Both READMEs, two code comments, a
+  test name and the 4.38.0 section above named a separate project as the source
+  of some patterns. A reader of this repository cannot check such a claim
+  without leaving it, and a link between two repositories that ship
+  independently goes stale on whichever side moves first. The technical reason
+  for each rule is unchanged and stays where the rule is; the provenance is
+  gone. Nothing here ever called that project at runtime — this scanner is
+  self-contained, Python standard library only, and has no dependency of any
+  kind.
+
 ## 4.38.0
 
 - **Three provider prefixes the scanner did not have**: GitLab (`glpat-`),
@@ -29,19 +41,16 @@ looks authoritative, and nothing says which is right.
   boundary where the previous character is a hyphen, so
   `zai-sk-glm-4-6-turbo-preview` matched in full. What precedes a real key is a
   space, a quote, `=`, `:` or the start of the line, and the pattern says that
-  now. env2hell hit this first and fixed it there; the fix had never been
-  carried across.
+  now.
 - **Huawei and OpenStack keys are caught by their variable name**, the way
   `aws_secret_access_key` already was. Their access key is 20 characters of
   upper case and digits and the secret 40 of base62 — shapes that also describe
   a git SHA, so no prefix rule can take them. The name pattern is "vendor
   prefix, anything, key", because the live variable is `HW_SECRET_ACCESS_KEY`
   where neither word sits next to the `=`.
-- Both READMEs now say that the list is kept in step with env2hell **by hand**,
-  and why it cannot be done in code: env2hell's own scanner calls its redactor
-  rather than copying the patterns, while kb installs alone, uses the standard
-  library only, and runs where env2hell is absent. Every import lands with a
-  test naming the shape, including the shapes that must not fire.
+- Both READMEs now say that every pattern arrives with a test naming the shape,
+  including the shapes that must not fire. The negative case is what caught the
+  model name above; the pattern that let it through had looked right for weeks.
 - Tests: 158 → 161.
 
 ## 4.37.1
