@@ -132,8 +132,12 @@ MARK_END = "<!-- kb:end -->"
 # silently producing a half-translated file.
 LANG_ENV = os.environ.get("KB_LANG")
 # The language a kb gets when nothing says otherwise — no KB_LANG, no mark in
-# the overview.
-LANG_DEFAULT = "ru"
+# the overview. It decides the frame only: the table header, the skeleton, the
+# marker note. Titles and bodies are the writer's and are never translated, so
+# a Russian note under an English frame is an ordinary outcome here, not a bug.
+# Was "ru" until 2026-09-19; the streams started here are now mostly English,
+# and a Russian one is KB_LANG=ru before its first `kb add`.
+LANG_DEFAULT = "en"
 # What renders when the language asked for has no entry in STRINGS. English,
 # not the default above: a reader who set KB_LANG=de reads more languages than
 # one, and English is the likelier of the two to be among them. Russian was the
@@ -141,6 +145,10 @@ LANG_DEFAULT = "ru"
 # language" with the language of this machine rather than the language of the
 # wider audience.
 LANG_FALLBACK = "en"
+# What a kb made before the mark existed is already written in: `ru` was the
+# only default at the time. See `legacy_lang` for why this is not the same
+# constant as LANG_DEFAULT and must not follow it when that one moves again.
+LANG_LEGACY = "ru"
 LANG_RE = re.compile(r"kb:begin\s+lang=([a-z]{2})\b")
 LANG = LANG_ENV or LANG_DEFAULT
 STRINGS = {
@@ -319,10 +327,24 @@ def recorded_lang(root: Path) -> str | None:
     return m.group(1) if m and m.group(1) in STRINGS else None
 
 
+def legacy_lang(root: Path) -> str | None:
+    """`ru` for an overview written before kb recorded the language at all.
+
+    Such a file is already wearing a Russian frame, because `ru` was the only
+    default there had ever been when it was made. Letting the CURRENT default
+    answer for it would repaint a Russian document in English on the first sync
+    after an upgrade, and nothing would say so. This is history, not detection:
+    the prose is never read to guess a language.
+    """
+    return LANG_LEGACY if (root / OVERVIEW).is_file() else None
+
+
 def set_lang(root: Path) -> None:
     """Render in the kb's own language. Called once a root is known."""
     global LANG
-    LANG = recorded_lang(root) or LANG_ENV or LANG_DEFAULT
+    # KB_LANG outranks the legacy guess and not the mark: an explicit request
+    # is a person deciding, and the guess exists only to keep silence safe.
+    LANG = recorded_lang(root) or LANG_ENV or legacy_lang(root) or LANG_DEFAULT
 
 # Six kinds, not more. The distinction that earns its keep: does a newer file
 # REPLACE this one (state, plan) or is it edited in place (reference, recipe)?

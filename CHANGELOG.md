@@ -18,6 +18,32 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.36.0
+
+- **`LANG_DEFAULT` is `en`.** A kb that names no language — no `KB_LANG`, no
+  mark in its overview — is scaffolded with an English frame. A Russian one is
+  `KB_LANG=ru` before the first `kb add`, which is the same single step the
+  other direction used to need.
+- **The default decides the frame, not the writing.** `title:`, note bodies,
+  the prose outside the markers and the filled sections of the entry point are
+  never translated, so a Russian note under an English frame is the designed
+  outcome. Said in both READMEs and both manuals, because the mixture looks
+  like a bug when nothing states it.
+- **Every kb already on disk is unaffected**, and that is mechanical rather
+  than a promise: each carries its language in its own `kb:begin` marker, and
+  the marker outranks the default. A test pins it — a kb made as `ru` still
+  renders Russian with `KB_LANG` unset.
+- **A kb made before the mark existed keeps Russian too**, which is the part
+  that nearly shipped broken. Such a file has no mark to defend it, so the new
+  default would have put an English frame over Russian notes on the first sync
+  after the upgrade, in silence — on every machine, not only the one that made
+  the change. `LANG_LEGACY = "ru"` answers for those files: `ru` was the only
+  default that had ever existed when they were written, so this is their
+  history rather than a guess at their language. Nothing reads the prose. An
+  explicit `KB_LANG` still outranks it, since the guess exists to make silence
+  safe and not to overrule a person.
+- Tests: 151 → 155.
+
 ## 4.35.0
 
 - **A language the CLI has no strings for now renders in English, not Russian.**

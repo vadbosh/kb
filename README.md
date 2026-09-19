@@ -358,7 +358,7 @@ CLI also works on its own if you prefer driving it by hand.
 
 | Variable | Default | Controls |
 |---|---|---|
-| `KB_LANG` | `ru` | language of text written **into** notes — table header, the "current snapshot" line, the index skeleton. Diagnostics are always English. |
+| `KB_LANG` | `en` | language of text written **into** notes — table header, the "current snapshot" line, the index skeleton. Diagnostics are always English. |
 | `KB_REGISTRY` | `$HOME/.local/state/kb/registry.txt` | where the list of known kb directories lives |
 | `KB_DOC_DIR` | `$HOME/.kb-docs` | install target for the manual |
 | `KB_BIN_DIR` | `$HOME/.local/bin` · `%LOCALAPPDATA%\kb\bin` | install target for the optional PATH copy |
@@ -369,10 +369,17 @@ languages sit on one machine, and a kb cloned onto a machine set up differently
 keeps its own. `KB_LANG` decides for a kb that has no language yet; adding a
 language means adding one key to the `STRINGS` dict in the CLI.
 
-**A language the CLI has no strings for renders in English** — not in the `ru`
-default. `KB_LANG=de` gets an English table header and an English skeleton,
-while the marker still records `lang=de`: the kb keeps the language it asked
-for, and picks it up the day that key exists.
+**A language the CLI has no strings for renders in English too.** `KB_LANG=de`
+gets an English table header and an English skeleton, while the marker still
+records `lang=de`: the kb keeps the language it asked for, and picks it up the
+day that key exists.
+
+**The default is the frame, never your text.** `title:`, note bodies, the prose
+outside the markers and the sections of the entry point somebody filled are
+written by hand and are never translated — so a Russian note under an English
+frame is an ordinary outcome, not a defect. Writing in Russian means
+`KB_LANG=ru` before the first `kb add`; after that the kb carries `ru` in its
+own marker and the default stops applying to it.
 
 Pointing `KB_LANG` at an existing kb does not switch it, and `kb check` says so.
 Switching is not a setting. The next sync flips the marker and the table header.

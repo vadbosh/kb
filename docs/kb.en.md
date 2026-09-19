@@ -542,11 +542,28 @@ recorded yet — a new one, or one made before this was so, which picks up the
 mark on its next `kb sync`.
 
 **A language with no entry in `STRINGS` renders in English.** Two constants,
-because the two questions differ: `LANG_DEFAULT = "ru"` answers "nobody named a
-language", `LANG_FALLBACK = "en"` answers "the language named has no strings".
-Russian filled both roles until 2026-09-19, which meant `KB_LANG=de` produced
-Russian — the language of this machine, offered to a reader who had just said
-they read another. English is the likelier second language of the two.
+because the two questions differ: `LANG_DEFAULT` answers "nobody named a
+language", `LANG_FALLBACK` answers "the language named has no strings". Both are
+`en` since 4.36.0 and they stay separate — a kb asking for a language nobody
+translated is not the same event as a kb asking for nothing, and one of the two
+may move again without the other. Russian filled both roles until 2026-09-19,
+which meant `KB_LANG=de` produced Russian: the language of this machine, offered
+to a reader who had just said they read another.
+
+**The default decides the frame, never the writing.** `title:`, note bodies, the
+prose outside the markers and the filled sections of the entry point are the
+human's and are never translated, so a Russian note under an English frame is
+the designed outcome rather than a defect. A Russian kb is `KB_LANG=ru` before
+its first `kb add`; after that the marker carries `ru` and the default no longer
+reaches it — which is also why the kbs made before 4.36.0 are unaffected.
+
+**A kb older than the mark itself keeps Russian as well.** It has no marker to
+defend it, so the default would otherwise repaint it English on the first sync
+after an upgrade, silently and on every machine. `LANG_LEGACY = "ru"` answers
+for those files: `ru` was the only default that existed when they were written,
+so the frame they already wear is a fact about their history and not a guess at
+their language — the prose is never read. Setting `KB_LANG` outranks it, which
+is how such a kb is stamped English on purpose.
 
 The mark keeps the language that was asked for: `KB_LANG=de` records
 `lang=de` and renders English, so the day a `de` key lands in `STRINGS` the kb

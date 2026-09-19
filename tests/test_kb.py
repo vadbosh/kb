@@ -1688,6 +1688,42 @@ class Language(Base):
         self.kb("sync", expect=0)
         self.assertIn("kb:begin lang=en", f.read_text(encoding="utf-8"))
 
+    def test_an_unmarked_kb_is_not_repainted_by_a_new_default(self):
+        # The hazard the "en" default creates for everyone else: a kb made
+        # before the mark existed is Russian and says so nowhere, so an upgrade
+        # would put an English frame over Russian notes on the next sync, in
+        # silence. LANG_LEGACY answers for those files instead of the current
+        # default. Nothing reads the prose; the date the file was made is what
+        # decides, and an unmarked overview can only predate the mark.
+        self.assertEqual(kb_cli.LANG_LEGACY, "ru")
+        d = self.tmp / "legacy"
+        d.mkdir()
+        self.kb("add", "start", "--kind", "state", "--title", "где работа",
+                cwd=d, env={"KB_LANG": "ru"}, expect=0)
+        f = d / "kb" / "00-overview.md"
+        f.write_text(f.read_text(encoding="utf-8").replace("kb:begin lang=ru",
+                                                           "kb:begin"),
+                     encoding="utf-8")
+        self.kb("sync", cwd=d, env={"KB_LANG": None}, expect=0)
+        text = f.read_text(encoding="utf-8")
+        self.assertIn("kb:begin lang=ru", text)
+        self.assertIn("| что нужно |", text)
+
+    def test_the_legacy_guess_gives_way_to_an_explicit_request(self):
+        # The guess exists to keep SILENCE safe, not to overrule a person. With
+        # KB_LANG set the unmarked kb takes what was asked for -- which is also
+        # the only way to stamp an old kb as English.
+        d = self.tmp / "legacy-asked"
+        d.mkdir()
+        self.kb("add", "start", "--kind", "state", "--title", "где работа",
+                cwd=d, env={"KB_LANG": "ru"}, expect=0)
+        f = d / "kb" / "00-overview.md"
+        f.write_text(f.read_text(encoding="utf-8").replace("kb:begin lang=ru",
+                                                           "kb:begin"),
+                     encoding="utf-8")
+        self.kb("sync", cwd=d, env={"KB_LANG": "en"}, expect=0)
+        self.assertIn("kb:begin lang=en", f.read_text(encoding="utf-8"))
+
     def test_asking_for_another_language_reports_what_switching_costs(self):
         root = self.make_kb()
         self.fill_overview(root)
@@ -1717,16 +1753,46 @@ class Language(Base):
         # The title is the human's and is untouched whatever the language is.
         self.assertIn("Wo die Arbeit steht", text)
 
-    def test_the_default_for_a_kb_that_asks_for_nothing_is_unchanged(self):
+    def test_a_kb_that_names_no_language_gets_english(self):
         # LANG_FALLBACK answers "unknown language"; LANG_DEFAULT answers "no
-        # language named at all". Changing the first must not move the second.
-        self.assertEqual(kb_cli.LANG_DEFAULT, "ru")
+        # language named at all". Both are "en" since 4.36.0, and they are still
+        # two constants: a kb asking for a language nobody translated is not the
+        # same event as a kb asking for nothing.
+        self.assertEqual(kb_cli.LANG_DEFAULT, "en")
         d = self.tmp / "plain"
         d.mkdir()
         self.kb("add", "start", "--kind", "state", "--title", "где работа",
                 cwd=d, env={"KB_LANG": None}, expect=0)
-        self.assertIn("kb:begin lang=ru",
-                      (d / "kb" / "00-overview.md").read_text(encoding="utf-8"))
+        text = (d / "kb" / "00-overview.md").read_text(encoding="utf-8")
+        self.assertIn("kb:begin lang=en", text)
+        self.assertIn("| what you need |", text)
+        # The frame is English and the title stays Russian: kb never translates
+        # what a human wrote, so this mixture is the designed outcome.
+        self.assertIn("где работа", text)
+
+    def test_a_russian_kb_is_one_variable_away(self):
+        # The default moved, so the other language has to stay reachable in one
+        # step — otherwise the change traded one group of writers for another.
+        d = self.tmp / "ru"
+        d.mkdir()
+        self.kb("add", "start", "--kind", "state", "--title", "где работа",
+                cwd=d, env={"KB_LANG": "ru"}, expect=0)
+        text = (d / "kb" / "00-overview.md").read_text(encoding="utf-8")
+        self.assertIn("kb:begin lang=ru", text)
+        self.assertIn("| что нужно |", text)
+
+    def test_an_existing_kb_keeps_its_language_when_the_default_moves(self):
+        # The mark in the overview outranks the default: a kb made when the
+        # default was "ru" keeps rendering Russian with KB_LANG unset. This is
+        # what made the change safe for the kbs already on disk.
+        d = self.tmp / "made-earlier"
+        d.mkdir()
+        self.kb("add", "start", "--kind", "state", "--title", "где работа",
+                cwd=d, env={"KB_LANG": "ru"}, expect=0)
+        self.kb("sync", cwd=d, env={"KB_LANG": None}, expect=0)
+        text = (d / "kb" / "00-overview.md").read_text(encoding="utf-8")
+        self.assertIn("kb:begin lang=ru", text)
+        self.assertIn("| что нужно |", text)
 
 
 # ── the notes directory is not automatically ours ───────────────────────────
