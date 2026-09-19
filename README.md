@@ -369,6 +369,11 @@ languages sit on one machine, and a kb cloned onto a machine set up differently
 keeps its own. `KB_LANG` decides for a kb that has no language yet; adding a
 language means adding one key to the `STRINGS` dict in the CLI.
 
+**A language the CLI has no strings for renders in English** — not in the `ru`
+default. `KB_LANG=de` gets an English table header and an English skeleton,
+while the marker still records `lang=de`: the kb keeps the language it asked
+for, and picks it up the day that key exists.
+
 Pointing `KB_LANG` at an existing kb does not switch it, and `kb check` says so.
 Switching is not a setting. The next sync flips the marker and the table header.
 The titles, the prose outside the markers and the filled sections of the entry

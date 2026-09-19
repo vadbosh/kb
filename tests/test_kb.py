@@ -71,6 +71,9 @@ class Base(unittest.TestCase):
             "PYTHONIOENCODING": "utf-8",
         }
         environ.update(env or {})
+        # None means "unset this one", which is the only way to ask what the
+        # tool does when a variable is absent rather than merely different.
+        environ = {k: v for k, v in environ.items() if v is not None}
         res = subprocess.run(
             [sys.executable, str(KB), *argv],
             cwd=str(cwd or self.proj), env=environ,
@@ -1696,6 +1699,34 @@ class Language(Base):
         self.assertIn("these notes are en", res.stdout)
         self.assertIn("title:", res.stdout)
         self.assertEqual(self.kb("check").returncode, 0)
+
+    def test_a_language_with_no_strings_renders_in_english(self):
+        # KB_LANG=de has no entry in STRINGS, and until 2026-09-19 the fallback
+        # was the machine's default rather than the wider audience's language:
+        # a reader who asked for German got Russian. Two separate meanings of
+        # "default" shared one constant; they are LANG_DEFAULT and
+        # LANG_FALLBACK now.
+        self.assertEqual(kb_cli.LANG_FALLBACK, "en")
+        d = self.tmp / "de"
+        d.mkdir()
+        self.kb("add", "start", "--kind", "state", "--title", "Wo die Arbeit steht",
+                cwd=d, env={"KB_LANG": "de"}, expect=0)
+        text = (d / "kb" / "00-overview.md").read_text(encoding="utf-8")
+        self.assertIn("| what you need |", text)
+        self.assertNotIn("| что нужно |", text)
+        # The title is the human's and is untouched whatever the language is.
+        self.assertIn("Wo die Arbeit steht", text)
+
+    def test_the_default_for_a_kb_that_asks_for_nothing_is_unchanged(self):
+        # LANG_FALLBACK answers "unknown language"; LANG_DEFAULT answers "no
+        # language named at all". Changing the first must not move the second.
+        self.assertEqual(kb_cli.LANG_DEFAULT, "ru")
+        d = self.tmp / "plain"
+        d.mkdir()
+        self.kb("add", "start", "--kind", "state", "--title", "где работа",
+                cwd=d, env={"KB_LANG": None}, expect=0)
+        self.assertIn("kb:begin lang=ru",
+                      (d / "kb" / "00-overview.md").read_text(encoding="utf-8"))
 
 
 # ── the notes directory is not automatically ours ───────────────────────────

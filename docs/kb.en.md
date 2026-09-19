@@ -541,6 +541,19 @@ differently keeps its own. `KB_LANG` decides for a kb that has no language
 recorded yet — a new one, or one made before this was so, which picks up the
 mark on its next `kb sync`.
 
+**A language with no entry in `STRINGS` renders in English.** Two constants,
+because the two questions differ: `LANG_DEFAULT = "ru"` answers "nobody named a
+language", `LANG_FALLBACK = "en"` answers "the language named has no strings".
+Russian filled both roles until 2026-09-19, which meant `KB_LANG=de` produced
+Russian — the language of this machine, offered to a reader who had just said
+they read another. English is the likelier second language of the two.
+
+The mark keeps the language that was asked for: `KB_LANG=de` records
+`lang=de` and renders English, so the day a `de` key lands in `STRINGS` the kb
+speaks German on its next `kb sync` with nothing to migrate. The cost is that
+until then the file names a language it is not written in, and `kb check` does
+not report the contradiction.
+
 ### Switching a kb from one language to another
 
 Pointing `KB_LANG` at an existing kb does not switch it, and `kb check` reports

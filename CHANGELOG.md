@@ -18,6 +18,24 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 4.35.0
+
+- **A language the CLI has no strings for now renders in English, not Russian.**
+  One constant carried two meanings: `LANG_DEFAULT` answered both "nobody named
+  a language" and "the language named is not translated". They are split —
+  `LANG_DEFAULT = "ru"` for the first, `LANG_FALLBACK = "en"` for the second —
+  so `KB_LANG=de` produces an English table header instead of a Russian one.
+  The old behaviour answered a reader who had just said they read German with
+  the language of this machine; English is the likelier second language of the
+  two. A kb that names no language is untouched and still records `lang=ru`.
+- The mark keeps the language that was asked for: `KB_LANG=de` records
+  `lang=de` and renders English, so adding a `de` key to `STRINGS` later needs
+  no migration. Until then the file names a language it is not written in, and
+  `kb check` does not report that contradiction — known, and open.
+- Tests: 149 → 151. The harness can now unset a variable rather than only
+  change it, which is the only way to ask what the tool does when `KB_LANG` is
+  absent.
+
 ## 4.34.4
 
 - Заголовок `### What it does not catch` в английской README назван предметом —
