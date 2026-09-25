@@ -358,35 +358,23 @@ CLI also works on its own if you prefer driving it by hand.
 
 | Variable | Default | Controls |
 |---|---|---|
-| `KB_LANG` | `en` | language of text written **into** notes — table header, the "current snapshot" line, the index skeleton. Diagnostics are always English. |
 | `KB_REGISTRY` | `$HOME/.local/state/kb/registry.txt` | where the list of known kb directories lives |
 | `KB_DOC_DIR` | `$HOME/.kb-docs` | install target for the manual |
 | `KB_BIN_DIR` | `$HOME/.local/bin` · `%LOCALAPPDATA%\kb\bin` | install target for the optional PATH copy |
 
-**A kb remembers the language it was made in**, recorded in the `kb:begin`
-marker of its overview. Every later command reads it back, so two streams in two
-languages sit on one machine, and a kb cloned onto a machine set up differently
-keeps its own. `KB_LANG` decides for a kb that has no language yet; adding a
-language means adding one key to the `STRINGS` dict in the CLI.
+**The frame is English, always; the writing is yours.** Everything kb writes
+into a note — the table header, the "current snapshot" line, the skeletons, the
+marker notes — is English, and nothing configures it. Everything a person
+writes — `title:`, note bodies, the prose outside the markers, the filled
+sections of the entry point — is in the language the work is discussed in, and
+kb never translates or inspects it. A Russian note under an English frame is the
+designed outcome.
 
-**A language the CLI has no strings for renders in English too.** `KB_LANG=de`
-gets an English table header and an English skeleton, while the marker still
-records `lang=de`: the kb keeps the language it asked for, and picks it up the
-day that key exists.
-
-**The default is the frame, never your text.** `title:`, note bodies, the prose
-outside the markers and the sections of the entry point somebody filled are
-written by hand and are never translated — so a Russian note under an English
-frame is an ordinary outcome, not a defect. Writing in Russian means
-`KB_LANG=ru` before the first `kb add`; after that the kb carries `ru` in its
-own marker and the default stops applying to it.
-
-Pointing `KB_LANG` at an existing kb does not switch it, and `kb check` says so.
-The mark outranks the variable, and always has. Switching is `kb sync --lang
-<xx>`, which rewrites the mark and everything generated — the titles, the prose
-outside the markers and the filled sections of the entry point are written by
-hand and stay as they were. So translate those three first, or the file ends up
-half in each language.
+A kb made before 5.0.0 may carry another frame (`kb:begin lang=ru`). `kb check`
+reports its index as stale, and the next `kb sync` rewrites what sits between
+the markers in English — in place, once, with a `frame: ru → en` line. Headings
+a scaffold wrote outside the markers stay as they are: from then on they are
+the human's text.
 
 No path anywhere is hardcoded to a particular machine.
 

@@ -529,83 +529,42 @@ Both are read and written like any other kb afterwards.
 
 ## Language
 
-Tool diagnostics (`check` / `list` / `outline` / `status`) are English. Text the
-tool writes **into** the notes — the table header, the "current snapshot" line,
-the index skeleton, the generated block of `AGENTS.md` — follows the language of
-the kb itself. A new language is one key in the `STRINGS` dict inside the CLI
-and nothing else.
+Tool diagnostics (`check` / `list` / `outline` / `status`) are English.
 
-**The language belongs to the kb, not to the machine.** It is recorded in the
-`kb:begin` marker of the overview when the directory is scaffolded, and read
-back by every command after that. Two streams in two languages therefore sit on
-one machine without interfering, and a kb cloned onto a machine set up
-differently keeps its own. `KB_LANG` decides for a kb that has no language
-recorded yet — a new one, or one made before this was so, which picks up the
-mark on its next `kb sync`.
+**The frame is English, always.** Text the tool writes **into** the notes — the
+table header, the "current snapshot" line, the section skeletons, the marker
+notes, the generated block of `AGENTS.md` — is English, and nothing configures
+it: there is no `KB_LANG` and no `--lang` since 5.0.0.
 
-**A language with no entry in `STRINGS` renders in English.** Two constants,
-because the two questions differ: `LANG_DEFAULT` answers "nobody named a
-language", `LANG_FALLBACK` answers "the language named has no strings". Both are
-`en` since 4.36.0 and they stay separate — a kb asking for a language nobody
-translated is not the same event as a kb asking for nothing, and one of the two
-may move again without the other. Russian filled both roles until 2026-09-19,
-which meant `KB_LANG=de` produced Russian: the language of this machine, offered
-to a reader who had just said they read another.
+**The writing is the human's.** `title:`, note bodies, the prose outside the
+markers and the filled sections of the entry point are written in the language
+the work is discussed in — Russian, Chinese, anything. kb never translates or
+inspects that text, so a Russian note under an English frame is the designed
+outcome. The skill tells the assistant the same: write notes in the language of
+the conversation, and leave the frame alone.
 
-**The default decides the frame, never the writing.** `title:`, note bodies, the
-prose outside the markers and the filled sections of the entry point are the
-human's and are never translated, so a Russian note under an English frame is
-the designed outcome rather than a defect. A Russian kb is `KB_LANG=ru` before
-its first `kb add`; after that the marker carries `ru` and the default no longer
-reaches it — which is also why the kbs made before 4.36.0 are unaffected.
+**Why one frame and not a choice.** From 4.26.0 to 4.38.1 the frame language
+belonged to each kb: `KB_LANG` picked it for a new one, `kb sync --lang`
+switched an old one, and the skill told the assistant to write notes in the
+frame's language rather than the conversation's. That turned a formatting
+detail into a per-kb decision nobody wanted to make, and the assistant made it
+in the wrong direction — switching the frame to match a note. With one frame
+there is nothing to decide and nothing to get wrong.
 
-**A kb older than the mark itself keeps Russian as well.** It has no marker to
-defend it, so the default would otherwise repaint it English on the first sync
-after an upgrade, silently and on every machine. `LANG_LEGACY = "ru"` answers
-for those files: `ru` was the only default that existed when they were written,
-so the frame they already wear is a fact about their history and not a guess at
-their language — the prose is never read. Setting `KB_LANG` outranks it, which
-is how such a kb is stamped English on purpose.
-
-The mark keeps the language that was asked for: `KB_LANG=de` records
-`lang=de` and renders English, so the day a `de` key lands in `STRINGS` the kb
-speaks German on its next `kb sync` with nothing to migrate. The cost is that
-until then the file names a language it is not written in. Since 4.37.0
-`kb check` reports that contradiction and names the two ways out: add the key
-to `STRINGS`, or `kb sync --lang en` so the mark says what the file does.
-
-### Switching a kb from one language to another
-
-Pointing `KB_LANG` at an existing kb does not switch it, and `kb check` reports
-the attempt rather than acting on it. The reason is that only part of the file
-is the tool's to write:
+**A kb made before 5.0.0 converts itself once.** Its overview may carry
+`kb:begin lang=ru` and a Russian table header. `kb check` reports the index as
+stale; the next `kb sync` rewrites what sits between the markers — in the
+overview and in `AGENTS.md` — in English, prints `frame: ru → en`, and appends
+nothing. Only the markers' contents change:
 
 | What | Changes on `kb sync` |
 |---|---|
-| the marker, the table header, the "current snapshot" line, the block in `AGENTS.md` | yes |
-| the `title:` of every note | no — written by hand |
-| the prose outside the markers in `00-overview.md` | no |
-| the sections of the entry point somebody filled | no |
-| the body of every note | no |
+| the marker, the table header, the "current snapshot" line, the block in `AGENTS.md` | yes, to English |
+| headings a scaffold wrote outside the markers (`## Правила`, `## Команды`) | no — from then on they are the human's |
+| the `title:` of every note, the bodies, the filled sections of the entry point | no |
 
-Switching the generated half alone therefore produces an English header over
-Russian titles. The order that works:
-
-```
-1. translate the `title:` of every note, the prose outside the markers, and the
-   filled sections of AGENTS.md
-2. kb sync --lang <new>         the generated parts follow, and the mark is rewritten
-3. kb check                     the index agrees with the front matter again
-```
-
-Step 1 is the whole job and no command does it; kb has no language migration.
-
-Step 2 was written as `KB_LANG=<new> kb sync` until 4.37.0, and that did
-nothing: `set_lang` reads the mark before the variable, so the sync rewrote the
-file in the language it already had and said so nowhere. The flag exists
-because a switch is a decision taken once, and a variable that outranked the
-mark would make every other command's language depend on the shell it was run
-from.
+The mark still reads `lang=en`: older copies of the CLI read it and render
+English from it.
 
 Skill trigger phrases are bilingual — both "запиши в kb" and "save to kb" work.
 The bodies of the skills are English, since an LLM is what reads them.

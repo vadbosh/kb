@@ -115,123 +115,23 @@ def project_of(root: Path) -> Path:
 MARK_BEGIN = "<!-- kb:begin"          # prefix only; the rest of the line is a note
 MARK_END = "<!-- kb:end -->"
 
-# Everything the tool WRITES INTO the notes, in one place. Diagnostics stay in
-# English — they are the tool talking. This is different: it lands inside
-# documents a human reads, so it has to match the language they are written in.
-# KB_LANG picks; adding a language means adding a key, nothing else changes.
-# The language a kb is written in belongs to the kb, not to the machine. It is
-# recorded in the `kb:begin` marker of the overview when the directory is
-# scaffolded, and every later render reads it back — so two streams in two
-# languages live side by side, and a stream keeps its language when it is
-# cloned onto a machine set up differently.
+# Everything the tool WRITES INTO the notes, in one place: the table header, the
+# skeletons, the marker notes. This is the frame, and the frame is English,
+# always. The writing inside it -- `title:`, note bodies, the prose outside the
+# markers, the filled sections of the entry point -- is the human's, in whatever
+# language the work is discussed in, and kb never translates or inspects it. A
+# Russian note under an English frame is the designed outcome.
 #
-# KB_LANG still decides, but only for a kb that has no language yet. Setting it
-# against a kb that does is a request to switch, and switching is not a setting:
-# the titles, the prose outside the markers and the entry point are all written
-# by hand and none of them change by themselves. `check` says so rather than
-# silently producing a half-translated file.
-LANG_ENV = os.environ.get("KB_LANG")
-# The language a kb gets when nothing says otherwise — no KB_LANG, no mark in
-# the overview. It decides the frame only: the table header, the skeleton, the
-# marker note. Titles and bodies are the writer's and are never translated, so
-# a Russian note under an English frame is an ordinary outcome here, not a bug.
-# Was "ru" until 2026-09-19; the streams started here are now mostly English,
-# and a Russian one is KB_LANG=ru before its first `kb add`.
-LANG_DEFAULT = "en"
-# What renders when the language asked for has no entry in STRINGS. English,
-# not the default above: a reader who set KB_LANG=de reads more languages than
-# one, and English is the likelier of the two to be among them. Russian was the
-# fallback until 2026-09-19 and it was the wrong one — it answered "unknown
-# language" with the language of this machine rather than the language of the
-# wider audience.
-LANG_FALLBACK = "en"
-# What a kb made before the mark existed is already written in: `ru` was the
-# only default at the time. See `legacy_lang` for why this is not the same
-# constant as LANG_DEFAULT and must not follow it when that one moves again.
-LANG_LEGACY = "ru"
-LANG_RE = re.compile(r"kb:begin\s+lang=([a-z]{2})\b")
-LANG = LANG_ENV or LANG_DEFAULT
-STRINGS = {
-    "ru": {
-        "block_note": " — таблица генерируется `kb sync`, руками не править -->",
-        "current": "Актуальный срез: `{name}` ({date}). Более ранние `state` "
-                   "описывают своё число, не отменены.",
-        "header": "| что нужно | файл | тип | обновлён |",
-        "superseded": " ⏳ (прежний срез)",
-        "reversed": " ⤺ (отменён {num})",
-        "replaces": " ⤺ {nums}",
-        "shape": {
-            "charter": ["Зачем это существует", "Границы",
-                        "Чего сознательно не делаем", "Принципы",
-                        "Внешние зависимости"],
-            "decision": ["Что выбрали", "Что отвергли и почему",
-                         "Чем платим", "При каком условии пересмотреть"],
-            "reference": ["Где это лежит", "Как устроено",
-                          "Что ломается молча"],
-            "recipe": ["<грабля: признак, причина, команда>"],
-            "state": ["Что сделано", "Что открыто", "Чем проверить состояние"],
-            "plan": ["Порядок", "Зависимости", "Как понять, что выполнено"],
-        },
-        "fill": "<!-- kb:fill — заполни или убери раздел -->",
-        "index_heading": "## Указатель",
-        "heavy": " ⚠ ~{k}k токенов",
-        "skeleton": """\
-# {title} — указатель по документации
-
-Обновлён {today}.
-
-## Зачем этот каталог
-
-<!-- одним абзацем: что за работа, где её границы, что сюда НЕ пишем -->
-
-## С чего начинать чтение
-
-{block}
-
-## Правила
-
-- Актуальный срез — `state` с наибольшей датой в имени. Прежние не отменены.
-- Таблица выше генерируется `kb sync` из front matter файлов. Руками не править.
-- Креды, пароли, адреса баз сюда не выносятся.
-""",
-        "route_skeleton": """\
-# {title}
-
-<!-- kb:fill — одной фразой: что это за работа и где её границы -->
-
-## Команды
-
-<!-- kb:fill — чем проверить, что работа в порядке. Вывод именно этих команд
-     прикладывают к сделанной задаче -->
-
-## Задача готова, когда
-
-<!-- kb:fill — чем доказывается результат. «Выглядит правильно» — не
-     доказательство -->
-
-## Знания об этой работе
-
-{block}
-""",
-        "route_block": """\
-Заметки — `{rel}`, {count} шт. Читаются одной командой, целиком:
-
-```
-kb brief
-```
-
-{pointers}Источники расходятся — остановись и скажи человеку, не выбирай удобный:
-`decision` = намерение и почему так, активный `plan` = незаконченное изменение,
-`state` = как обстояло дело на свою дату. Как обстоит сейчас — отвечает
-проверка, а не заметка.
-
-Изменение не закончено, пока не обновлена заметка про него.
-""",
-        "route_note": " — генерируется `kb route`, руками не править -->",
-        "route_current": "Где всё стоит сейчас: `{path}`.",
-        "route_charter": "Замысел, границы, чего не делаем: `{path}`.",
-    },
-    "en": {
+# Until 5.0.0 the frame had a language of its own: STRINGS held `ru` and `en`,
+# KB_LANG picked one for a new kb and `kb sync --lang` switched an old one. That
+# made the frame language a per-kb decision, and the skill told the assistant
+# to write notes in the frame's language rather than the conversation's -- the
+# opposite of what the owner wanted. One frame, no choice, nothing to get wrong.
+#
+# The mark still reads `lang=en`. Older copies of the CLI read it, and they
+# render English from it; dropping it would send them to their own defaults.
+FRAME_LANG = "en"
+FRAME = {
         "block_note": " — generated by `kb sync`, do not edit by hand -->",
         "current": "Current snapshot: `{name}` ({date}). Earlier `state` files "
                    "describe their own date and are not cancelled.",
@@ -310,53 +210,11 @@ A change is not done until the matching note is updated.
         "route_note": " — generated by `kb route`, do not edit by hand -->",
         "route_current": "Where things stand now: `{path}`.",
         "route_charter": "Intent, boundaries, what is deliberately not done: `{path}`.",
-    },
 }
 
 
 def S(key: str) -> str:
-    return STRINGS.get(LANG, STRINGS[LANG_FALLBACK])[key]
-
-
-def marked_lang(root: Path) -> str | None:
-    """Whatever the mark says, translated or not.
-
-    Separate from `recorded_lang` because the two answer different questions.
-    Rendering needs a language it can actually render, so an untranslated mark
-    is no answer there. `check` needs the mark exactly as written, which is the
-    only way it can report that a file claims a language its text is not in.
-    """
-    f = root / OVERVIEW
-    if not f.is_file():
-        return None
-    m = LANG_RE.search(f.read_text(encoding="utf-8", errors="replace"))
-    return m.group(1) if m else None
-
-
-def recorded_lang(root: Path) -> str | None:
-    """The language this kb was created in, or None for one predating the mark."""
-    have = marked_lang(root)
-    return have if have in STRINGS else None
-
-
-def legacy_lang(root: Path) -> str | None:
-    """`ru` for an overview written before kb recorded the language at all.
-
-    Such a file is already wearing a Russian frame, because `ru` was the only
-    default there had ever been when it was made. Letting the CURRENT default
-    answer for it would repaint a Russian document in English on the first sync
-    after an upgrade, and nothing would say so. This is history, not detection:
-    the prose is never read to guess a language.
-    """
-    return LANG_LEGACY if (root / OVERVIEW).is_file() else None
-
-
-def set_lang(root: Path) -> None:
-    """Render in the kb's own language. Called once a root is known."""
-    global LANG
-    # KB_LANG outranks the legacy guess and not the mark: an explicit request
-    # is a person deciding, and the guess exists only to keep silence safe.
-    LANG = recorded_lang(root) or LANG_ENV or legacy_lang(root) or LANG_DEFAULT
+    return FRAME[key]
 
 # Six kinds, not more. The distinction that earns its keep: does a newer file
 # REPLACE this one (state, plan) or is it edited in place (reference, recipe)?
@@ -571,10 +429,8 @@ class Note:
 
 
 def find_root(explicit: str | None, *, for_init: bool = False) -> Path:
-    """Wrapper: every caller gets the kb's own language set before it renders."""
-    root = absolute(_find_root(explicit, for_init=for_init))
-    set_lang(root)
-    return root
+    """Wrapper: see `_find_root`. Every caller gets an absolute path."""
+    return absolute(_find_root(explicit, for_init=for_init))
 
 
 def _find_root(explicit: str | None, *, for_init: bool = False) -> Path:
@@ -737,7 +593,7 @@ def render_block(notes: list[Note]) -> str:
                 replaces.setdefault(n.name, []).append(f"{by_name[ref].num:02d}")
                 replaced_by[ref] = f"{n.num:02d}"
 
-    lines = [MARK_BEGIN + f" lang={LANG}" + S("block_note")]
+    lines = [MARK_BEGIN + f" lang={FRAME_LANG}" + S("block_note")]
     if cur:
         lines += ["", S("current").format(name=cur.name, date=cur.sort_date)]
     lines += ["", S("header"), "|---|---|---|---|"]
@@ -1122,12 +978,8 @@ def write_skeleton(root: Path, title: str | None) -> Path:
 
 
 def ensure_root(args) -> Path:
-    """Wrapper: see `find_root`. Scaffolding happens inside, in `LANG_ENV`'s
-    language, and reading the mark back afterwards is what makes the choice
-    stick for every command that follows."""
-    root = absolute(_ensure_root(args))
-    set_lang(root)
-    return root
+    """Wrapper: see `_ensure_root`. Scaffolding happens inside."""
+    return absolute(_ensure_root(args))
 
 
 def _ensure_root(args) -> Path:
@@ -1307,27 +1159,17 @@ def route_drift(root: Path, notes: list[Note]) -> tuple[Path, str] | None:
 def cmd_sync(args) -> int:
     root = find_root(args.dir)
     refuse_outside(root)
-    # `--lang` is the only thing that outranks the mark, and it has to exist:
-    # until 4.37.0 the documented way to switch -- translate by hand, then
-    # `KB_LANG=<new> kb sync` -- did nothing at all, because set_lang reads the
-    # mark first and KB_LANG never got a turn. Four documents described a
-    # procedure the code did not have.
-    # getattr, not args.lang: `add` finishes by calling this function with its
-    # own namespace, which has no such flag.
-    want = getattr(args, "lang", None)
-    if want:
-        if want not in STRINGS:
-            die(f"no such language: {want}\n"
-                f"  the CLI has strings for: {', '.join(sorted(STRINGS))}\n"
-                f"  adding one means adding a key to STRINGS, nothing else")
-        global LANG
-        was, LANG = LANG, want
-        if was != LANG:
-            print(f"language: {was} → {LANG}; the titles, the prose outside the "
-                  f"markers and the filled sections of the entry point are "
-                  f"yours and stay as they were")
     overview = root / OVERVIEW
     text = overview.read_text(encoding="utf-8")
+    # A kb made before 5.0.0 may wear another frame (`lang=ru`). The rewrite
+    # below replaces only what sits between the markers, so the frame turns
+    # English in place and nothing is appended; say so once, because the
+    # headings a scaffold wrote outside the markers stay as they were.
+    was = re.search(r"kb:begin\s+lang=([a-z]{2})\b", text)
+    if was and was.group(1) != FRAME_LANG:
+        print(f"frame: {was.group(1)} → {FRAME_LANG}; the titles, the prose "
+              f"outside the markers and the filled sections of the entry point "
+              f"are yours and stay as they were")
     notes = load_notes(root)
     new = replace_block(text, render_block(notes))
     if new is None:
@@ -1401,37 +1243,6 @@ class CheckCtx:
     root: Path
     notes: list[Note]
     overview: str
-
-
-def check_language(c: CheckCtx) -> list[str]:
-    """Switching a kb's language is not a setting change. The mark and the table
-    header flip on the next sync; the titles, the prose outside the markers and
-    the entry point are written by hand and stay as they were, so the file ends
-    up half in each. Saying it here is the point: the person who exported the
-    variable learns what it costs before the half-translated file exists, and
-    the steps arrive where they are acted on rather than in a manual nobody
-    opens at that moment."""
-    out = []
-    mark = marked_lang(c.root)
-    # A mark the CLI cannot render is a file claiming a language its own text is
-    # not in: `lang=de` renders English, and nothing said so until 4.37.0. The
-    # claim is not wrong to make -- it is what lets a `de` key arrive later with
-    # no migration -- but it has to be visible while it is untrue.
-    if mark and mark not in STRINGS:
-        out.append(f"{OVERVIEW} is marked lang={mark}, and the CLI has no {mark} "
-                   f"strings — the generated text is {LANG_FALLBACK}, so the file "
-                   f"names a language it is not written in. Either add a {mark} key "
-                   f"to STRINGS, or `kb sync --lang {LANG_FALLBACK}` to make the "
-                   f"mark say what the file does")
-    have = recorded_lang(c.root)
-    if have and LANG_ENV and LANG_ENV != have:
-        out.append(f"KB_LANG={LANG_ENV} but these notes are {have} — the mark in "
-                   f"{OVERVIEW} outranks the variable, and it always has. To "
-                   f"switch: translate the `title:` of every note, the prose "
-                   f"outside the markers in {OVERVIEW}, and the filled sections of "
-                   f"the entry point, then `kb sync --lang {LANG_ENV}`. Nothing "
-                   f"translates by itself")
-    return out
 
 
 def check_index(c: CheckCtx) -> list[str]:
@@ -1580,7 +1391,6 @@ def check_backups(c: CheckCtx) -> list[str]:
 # The list IS the order the findings are reported in, so adding a check is one
 # function and one row, and reordering the report is moving the row.
 CHECKS: list[tuple[str, "object"]] = [
-    ("language", check_language),
     ("index", check_index),
     ("links", check_links),
     ("front-matter", check_front_matter),
@@ -2934,9 +2744,9 @@ def cmd_adopt(args) -> int:
             end = table_start
             while end < len(lines) and lines[end].lstrip().startswith("|"):
                 end += 1
-            lines[table_start:end] = [MARK_BEGIN + f" lang={LANG}" + S("block_note"), MARK_END]
+            lines[table_start:end] = [MARK_BEGIN + f" lang={FRAME_LANG}" + S("block_note"), MARK_END]
         else:
-            lines += ["", S("index_heading"), "", MARK_BEGIN + f" lang={LANG}" + S("block_note"), MARK_END]
+            lines += ["", S("index_heading"), "", MARK_BEGIN + f" lang={FRAME_LANG}" + S("block_note"), MARK_END]
         overview.write_text("\n".join(lines), encoding="utf-8")
         made.append((obak, overview, None))
         print(f"  inserted managed block: {OVERVIEW}")
@@ -3013,11 +2823,7 @@ def main() -> int:
     p.set_defaults(fn=cmd_add)
 
     p = with_dir(sub.add_parser("sync", help="regenerate the index table"))
-    p.add_argument("--lang", metavar="XX",
-                   help="switch the kb to this language: rewrites the mark and "
-                        "everything generated. Titles, prose and filled sections "
-                        "are yours and stay as they are")
-    p.set_defaults(fn=cmd_sync, no_sync=False, lang=None)
+    p.set_defaults(fn=cmd_sync, no_sync=False)
 
     p = with_dir(sub.add_parser("check", help="report drift, exit 3 if any"))
     p.set_defaults(fn=cmd_check)

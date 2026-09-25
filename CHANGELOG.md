@@ -18,6 +18,32 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 5.0.0 — breaking
+
+- **The frame is English, always; the writing is in the language of the
+  conversation.** Everything kb writes into a note — the table header, the
+  "current snapshot" line, the section skeletons, the marker notes, the
+  generated block of `AGENTS.md` — is English, and nothing configures it. The
+  Russian strings are gone, and with them `KB_LANG` and `kb sync --lang`.
+  Breaking: `kb sync --lang <xx>` now refuses as an unknown argument, and
+  `KB_LANG` is no longer read.
+- **The skill says the same.** `references/save.md` told the assistant to write
+  notes in the frame's language and not to take the language from the
+  conversation — the reverse of what the owner wanted. An assistant following
+  it switched a kb's frame to Russian to match a Russian note. Now: titles and
+  bodies in the conversation's language, the frame is not the assistant's to
+  change. `references/entry-point.md` likewise: slots filled in the
+  conversation's language, headings left English.
+- **A kb with another frame converts on its next `kb sync`, once and in place.**
+  `kb check` reports its index as stale; `sync` rewrites what sits between the
+  markers — in the overview and in `AGENTS.md` — in English and prints
+  `frame: ru → en`. Nothing is appended: one `kb:begin`, one header, one table,
+  pinned by a test. Headings a scaffold once wrote outside the markers stay as
+  they are, because from then on they are the human's text.
+- Tests: 161 → 153. Fourteen tests pinned the language switch that no longer
+  exists; six new ones pin the English frame, the refused flag, the in-place
+  conversion of both files and that a second `sync` has nothing to do.
+
 ## 4.38.1
 
 - **No references to another repository.** Both READMEs, two code comments, a

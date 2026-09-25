@@ -135,11 +135,12 @@ equals, which is how someone acts on a reversed decision.
   might be. `kb list` prints every notes directory on the machine; called during
   a save it buries the two or three the question is about under everything else.
   Whether a stream has a kb is `ls -d <dir>/kb`, per stream, and nothing wider.
-- **Write in the language the notes are written in**, not this file's. Titles and
-  bodies land in a document a human reads. The kb records its own language in the
-  `kb:begin` marker of its overview — read it rather than guessing from the last
-  thing said in the conversation. Asked to switch a stream to another language:
-  that is a translation job, not a setting. `kb check` prints what it involves.
+- **Write titles and bodies in the language of the conversation**, not this
+  file's and not the frame's. The frame — the `kb:begin` marker, the table
+  header, the skeleton headings — is English, always, and is not yours to
+  change: a Russian note under an English frame is the designed outcome, not a
+  mismatch to fix. Older notes in another language stay as they are; asked to
+  translate them, that is a translation job and nothing in kb does it.
 - **No credentials.** Reference the mechanism (a secret in the cluster, an env
   var), never the value.
 - **Nothing that lives elsewhere** — reference it by path or URL. A copy goes

@@ -51,12 +51,10 @@ above puts them twice in a file loaded every session, and the two copies drift
 the first time the block is regenerated. Read the block before filling the
 slots — everything in it is already said.
 
-**Write the entry point in the language the notes are written in.** The
-generated block already follows `KB_LANG`; matching it by hand keeps one reader
-from meeting two languages in one stream. An English file next to Russian notes
-is marginally cheaper per session and worse to live with — and it is not even
-uniformly English, since the note titles inside the generated block come from
-the front matter as they were written.
+**Fill the slots in the language of the conversation; leave the headings
+English.** The headings and the generated block are the frame, and the frame is
+English, always — the same as in the overview. What you write under them is the
+human's text, in the language the work is discussed in, like the notes.
 
 **Ask only for what the session genuinely does not contain**, and ask for that
 one thing rather than for the file: a stream where nothing was run and the note
