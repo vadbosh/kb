@@ -18,6 +18,17 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 5.0.1
+
+- **Step 5 of saving greps the older notes with `rg -in`, not `grep -rin`.**
+  `references/save.md` told the assistant to run `grep -rin "<subject>" <dir>/kb`;
+  where a hook rewrites grep to rg or denies it, that line was refused or
+  rewritten. Now `rg -in`, with the warning that matters: rg recurses by default
+  and its `-r` is `--replace`, so `rg -rin` prints "in" in place of every match
+  and still exits 0. Where only grep exists, `grep -rin` is the same search.
+  The fix was made in a config canon on 2026-09-29 and never reached this
+  repository; installing kb would have put the old line back.
+
 ## 5.0.0 — breaking
 
 - **The frame is English, always; the writing is in the language of the

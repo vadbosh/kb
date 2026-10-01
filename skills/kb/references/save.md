@@ -14,7 +14,7 @@ when a step is genuinely ambiguous.
 3. no kb   → kb add … in that directory, creating it
    has kb  → kb status, then append or new file
 4. write the body
-5. grep -rin "<subject>" <dir>/kb   what the OLDER notes say about it
+5. rg -in "<subject>" <dir>/kb     what the OLDER notes say about it
 6. kb sync && kb check
 7. could someone WORK from this, or only understand it?
 ```
@@ -35,8 +35,12 @@ so the stale line went straight to the reader who would act on it.
 `check`.** One command, a handful of lines to read:
 
 ```
-grep -rin "test" /srv/api/kb        # the thing whose truth just changed
+rg -in "test" /srv/api/kb           # the thing whose truth just changed
 ```
+
+No `-r`: rg recurses by default, and in rg `-r` is `--replace` — `rg -rin`
+prints "in" in place of every match and still exits 0. Where only grep exists,
+`grep -rin` is the same search.
 
 Read the hits and correct the ones that are now wrong. A claim of ABSENCE is the
 one that rots fastest — "there is no X", "nothing does Y", "not decided yet" —
