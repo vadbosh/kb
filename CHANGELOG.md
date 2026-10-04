@@ -18,6 +18,12 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 5.0.4
+
+- **macOS: in `install.sh` and `release.sh`, paths printed as `~/…` came out as `\~/…` under bash 3.2 — the `/bin/bash`
+  macOS still ships — because `${x/#$HOME/\~}` keeps the backslash before bash
+  4.3. A `tilde` function replaces it; measured in the `bash:3.2` image.**
+
 ## 5.0.3
 
 - **README.md:** the sentence about `zai-sk-glm-4-6-turbo-preview` ("what caught
