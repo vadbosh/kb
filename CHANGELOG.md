@@ -18,6 +18,12 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 5.0.3
+
+- **README.md:** the sentence about `zai-sk-glm-4-6-turbo-preview` ("what caught
+  … was a test …, not the pattern that let it through") had to be read twice;
+  it is three sentences now, as the Russian one became in 5.0.2.
+
 ## 5.0.2
 
 - **Both READMEs: "roughly 150 rules instead of ten" contradicted "nineteen

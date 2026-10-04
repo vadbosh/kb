@@ -408,10 +408,10 @@ not collide with ordinary text.
 
 **Every pattern here arrives with a test naming the shape, including the shapes
 that must *not* fire.** A list like this is maintained by comparing it against
-other people's, and an import is worth nothing without the negative case: what
-caught `zai-sk-glm-4-6-turbo-preview` being read as an OpenAI key was a test
-asserting that a model name is not a finding, not the pattern that let it
-through.
+other people's, and an import is worth nothing without the negative case. For
+example, the model name `zai-sk-glm-4-6-turbo-preview` was read as an OpenAI
+key. A test caught it — one that asserts a model name is not a finding. The
+pattern itself had let it through.
 
 **Layer 2, when present** — `gitleaks`, `trufflehog` or `detect-secrets`,
 whichever is found on PATH first, run over the same directory. Roughly 150 rules
