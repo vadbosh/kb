@@ -415,7 +415,7 @@ through.
 
 **Layer 2, when present** — `gitleaks`, `trufflehog` or `detect-secrets`,
 whichever is found on PATH first, run over the same directory. Roughly 150 rules
-instead of ten. Missing is not an error; it narrows coverage, and the report
+instead of nineteen. Missing is not an error; it narrows coverage, and the report
 says so.
 
 A finding exits **4**, distinct from 3 for ordinary drift, so a hook or a
@@ -454,6 +454,7 @@ kb hook --install     # git pre-commit; refuses a commit on exit 4
 Only meaningful when the notes are inside a git repository. Plenty are not — in
 that case the control that applies is `kb check` at the end of every save, which
 runs regardless.
+
 ---
 
 ## Design notes

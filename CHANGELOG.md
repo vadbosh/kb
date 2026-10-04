@@ -18,6 +18,17 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 5.0.2
+
+- **Both READMEs: "roughly 150 rules instead of ten" contradicted "nineteen
+  patterns"** twenty lines above; it now says nineteen.
+- **Both READMEs: a `---` right under a paragraph** turned the paragraph
+  ("Only useful when the notes live inside a git repository…") into an `<h2>`
+  — `pandoc -f commonmark` confirms it. A blank line separates them now.
+- README.RU.md: «где швы для дробления» is «где резать файл на части», and the
+  sentence about `zai-sk-glm-4-6-turbo-preview` is rewritten so it can be
+  read once. Found by a docs-techwriter review of the Russian READMEs.
+
 ## 5.0.1
 
 - **Step 5 of saving greps the older notes with `rg -in`, not `grep -rin`.**
