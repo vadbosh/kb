@@ -169,10 +169,12 @@ Only assistant directories that already exist are written to; `--skills-dir
 `cp -r skills/kb <skills-dir>/` — the skill is self-contained.
 
 Re-running an installer is a genuine no-op for unchanged files. A file it does
-replace is copied aside as `<file>.bak.<timestamp>` — but **only when that
-content is not already in the repository**. A hand edit is the one thing
-`git checkout` cannot give back; a copy of anything else would save what is
-already recoverable.
+replace is copied to `~/.local/state/kb-backups` (on Windows
+`%LOCALAPPDATA%\kb-backups`) — but **only when that content is not already in
+the repository**. A hand edit is the one thing `git checkout` cannot give back;
+a copy of anything else would save what is already recoverable. The copy is
+never left beside the file: in a skills directory an assistant would load it
+as part of the skill. The three newest copies of each file are kept.
 
 ---
 

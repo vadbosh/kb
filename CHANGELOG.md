@@ -18,6 +18,15 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 5.0.5
+
+- **A backup no longer sits beside the file it copies.** `install.sh` and
+  `install.ps1` put a hand-edited file they replace into
+  `~/.local/state/kb-backups` (on Windows `%LOCALAPPDATA%\kb-backups`),
+  named by its path below `$HOME`, the three newest per file kept. Beside the
+  file, in a skills directory, an assistant loaded the copy as part of the
+  skill, and on `PATH` it was a second, stale command.
+
 ## 5.0.4
 
 - **macOS: in `install.sh` and `release.sh`, paths printed as `~/…` came out as `\~/…` under bash 3.2 — the `/bin/bash`

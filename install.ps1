@@ -11,7 +11,8 @@ does not act on a shebang line -- hence the launcher.
   .\install.ps1 -SkillsDir D    install into D instead of auto-detecting
 
 Idempotent: re-running replaces only what changed and backs up what it
-overwrites as <file>.bak.<timestamp>. Nothing outside the user profile is
+overwrites into %LOCALAPPDATA%\kb-backups, never beside it. Nothing outside
+the user profile is
 touched. If execution policy blocks this file:
 
   powershell -ExecutionPolicy Bypass -File .\install.ps1
@@ -39,6 +40,23 @@ $PathDir = if ($env:KB_BIN_DIR)      { $env:KB_BIN_DIR }
            else                       { Join-Path $HOME '.kb\bin' }
 $Stamp   = Get-Date -Format 'yyyyMMdd-HHmmss'
 
+# A copy goes to $BackupDir, never beside the file: a backup left in a skills
+# directory loads as part of the skill. Named by the path below the profile
+# with \ turned into _, the three newest kept per file.
+$BackupDir = if ($env:KB_BACKUP_DIR) { $env:KB_BACKUP_DIR }
+             elseif ($env:LOCALAPPDATA) { Join-Path $env:LOCALAPPDATA 'kb-backups' }
+             else { Join-Path $HOME '.local/state/kb-backups' }
+function Backup-File ([string]$Path) {
+    New-Item -ItemType Directory -Force -Path $BackupDir | Out-Null
+    $full = [System.IO.Path]::GetFullPath($Path)
+    $rel  = if ($full.StartsWith("$HOME$([IO.Path]::DirectorySeparatorChar)", [StringComparison]::OrdinalIgnoreCase)) {
+                $full.Substring($HOME.Length + 1) } else { $full -replace '^([A-Za-z]:)?[\\/]', '' }
+    $name = $rel -replace '[\\/]', '_'
+    Copy-Item -LiteralPath $Path -Destination (Join-Path $BackupDir "$name.bak.$Stamp") -Force
+    Get-ChildItem -Force -LiteralPath $BackupDir -Filter "$name.bak.*" |
+        Sort-Object Name -Descending | Select-Object -Skip 3 | Remove-Item -Force
+}
+
 function Say  ([string]$T) { Write-Host $T }
 function Ok   ([string]$T) { Write-Host $T -ForegroundColor Green }
 function Warn ([string]$T) { Write-Host $T -ForegroundColor Yellow }
@@ -64,8 +82,8 @@ function Install-KbFile([string]$From, [string]$To) {
         New-Item -ItemType Directory -Path $parent -Force | Out-Null
     }
     if (Test-Path -LiteralPath $To) {
-        Copy-Item -LiteralPath $To -Destination "$To.bak.$Stamp"
-        Say "    ~ $(Short $To)  (backup .bak.$Stamp)"
+        Backup-File $To
+        Say "    ~ $(Short $To)  (backup in $(Short $BackupDir))"
     } else {
         Say "    + $(Short $To)"
     }
@@ -89,8 +107,8 @@ function Install-KbText([string]$Text, [string]$To) {
         New-Item -ItemType Directory -Path $parent -Force | Out-Null
     }
     if (Test-Path -LiteralPath $To) {
-        Copy-Item -LiteralPath $To -Destination "$To.bak.$Stamp"
-        Say "    ~ $(Short $To)  (backup .bak.$Stamp)"
+        Backup-File $To
+        Say "    ~ $(Short $To)  (backup in $(Short $BackupDir))"
     } else {
         Say "    + $(Short $To)"
     }
