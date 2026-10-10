@@ -18,6 +18,31 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 5.1.0
+
+- **The overview no longer gets an `Updated <date>` line.** The scaffold wrote
+  it outside the markers, where no `sync` reaches, so the line read as freshness
+  and was only ever the creation date. On a kb made earlier, `kb verify` now
+  names that line when it is older than the newest note. kb does not edit it,
+  because it is outside the markers.
+- **`kb verify` no longer asks for markers in a hand-written `AGENTS.md`.** If
+  the file names the notes directory (`kb/`), there is nothing to report: a
+  prose pointer carries no count or snapshot that could go stale. If the file
+  does not name it, the finding is now `nothing in AGENTS.md points at kb/`.
+  The old text, `nothing keeps it current`, named the wrong consequence and
+  repeated at every restore.
+- **`kb brief` no longer runs gitleaks.** gitleaks spends about 2.4 s starting
+  up, whatever it scans. `brief` runs at every session start, over notes that
+  the last `check` already scanned. The built-in patterns still run, so a
+  credential still stops the briefing. `kb check` keeps the external scanner.
+  `brief` here: 4.99 s → under a second.
+- **`tests/run.sh` runs the suite by class in parallel**: 159 tests in about
+  30 s on four cores, against 2–2.5 minutes in sequence. It fails when any
+  class fails, and when the number of tests run differs from the number of
+  `def test_` lines, so a class the split misses cannot pass by not running.
+- The exit codes in the module docstring now include `2` and `verify`'s `3`,
+  as `docs/cli.*.md` already did.
+
 ## 5.0.5
 
 - **A backup no longer sits beside the file it copies.** `install.sh` and

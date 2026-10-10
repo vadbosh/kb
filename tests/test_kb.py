@@ -405,6 +405,31 @@ class Add(Base):
 
 
 class Index(Base):
+    def test_the_scaffold_writes_no_date_it_will_not_keep(self):
+        """`Updated <today>` sat outside the markers, so no `sync` ever touched
+        it: the line read as freshness and was only ever the scaffold date."""
+        root = self.make_kb()
+        text = (root / "00-overview.md").read_text(encoding="utf-8")
+        self.assertNotIn("Updated", text)
+
+    def test_an_old_dated_line_outside_the_block_is_a_suspicion(self):
+        root = self.make_kb()
+        self.write_note(root, "01-a.md")
+        self.kb("sync", expect=0)
+        overview = root / "00-overview.md"
+        text = overview.read_text(encoding="utf-8")
+        for line in ("Updated 2000-01-01.", "Обновлён 2000-01-01."):
+            overview.write_text(text.replace("\n\n", f"\n\n{line}\n\n", 1),
+                                encoding="utf-8")
+            res = self.kb("verify", expect=3)
+            self.assertIn(line, res.stdout)
+            self.assertEqual(overview.read_text(encoding="utf-8").count(line), 1,
+                             "verify must not rewrite the human's line")
+        today = date.today().isoformat()
+        overview.write_text(text.replace("\n\n", f"\n\nUpdated {today}.\n\n", 1),
+                            encoding="utf-8")
+        self.assertNotIn(f"Updated {today}", self.kb("verify").stdout)
+
     def test_table_is_regenerated_from_front_matter(self):
         root = self.make_kb()
         self.write_note(root, "01-a.md", kind="recipe", title="traps worth knowing")
@@ -676,6 +701,41 @@ class Secrets(Base):
         # with an ordinary name beside it.
         self.assertFalse(kb_cli.scan_line("set HW_SECRET_ACCESS_KEY in the cluster"))
         self.assertFalse(kb_cli.scan_line("commit = " + val))
+
+    def fake_scanner(self):
+        """A `gitleaks` on PATH that only records that it was run."""
+        bin_dir = self.tmp / "bin"
+        bin_dir.mkdir()
+        ran = self.tmp / "gitleaks-ran"
+        fake = bin_dir / "gitleaks"
+        fake.write_text(f"#!/bin/sh\ntouch '{ran}'\nexit 0\n", encoding="utf-8")
+        fake.chmod(0o755)
+        return {"PATH": f"{bin_dir}:/usr/bin:/bin"}, ran
+
+    def test_brief_leaves_the_external_scanner_to_check(self):
+        """gitleaks costs about 2.4 s of startup whatever it scans, and `brief`
+        runs at every restore over notes the last `check` already scanned."""
+        root = self.make_kb()
+        self.write_note(root, "01-a.md")
+        self.kb("sync", expect=0)
+        env, ran = self.fake_scanner()
+        res = self.kb("brief", env=env, expect=0)
+        self.assertFalse(ran.exists(), "brief ran the external scanner")
+        self.assertNotIn("+ gitleaks", res.stdout)
+        self.kb("check", env=env)
+        self.assertTrue(ran.exists(), "check no longer runs the external scanner")
+
+    def test_brief_still_stops_on_a_credential_without_the_scanner(self):
+        root = self.make_kb()
+        self.fill_overview(root)
+        token = "xox" + "b-" + "2" * 12 + "-" + "a" * 10
+        self.write_note(root, "01-a.md", body=f"token is {token} here")
+        self.kb("sync", expect=0)
+        env, ran = self.fake_scanner()
+        res = self.kb("brief", env=env, expect=0)
+        self.assertIn("A CREDENTIAL", res.stdout)
+        self.assertIn("kb check` runs gitleaks", res.stdout)
+        self.assertFalse(ran.exists())
 
 
 # ── the rest of the commands ────────────────────────────────────────────────
@@ -1123,7 +1183,29 @@ class Route(Base):
             "# p\n\nsee `<!-- kb:begin` in the marker docs\n", encoding="utf-8")
         self.assertIn("no managed block", self.kb("route", expect=1).stdout)
         res = self.kb("verify", expect=3)
-        self.assertIn("no kb:begin/kb:end markers", res.stdout)
+        self.assertIn("nothing in AGENTS.md points at kb/", res.stdout)
+
+    def test_a_hand_written_pointer_to_the_notes_is_not_a_finding(self):
+        """Markers keep derived facts current -- a count, a snapshot. A prose
+        pointer states none of them, so nothing in it can go stale, and the
+        old warning repeated at every restore with no way to settle it."""
+        self.make_kb()
+        (self.proj / "AGENTS.md").write_text(
+            "# p\n\nWork notes are in `kb/`. Read them with `kb brief`.\n",
+            encoding="utf-8")
+        (self.proj / "CLAUDE.md").write_text("@AGENTS.md\n", encoding="utf-8")
+        res = self.kb("verify")
+        self.assertNotIn("markers", res.stdout)
+        self.assertNotIn("points at", res.stdout)
+
+    def test_a_hand_written_file_that_never_names_the_notes_says_so(self):
+        self.make_kb()
+        (self.proj / "AGENTS.md").write_text("# p\n\nBuild with make.\n",
+                                             encoding="utf-8")
+        (self.proj / "CLAUDE.md").write_text("@AGENTS.md\n", encoding="utf-8")
+        res = self.kb("verify", expect=3)
+        self.assertIn("nothing in AGENTS.md points at kb/", res.stdout)
+        self.assertNotIn("nothing keeps it current", res.stdout)
 
     def test_scaffolding_says_the_project_root_has_no_pointer(self):
         # The condition for the automatic `route` arrives in the output of the

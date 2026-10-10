@@ -332,7 +332,10 @@ from the notes it just wrote and the commands the session actually ran, and says
 what it wrote so you can correct it. It asks instead of guessing only where the
 session holds no answer: a stream that ran nothing has no honest check command,
 and a made-up one lands in a file an agent will execute. An
-`AGENTS.md` without markers kb does not touch and refuses to write to. A
+`AGENTS.md` without markers kb does not touch and refuses to write to. If such a
+file names the notes directory (`kb/`), `kb verify` has nothing to say about it.
+If it does not name it, `verify` reports that nothing in `AGENTS.md` points at
+the notes. A
 `CLAUDE.md` without the import kb does not write to either — it prints the line
 for you to add by hand.
 
@@ -475,6 +478,11 @@ Not counted as work:
 | `charter` | 365 days — direction is meant to outlive a release; flagging it sooner would train you to skip the whole report |
 | `decision` | **never checked** — why a choice was made stays true |
 | `state`, `plan` | not checked — supersession already covers them |
+
+**A date in the overview.** Before 5.1.0 the scaffold wrote `Updated <date>` into
+`00-overview.md`, outside the markers, and no command ever changed it again. If
+that date is older than the newest note, `verify` names the line. kb does not
+edit it: correct the date or delete the line yourself.
 
 **What `verify` cannot do**: confirm a claim about a live system ("the NLB is
 called X", "there is no Gateway API CRD in AU"). That needs the system itself —

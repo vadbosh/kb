@@ -77,7 +77,7 @@ not quietly forgotten, and not announced once in a turn nobody revisits.
 | **over 200 lines of context** | move what is not routing out, leave one line pointing at it, re-run `kb sync`. **Choose the destination by when it loads** — the table below. Say in the report what moved and where |
 | **a subdirectory over the budget** | the chain is named in the finding. Shorten the root file first — it is charged again in every chain, so one edit fixes several. Then the subdirectory's own `CLAUDE.md`, by the same table |
 | `CLAUDE.md` missing, or without the import | write the one line `@AGENTS.md`. A missing `CLAUDE.md` you may create outright: Claude Code reads it and not `AGENTS.md`, so without it the entry point reaches nobody |
-| `AGENTS.md` has no markers | do not add them silently — the file belongs to somebody. Say where they go and ask |
+| nothing in `AGENTS.md` points at the notes | the file has no markers and does not name the notes directory. Do not edit it silently — it belongs to somebody. Offer one line naming the directory, or the two markers and `kb route`, and ask |
 | pointer not excluded while the notes are | name the two ways out — stop excluding the notes, or exclude the pointer as well — and ask which. Both are real answers |
 
 **Moving prose is an edit, so it is reported, never silent.** The rule this tool

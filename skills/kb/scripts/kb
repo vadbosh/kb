@@ -33,7 +33,8 @@ Exit codes:
     0 — done / clean
     1 — error (a refusal counts: `route` on a file it did not write, `streams`
         with no transcript to read)
-    3 — drift found (`kb check` only)
+    2 — bad arguments (argparse)
+    3 — drift found (`kb check`) or something suspicious (`kb verify`)
     4 — a credential is in a note (`kb check` only) — reported, never edited
 """
 import argparse
@@ -156,8 +157,6 @@ FRAME = {
         "heavy": " ⚠ ~{k}k tokens",
         "skeleton": """\
 # {title} — documentation index
-
-Updated {today}.
 
 ## What this directory is for
 
@@ -360,8 +359,15 @@ def external_scanner() -> tuple[str, list[str]] | None:
     return None
 
 
-def find_secrets(root: Path, notes: list) -> tuple[list[str], str]:
-    """Returns (findings, one line describing what was actually checked)."""
+def find_secrets(root: Path, notes: list,
+                 external: bool = True) -> tuple[list[str], str]:
+    """Returns (findings, one line describing what was actually checked).
+
+    `external=False` is for `brief`. gitleaks spends about 2.4 s starting up
+    whatever it scans, and `brief` runs at every restore over notes that the
+    last `check` -- run at save time -- already scanned. The built-in layer
+    still runs, so a credential still stops the briefing.
+    """
     found = []
     for n in notes:
         for i, line in enumerate(n.text.split("\n"), 1):
@@ -370,6 +376,8 @@ def find_secrets(root: Path, notes: list) -> tuple[list[str], str]:
 
     ext = external_scanner()
     coverage = "built-in patterns only"
+    if ext and not external:
+        return found, f"built-in patterns; `kb check` runs {ext[0]}"
     if ext:
         name, cmd = ext
         try:
@@ -946,7 +954,6 @@ def write_skeleton(root: Path, title: str | None) -> Path:
     overview = root / OVERVIEW
     overview.write_text(S("skeleton").format(
         title=title or (project_of(root).name if is_nested(root) else root.name),
-        today=date.today().isoformat(),
         block=render_block([]),
     ), encoding="utf-8")
     register(root)
@@ -1406,11 +1413,12 @@ CHECKS: list[tuple[str, "object"]] = [
 ]
 
 
-def check_problems(root: Path, notes: list[Note]) -> CheckResult:
+def check_problems(root: Path, notes: list[Note],
+                   external: bool = True) -> CheckResult:
     ctx = CheckCtx(root=root, notes=notes,
                    overview=(root / OVERVIEW).read_text(encoding="utf-8"))
     problems = [p for _, fn in CHECKS for p in fn(ctx)]
-    secrets, coverage = find_secrets(root, notes)
+    secrets, coverage = find_secrets(root, notes, external)
     return CheckResult(problems, secrets, coverage, len(notes))
 
 
@@ -1558,10 +1566,37 @@ class VerifyResult:
     moved: list[Path]
     gap_hours: float
     entry: list[str]
+    dated: tuple[str, str] | None = None
 
     @property
     def code(self) -> int:
-        return 3 if (self.dead or self.aging or self.moved or self.entry) else 0
+        return 3 if (self.dead or self.aging or self.moved or self.entry
+                     or self.dated) else 0
+
+
+# Before 5.1.0 the scaffold wrote `Updated <today>` (`Обновлён` in the old
+# Russian frame) outside the markers, where no `sync` reaches: the line reads as
+# freshness and is only the date the kb was created. It is the human's prose
+# now, so it is reported and never rewritten.
+DATED_LINE_RE = re.compile(
+    r"^(?:Updated|Обновлён|Обновлено)\s+(\d{4}-\d{2}-\d{2})\b.*$", re.M)
+
+
+def stale_dated_line(overview: Path, notes: list[Note]) -> tuple[str, str] | None:
+    """(the line, the newest note's date) when the line is older than that note."""
+    try:
+        text = overview.read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return None
+    outside = replace_block(text, "")
+    newest = max((n.updated for n in notes if ISO_DATE_RE.match(n.updated)),
+                 default=None)
+    if newest is None:
+        return None
+    for m in DATED_LINE_RE.finditer(outside if outside is not None else text):
+        if m.group(1) < newest:
+            return m.group(0).strip(), newest
+    return None
 
 
 def verify_findings(root: Path, notes: list[Note]) -> VerifyResult:
@@ -1679,7 +1714,8 @@ def verify_findings(root: Path, notes: list[Note]) -> VerifyResult:
     # into the context window at the start of every session, so it is the one
     # file here where length is a running cost rather than a one-off.
     entry = route_findings(root, chains=chains)
-    return VerifyResult(dead, aging, moved, gap_hours, entry)
+    dated = stale_dated_line(root / OVERVIEW, notes)
+    return VerifyResult(dead, aging, moved, gap_hours, entry, dated)
 
 
 def print_verify(res: VerifyResult, out=None) -> int:
@@ -1705,6 +1741,14 @@ def print_verify(res: VerifyResult, out=None) -> int:
         print("  Every other check compares the notes with each other, so they "
               "stay clean while\n  describing a state the work has left. Read "
               "what changed; if it matters, it\n  belongs in a note.", file=out)
+
+    if res.dated:
+        line, newest = res.dated
+        print(f"\n{OVERVIEW} says \"{line}\" outside the generated block, and the "
+              f"newest note is {newest}.", file=out)
+        print("  The scaffold wrote that line once and nothing ever updated it. "
+              "Correct it or delete it\n  by hand: kb does not edit prose outside "
+              "the markers.", file=out)
 
     if res.entry:
         print(f"\nthe entry point at the project root ({len(res.entry)}):", file=out)
@@ -1810,6 +1854,16 @@ ROUTE_BUDGET = 200
 ENTRY_POINT_HINT = "what to do about these: references/entry-point.md"
 
 
+def names_notes(text: str, root: Path, project: Path) -> bool:
+    """Whether a hand-written entry point mentions the notes directory: `kb/`,
+    `./kb/`, `docs/notes/`. The flat layout keeps the notes beside the file
+    itself, so there is nothing to point at."""
+    rel = os.path.relpath(root, project).replace(os.sep, "/")
+    if rel == ".":
+        return True
+    return re.search(r"(?<![\w.-])" + re.escape(rel) + "/", text) is not None
+
+
 def route_findings(root: Path, *, on_write: bool = False,
                    chains: list | None = None) -> list[str]:
     """Everything wrong with the entry point, for whoever asks.
@@ -1830,9 +1884,19 @@ def route_findings(root: Path, *, on_write: bool = False,
     # `kb:begin` in its prose, while `route` -- which needs both markers, in
     # order -- refused to write. Two answers to one question, and the finding
     # went missing exactly where it was true.
-    if replace_block(text, "") is None:
-        out.append(f"{target.name} has no kb:begin/kb:end markers, so nothing "
-                   "keeps it current — add them where the pointer belongs")
+    # Without markers the file is somebody else's, and `route` will not write
+    # into it. What the markers buy is derived facts kept current -- a count, a
+    # snapshot -- and a prose pointer states none of them, so nothing in it can
+    # go stale. Warning about the markers anyway repeated at every restore with
+    # no way to settle it short of handing the file over. The question that is
+    # worth asking is the one the markers were a means to: does the file send
+    # the reader to the notes at all.
+    if replace_block(text, "") is None and not names_notes(text, root, project):
+        rel = os.path.relpath(root, project).replace(os.sep, "/")
+        out.append(f"nothing in {target.name} points at {rel}/, so only someone "
+                   "who already knows the notes exist will read them — name the "
+                   "directory there, or add the kb:begin/kb:end markers and run "
+                   "`kb route`")
     claude = project / CLAUDE_FILE
     if not claude.is_file():
         out.append(f"{CLAUDE_FILE} is missing — Claude Code reads it and not "
@@ -2519,7 +2583,8 @@ def cmd_brief(args) -> int:
     # which did the whole job three times over and quietly dropped anything they
     # wrote to stderr.
     checks = io.StringIO()
-    rc_check = print_check(check_problems(root, notes), out=checks)
+    rc_check = print_check(check_problems(root, notes, external=False),
+                           out=checks)
     rc_verify = print_verify(verify_findings(root, notes), out=checks)
     detail = checks.getvalue().strip()
     if rc_check == 4:

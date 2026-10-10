@@ -418,7 +418,8 @@ pattern itself had let it through.
 **Layer 2, when present** — `gitleaks`, `trufflehog` or `detect-secrets`,
 whichever is found on PATH first, run over the same directory. Roughly 150 rules
 instead of nineteen. Missing is not an error; it narrows coverage, and the report
-says so.
+says so. Only `kb check` runs it. `kb brief` runs at every session start, and
+gitleaks spends about two seconds starting up, so `brief` uses layer 1 only.
 
 A finding exits **4**, distinct from 3 for ordinary drift, so a hook or a
 pipeline can tell "the table is stale" from "there is a key in a note".
@@ -487,11 +488,13 @@ Worth knowing before extending it:
 ## Tests
 
 ```bash
-python3 tests/test_kb.py          # a few seconds, standard library only
+tests/run.sh                      # every group in parallel, about 30 s on 4 cores
+python3 tests/test_kb.py          # the same tests one after another, about 2 min
 python3 tests/test_kb.py -v       # one line per test
 python3 tests/test_kb.py Guards   # one group
 ```
 
+The tests need the Python standard library and nothing else.
 Each run gets a temporary directory with its own `HOME` and its own
 `KB_REGISTRY`, so real notes and the real registry are never touched.
 
