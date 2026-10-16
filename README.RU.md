@@ -227,7 +227,7 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1
 | Команда | Под капотом |
 |---|---|
 | `/kb restore` | `kb status` + `kb check` + `kb verify`, затем указатель и актуальный срез, затем только нужные задаче файлы |
-| `/kb save` | `kb status` → решает дописать-или-новый → `kb add` → пишет тело → `kb sync` → `kb check` |
+| `/kb save` | `kb status` → решает дописать-или-новый → `kb add` → пишет тело → `kb sync` → `kb check` → `kb verify` |
 
 </details>
 

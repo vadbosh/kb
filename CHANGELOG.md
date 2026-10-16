@@ -18,6 +18,15 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 5.1.1
+
+- **`/kb save` now ends with `kb verify` as well as `kb check`, in every
+  stream it wrote to.** `check` does not read prose, and `verify` was left to
+  the restore half: a save could finish clean with a stale `Обновлён` line in an
+  overview, and the next session found it — in another assistant. Step 6 of
+  `references/save.md` asks for both outputs read whole; README and the manual
+  in both languages say the same.
+
 ## 5.1.0
 
 - **The overview no longer gets an `Updated <date>` line.** The scaffold wrote

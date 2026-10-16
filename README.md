@@ -226,7 +226,7 @@ description, but that is recognition rather than a command.
 | Command | Underneath |
 |---|---|
 | `/kb restore` | `kb status` + `kb check` + `kb verify`, then the index and the current snapshot, then only the files the task needs |
-| `/kb save` | `kb status` → decides append-or-new → `kb add` → writes the body → `kb sync` → `kb check` |
+| `/kb save` | `kb status` → decides append-or-new → `kb add` → writes the body → `kb sync` → `kb check` → `kb verify` |
 
 </details>
 

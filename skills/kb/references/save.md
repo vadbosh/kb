@@ -15,7 +15,7 @@ when a step is genuinely ambiguous.
    has kb  → kb status, then append or new file
 4. write the body
 5. rg -in "<subject>" <dir>/kb     what the OLDER notes say about it
-6. kb sync && kb check
+6. kb sync && kb check && kb verify   in every stream written to
 7. could someone WORK from this, or only understand it?
 ```
 
@@ -361,9 +361,15 @@ output. That sentence stays true through every change; a count survives one.
 Another tool or project may have solved it already. A decision justified by "this
 is impossible" is worth exactly what the search behind it was worth.
 
-## Step 6 — finish with `kb check`, always
+## Step 6 — finish with `kb check` and `kb verify`, always
 
-Exit 3 means act in the same turn:
+Both, in every stream this save wrote to, and read each output whole. Piping
+one through `grep` to see the part you expect is how the rest goes unread:
+measured on a save that filtered `verify` down to its dead paths and ran only
+`check` in the other streams — a stale `Обновлён` line in one overview passed,
+and turned up in the next session's `kb brief`, in another assistant.
+
+Exit 3 from `check` means act in the same turn:
 
 | What `check` reported | What to do |
 |---|---|
@@ -420,13 +426,15 @@ there too: the save half fills them from the session, it does not hand them back
 No `⚠` line means there is nothing wrong with the entry point, and that page
 costs a quarter of this one — do not open it on spec.
 
-## Run `kb verify` if this session moved or renamed anything
+## What `kb verify` reports, and what to do with it
 
-`check` proves internal consistency, not truth. The restore half runs `verify` at
-session start, so the routine pass is covered.
+`check` proves internal consistency, not truth. The restore half also runs
+`verify`, but only in the stream it opens and only in the next session — a save
+that left something stale hands it to whoever comes next, in whatever assistant.
 
 ```
-kb verify     vanished paths, notes past their re-check age; exit 3 = look
+kb verify     vanished paths, notes past their re-check age, an overview date
+              older than the newest note, the entry point; exit 3 = look
 ```
 
 It reports **suspicions** — a flagged path may live in a container or on another

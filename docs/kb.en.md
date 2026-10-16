@@ -281,8 +281,8 @@ text between the markers. Everything else in the index stays byte for byte.
 | file deleted or renamed | needs `kb sync` |
 
 Between editing a file and running `kb sync` the index is out of date — which is
-what `kb check` catches (`index table is stale`, exit 3). Inside `/kb save` both
-`sync` and `check` run on their own.
+what `kb check` catches (`index table is stale`, exit 3). Inside `/kb save`
+`sync`, `check` and `verify` run on their own.
 
 **Computed automatically, never written by hand:**
 
@@ -431,6 +431,9 @@ the notes are still true. That is a separate command:
 ```bash
 kb verify
 ```
+
+`/kb save` runs it after `check` in every stream it wrote to, so a save does not
+leave a stale date or a dead path for the next session to find.
 
 `verify` reports **suspicions**, not defects, which is why it is kept out of
 `check`. `check` is binary and mechanical: exit 3 means go fix it. `verify` works
