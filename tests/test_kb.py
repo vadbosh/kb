@@ -891,6 +891,15 @@ class Commands(Base):
         res = self.kb("list", expect=0)
         self.assertIn(str(self.proj / "kb"), res.stdout)
 
+    def test_a_kb_in_temp_stays_out_of_the_default_registry(self):
+        # The default registry lives under HOME; the project is in temp, as a
+        # `mktemp -d` experiment is. Only an explicit KB_REGISTRY records it.
+        self.kb("init", expect=0, env={"KB_REGISTRY": None})
+        default = self.home / ".local/state/kb/registry.txt"
+        self.assertFalse(default.exists() and str(self.proj) in default.read_text())
+        res = self.kb("list", expect=0, env={"KB_REGISTRY": None})
+        self.assertNotIn(str(self.proj / "kb"), res.stdout)
+
     def test_reading_a_directory_that_is_not_a_kb_says_so(self):
         res = self.kb("check")
         self.assertNotEqual(res.returncode, 0)

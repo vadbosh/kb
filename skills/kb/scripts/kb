@@ -45,6 +45,7 @@ import re
 import shutil
 import subprocess
 import sys
+import tempfile
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -670,6 +671,13 @@ def register(root: Path) -> None:
     """Remember this kb. Idempotent, best-effort — never blocks the real work."""
     try:
         path = root.resolve()
+        # A kb tried out in `mktemp -d` is gone within the day and stays in the
+        # real registry as a dead line: 17 `/tmp/tmp.*` of them by 2026-10-19.
+        # An explicit KB_REGISTRY registers anything — the tests live in temp.
+        if "KB_REGISTRY" not in os.environ:
+            tmp = Path(tempfile.gettempdir()).resolve()
+            if path == tmp or tmp in path.parents:
+                return
         known = read_registry()
         if path in known:
             return

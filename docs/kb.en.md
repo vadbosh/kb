@@ -506,6 +506,10 @@ kb list --scan /projects   # pick up kbs created before the registry, or by hand
 kb list --prune            # drop entries whose index disappeared
 ```
 
+A kb under the system temp directory is not recorded in the default registry: a
+trial in `mktemp -d` would stay there as a dead entry. With `KB_REGISTRY` set,
+it is recorded too.
+
 Notes live in `kb/`, or in `.kb/` when the first name was taken — both are
 searched, in that order, from the working directory and every directory above.
 Any other name works too and none of them are searched, so it needs `--dir` on

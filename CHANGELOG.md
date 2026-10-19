@@ -18,6 +18,15 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 5.1.2
+
+- **A kb under the system temp directory stays out of the default registry.**
+  A kb tried out in `mktemp -d` was recorded in `~/.local/state/kb/registry.txt`
+  and stayed there as a dead entry once the directory was gone: 17
+  `/tmp/tmp.*` entries had piled up in `kb list`. With `KB_REGISTRY` set, such a
+  kb is still recorded, so the tests, which run in temp, see no change. The
+  manual in both languages says so under "Registry".
+
 ## 5.1.1
 
 - **`/kb save` now ends with `kb verify` as well as `kb check`, in every
