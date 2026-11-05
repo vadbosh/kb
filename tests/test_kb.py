@@ -891,14 +891,47 @@ class Commands(Base):
         res = self.kb("list", expect=0)
         self.assertIn(str(self.proj / "kb"), res.stdout)
 
+    def scratch(self):
+        """A temp directory beside HOME, as on a real machine. The fixture's own
+        HOME sits under /tmp, and a temp directory that holds HOME is exactly
+        the case the rule must not apply to (A10), so TMPDIR points here."""
+        tmpdir = self.tmp / "scratch"
+        proj = tmpdir / "proj"
+        proj.mkdir(parents=True)
+        return proj, {"KB_REGISTRY": None, "TMPDIR": str(tmpdir)}
+
     def test_a_kb_in_temp_stays_out_of_the_default_registry(self):
         # The default registry lives under HOME; the project is in temp, as a
         # `mktemp -d` experiment is. Only an explicit KB_REGISTRY records it.
-        self.kb("init", expect=0, env={"KB_REGISTRY": None})
+        proj, env = self.scratch()
+        self.kb("init", cwd=proj, expect=0, env=env)
         default = self.home / ".local/state/kb/registry.txt"
-        self.assertFalse(default.exists() and str(self.proj) in default.read_text())
-        res = self.kb("list", expect=0, env={"KB_REGISTRY": None})
-        self.assertNotIn(str(self.proj / "kb"), res.stdout)
+        self.assertFalse(default.exists() and str(proj) in default.read_text())
+        res = self.kb("list", cwd=proj, expect=0, env=env)
+        self.assertNotIn(str(proj / "kb"), res.stdout)
+
+    def test_a_temp_dir_that_holds_home_does_not_hide_every_kb(self):
+        # TMPDIR is whatever the environment says. Set to $HOME, the temp rule
+        # skipped every project under it, and `kb list` stayed empty with no
+        # word about why (review 2026-11-05, A10).
+        work = self.home / "work" / "p"
+        work.mkdir(parents=True)
+        env = {"KB_REGISTRY": None, "TMPDIR": str(self.home)}
+        self.kb("init", cwd=work, expect=0, env=env)
+        res = self.kb("list", cwd=work, expect=0, env=env)
+        self.assertIn(str(work / "kb"), res.stdout)
+
+    def test_scan_records_what_it_reports(self):
+        # `--scan` is an explicit request: it records a kb under temp too, and
+        # the count says what was written. It used to print "1 new" and record
+        # nothing, the temp rule having returned early (review 2026-11-05, A9).
+        proj, env = self.scratch()
+        self.kb("init", cwd=proj, expect=0, env=env)
+        res = self.kb("list", "--scan", str(proj.parent), cwd=proj, expect=0, env=env)
+        self.assertIn(": 1 new", res.stdout)
+        self.assertIn(str(proj / "kb"), res.stdout)
+        default = self.home / ".local/state/kb/registry.txt"
+        self.assertIn(str((proj / "kb").resolve()), default.read_text())
 
     def test_reading_a_directory_that_is_not_a_kb_says_so(self):
         res = self.kb("check")

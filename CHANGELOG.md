@@ -18,6 +18,19 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 5.1.3
+
+- **`kb list --scan` records what it reports.** Over a temp directory it printed
+  `1 new`, and the next line said `registry is empty`: the 5.1.2 temp rule had
+  returned early. A scan is an explicit request, so it now records everything
+  it finds, temp included. The count is what was actually written.
+- **`TMPDIR` set to the home directory no longer hides every kb.** The temp
+  directory is the one `TMPDIR` names. When that was `$HOME` or a parent of it,
+  every project lay "under temp", and `kb list` stayed empty with no message.
+  The rule is now off in that case.
+- Both from the review of 2026-11-05 (A9, A10). The manual in both languages
+  says so under "Registry".
+
 ## 5.1.2
 
 - **A kb under the system temp directory stays out of the default registry.**

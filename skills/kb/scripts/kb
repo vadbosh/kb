@@ -667,25 +667,34 @@ def linked_files(text: str) -> set[str]:
 
 # ── commands ────────────────────────────────────────────────────────────────
 
-def register(root: Path) -> None:
-    """Remember this kb. Idempotent, best-effort — never blocks the real work."""
+def register(root: Path, force: bool = False) -> bool:
+    """Remember this kb. Idempotent, best-effort — never blocks the real work.
+
+    True when a line was written. `force` is for `kb list --scan`: an explicit
+    request records what it found, temp included."""
     try:
         path = root.resolve()
         # A kb tried out in `mktemp -d` is gone within the day and stays in the
         # real registry as a dead line: 17 `/tmp/tmp.*` of them by 2026-10-19.
         # An explicit KB_REGISTRY registers anything — the tests live in temp.
-        if "KB_REGISTRY" not in os.environ:
+        if not force and "KB_REGISTRY" not in os.environ:
             tmp = Path(tempfile.gettempdir()).resolve()
-            if path == tmp or tmp in path.parents:
-                return
+            home = Path.home().resolve()
+            # TMPDIR is whatever the environment says. Set to $HOME or above
+            # it, every real project lies under "temp", and the rule hid them
+            # all from `kb list` without a word (review 2026-11-05, A10).
+            holds_home = tmp == home or tmp in home.parents
+            if not holds_home and (path == tmp or tmp in path.parents):
+                return False
         known = read_registry()
         if path in known:
-            return
+            return False
         REGISTRY.parent.mkdir(parents=True, exist_ok=True)
         with REGISTRY.open("a", encoding="utf-8") as f:
             f.write(f"{path}\n")
+        return True
     except OSError:
-        pass
+        return False
 
 
 def read_registry() -> list[Path]:
@@ -1484,10 +1493,10 @@ def cmd_list(args) -> int:
         target = Path(args.scan)
         if not target.is_dir():
             die(f"not a directory: {target}")
-        fresh = [p for p in scan_for_kbs(target) if p.resolve() not in read_registry()]
-        for p in fresh:
-            register(p)
-        print(f"scan {target}: {len(fresh)} new")
+        # Counted from what was written, not from what was tried: the count
+        # once said "1 new" over a registry that stayed empty (A9).
+        written = sum(register(p, force=True) for p in scan_for_kbs(target))
+        print(f"scan {target}: {written} new")
 
     known = read_registry()
     if not known:

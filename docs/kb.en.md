@@ -508,7 +508,10 @@ kb list --prune            # drop entries whose index disappeared
 
 A kb under the system temp directory is not recorded in the default registry: a
 trial in `mktemp -d` would stay there as a dead entry. With `KB_REGISTRY` set,
-it is recorded too.
+it is recorded too, and so is everything `kb list --scan` finds: a scan is an
+explicit request. The temp directory is the one `TMPDIR` names. If that
+directory is your home directory or a parent of it, the rule is off: otherwise
+it would hide every project from `kb list`.
 
 Notes live in `kb/`, or in `.kb/` when the first name was taken — both are
 searched, in that order, from the working directory and every directory above.
