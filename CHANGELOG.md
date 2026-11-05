@@ -18,6 +18,25 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 5.1.4
+
+- **`kb streams` reads only this project's Claude Code transcripts.** It walked
+  every transcript under `~/.claude/projects` and opened each one to read its
+  `cwd`: 292 files, 954M on 2026-11-05, more with every session. Claude Code
+  files a session under a directory named after its cwd, with every character
+  that is not a letter or a digit replaced by `-`. That directory is now the only
+  one walked, and the cwd check inside it stays. Here: 1 file, 4.9M, same
+  output. Codex transcripts are filed by date, so they are still walked whole.
+  The cost: a transcript filed under another project but stamped with this cwd
+  is no longer found (1 of 56 project directories on this machine). From the
+  review of 2026-10-10, C5.
+- The tests no longer leave `skills/kb/scripts/__pycache__/` behind. They load
+  the CLI as a module, and Python cached the compiled code beside the source, in
+  the directory that ships. The `Shipped` test scans that directory for paths
+  of this machine, found one inside the `.pyc`, and failed or passed by timing.
+  The loader now sets `sys.dont_write_bytecode`. The installed copies never
+  carried the cache.
+
 ## 5.1.3
 
 - **`kb list --scan` records what it reports.** Over a temp directory it printed

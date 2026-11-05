@@ -39,7 +39,14 @@ KB = REPO / "skills" / "kb" / "scripts" / "kb"
 
 
 def load_kb_module():
-    """Import the CLI as a module. It has no .py suffix, hence the loader."""
+    """Import the CLI as a module. It has no .py suffix, hence the loader.
+
+    Without dont_write_bytecode the loader caches the compiled module beside
+    the source, in skills/kb/scripts/__pycache__/ -- the directory that ships.
+    Every class run by tests/run.sh wrote it again, mid-run, while Shipped was
+    scanning that directory for paths of this machine, and found one in the
+    .pyc: the suite failed or passed by timing."""
+    sys.dont_write_bytecode = True
     loader = importlib.machinery.SourceFileLoader("kb_cli", str(KB))
     spec = importlib.util.spec_from_loader("kb_cli", loader)
     mod = importlib.util.module_from_spec(spec)
@@ -1064,6 +1071,33 @@ class Transcripts(Base):
     def test_that_line_says_when_there_is_no_kb(self):
         res = self.kb("streams")
         self.assertIn(f"here: {self.proj.resolve()} — no kb yet", res.stdout)
+
+    def test_claude_transcripts_are_read_from_this_project_only(self):
+        """Claude Code files a session under ~/.claude/projects/<cwd with every
+        non-alphanumeric as '-'>. `streams` opened every transcript on the
+        machine to read its cwd: 292 files, 954M on 2026-11-05 (review C5).
+        A newer transcript filed under another project, even one stamped with
+        this cwd, is not this directory's session and is not opened."""
+        import re as _re
+        here = str(self.proj.resolve())
+        projects = self.home / ".claude" / "projects"
+        own = projects / _re.sub(r"[^A-Za-z0-9]", "-", here)
+        other = projects / "-somewhere-else"
+        own.mkdir(parents=True)
+        other.mkdir(parents=True)
+        rec = lambda text: {"type": "user", "cwd": here,
+                            "message": {"role": "user", "content": text}}
+        (own / "s.jsonl").write_text(json.dumps(rec("see /srv/own/app")) + "\n",
+                                     encoding="utf-8")
+        foreign = other / "f.jsonl"
+        foreign.write_text(json.dumps(rec("see /srv/foreign/app")) + "\n",
+                           encoding="utf-8")
+        later = time.time() + 60
+        os.utime(foreign, (later, later))
+        res = self.kb("streams", expect=0)
+        self.assertIn("/srv/own", res.stdout)
+        self.assertNotIn("/srv/foreign", res.stdout)
+        self.assertIn("claude ×1", res.stdout)
 
 
 # ── parsing ─────────────────────────────────────────────────────────────────
