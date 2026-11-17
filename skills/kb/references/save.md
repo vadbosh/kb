@@ -327,6 +327,14 @@ is exactly why they went unwritten.
 
 Lead with the concrete subject. Written text, not a transcript.
 
+**A note about code or configuration lists what it describes:
+`kb add … --sources <paths>`**, or a `sources:` line in the front matter of a
+note you edit. `verify` then names this note, and only this one, when one of
+those files changes after it — instead of "the work went on, read what
+changed". A note with no `sources:` is never checked this way. Skip it only for
+a note that describes nothing on disk: a decision about direction, a state of
+a remote system.
+
 **Run a command before writing a claim about the system** — now, not from memory
 of a run earlier in the session. `check` and `verify` cannot help: they prove the
 notes agree with each other, never that a sentence about the world is true, and a

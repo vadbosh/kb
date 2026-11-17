@@ -376,7 +376,7 @@ time someone edits an ignore rule.
 | `kb status` | where the kb is, file count, current snapshot, largest files |
 | `kb brief` | the overview and the current snapshot printed verbatim — same bytes every run |
 | `kb check` | mechanical drift; exit 3 if any |
-| `kb verify` | suspicions: vanished paths, notes gone stale, work that outran the notes; exit 3 |
+| `kb verify` | suspicions: vanished paths, notes gone stale, work that outran the notes, notes older than their `sources:`; exit 3 |
 | `kb sync` | rebuild the index table from front matter |
 | `kb add <slug> --kind <k> --title "..."` | new file + front matter + rebuild |
 | `kb list [--scan DIR] [--prune]` | every known kb: where it lives, what is inside |
@@ -486,6 +486,34 @@ Not counted as work:
 `00-overview.md`, outside the markers, and no command ever changed it again. If
 that date is older than the newest note, `verify` names the line. kb does not
 edit it: correct the date or delete the line yourself.
+
+**A note older than what it describes.** A note can list the files or
+directories it describes in its front matter:
+
+```
+sources: skills/kb/scripts/kb, docs/kb.en.md
+```
+
+Paths are relative to the project root; `~/…` and absolute paths work too.
+Separate them with commas, or with spaces when no path has a space in it.
+`verify` names the note, the source and both dates when a source changed after
+the note was last written, and names a source that no longer exists. A
+directory counts by its newest file.
+
+Which time counts for the source:
+
+| The source | Its time |
+|---|---|
+| tracked by git, no uncommitted change | the last commit that touched it |
+| edited and not committed, untracked, or outside git | its modification time |
+
+A fresh clone gives every file a new modification time. Comparing those alone
+would mark every note at once, so a clean tracked file answers with its commit
+instead. The note's own time is always its file's modification time: notes are
+often kept out of git.
+
+`kb add --sources <paths>` writes the field and refuses a path that does not
+exist.
 
 **What `verify` cannot do**: confirm a claim about a live system ("the NLB is
 called X", "there is no Gateway API CRD in AU"). That needs the system itself —

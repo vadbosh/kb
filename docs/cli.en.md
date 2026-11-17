@@ -396,7 +396,7 @@ The choice is not stored anywhere. `kb status` asks git and prints
 | `kb status` | where the kb is, how many files, which snapshot is current, the largest files |
 | `kb brief` | the overview and the current snapshot verbatim, and why that snapshot is the current one |
 | `kb check` | mechanical drift and credentials |
-| `kb verify` | advisory: vanished paths, notes nobody has revisited, work that outran the notes |
+| `kb verify` | advisory: vanished paths, notes nobody has revisited, work that outran the notes, notes older than their `sources:` |
 | `kb sync` | rebuild the index table from front matter |
 | `kb outline [file]` | section map with weights; no argument means every file over 400 lines |
 | `kb list [--scan DIR] [--prune]` | every kb known on this machine |
@@ -411,6 +411,8 @@ Flags:
 
 - `--dir <path>` — on any command;
 - `--supersedes <file>` — on `add`;
+- `--sources <paths>` — on `add`: the files or directories the note describes,
+  refused if one does not exist; `verify` names the note when they change after it;
 - `--no-sync` — on `add`, to skip the reindex;
 - `--body-file <path|->` — on `add`, to write the body in the same call instead
   of creating the note empty and editing it afterwards.
