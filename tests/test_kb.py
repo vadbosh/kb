@@ -1556,15 +1556,52 @@ class Sources(Base):
         res = self.kb("verify")
         self.assertNotIn("src/app.py changed", res.stdout)
 
-    def test_a_commit_after_the_note_is_named(self):
+    def test_a_change_pulled_after_the_note_is_named(self):
+        # A pull: the file and its commit are both newer than the note.
         self.git("init", "-q", ".")
         root = self.kb_root()
-        self.src("src/app.py", days=20)            # old mtime, new commit
+        self.note(root, "src/app.py")
+        self.src("src/app.py")
         self.git("add", "src/app.py")
         self.git("commit", "-qm", "new")
-        self.note(root, "src/app.py")
         res = self.kb("verify", expect=3)
         self.assertIn("src/app.py changed", res.stdout)
+
+    def test_a_note_updated_before_the_commit_is_quiet(self):
+        # The everyday order: edit the code, update the note, commit. The
+        # commit is newer than the note, the edit is not, and the note is
+        # current. Comparing the commit alone flagged it (final review, I1).
+        self.git("init", "-q", ".")
+        root = self.kb_root()
+        self.src("src/app.py", days=2 / 24)        # edited two hours ago
+        self.note(root, "src/app.py", days=1 / 24)  # note an hour ago
+        self.git("add", "src/app.py")
+        self.git("commit", "-qm", "now")
+        res = self.kb("verify")
+        self.assertNotIn("src/app.py changed", res.stdout)
+
+    def test_a_directory_source_does_not_count_the_notes(self):
+        # `.` holds kb/ itself: writing another note made this one look stale
+        # (final review, I2). The directory walk skips what the work walk skips.
+        root = self.kb_root()
+        self.src("src/app.py", days=20)
+        self.note(root, ".")
+        self.write_note(root, "02-b.md")
+        res = self.kb("verify")
+        self.assertNotIn(". changed", res.stdout)
+
+    def test_an_empty_sources_line_is_named(self):
+        # A YAML block list leaves the key empty, and the check was off without
+        # a word (final review, I3).
+        root = self.kb_root()
+        self.src("src/app.py", days=20)
+        path = self.note(root, "")
+        text = path.read_text(encoding="utf-8").replace(
+            "sources: \n", "sources:\n  - src/app.py\n", 1)
+        path.write_text(text, encoding="utf-8")
+        res = self.kb("verify", expect=3)
+        self.assertIn("01-a.md", res.stdout)
+        self.assertIn("`sources:` is empty", res.stdout)
 
     def test_an_uncommitted_edit_is_named(self):
         self.git("init", "-q", ".")
@@ -1604,11 +1641,12 @@ class Sources(Base):
         other = self.tmp / "other"
         other.mkdir()
         self.git("init", "-q", ".", cwd=other)
-        f = self.src("f.py", days=20, base=other)
+        root = self.kb_root()
+        f = self.src("f.py", days=30, base=other)
+        self.note(root, str(f))
+        self.src("f.py", base=other)                # changed and committed after
         self.git("add", "f.py", cwd=other)
         self.git("commit", "-qm", "new", cwd=other)
-        root = self.kb_root()
-        self.note(root, str(f))
         res = self.kb("verify", expect=3)
         self.assertIn(f"{f} changed", res.stdout)
 

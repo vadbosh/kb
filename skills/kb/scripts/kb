@@ -419,7 +419,7 @@ class Note:
     chars: int = 0
     # What the note describes, raw from front matter: `verify` names the note
     # when one of these changed after it (kb/24-sources-staleness.md).
-    sources: str = ""
+    sources: str | None = None      # None: no `sources:` key at all
 
     @property
     def name(self) -> str:
@@ -562,7 +562,7 @@ def load_notes(root: Path) -> list[Note]:
             text=text,
             lines=text.count("\n") + 1,
             chars=len(text),
-            sources=meta.get("sources", ""),
+            sources=meta.get("sources"),
         ))
     return notes
 
@@ -1603,11 +1603,13 @@ class VerifyResult:
     # (note, source as written, source date, note date) and (note, source).
     stale: list[tuple[str, str, str, str]] = field(default_factory=list)
     missing_sources: list[tuple[str, str]] = field(default_factory=list)
+    empty_sources: list[str] = field(default_factory=list)
 
     @property
     def code(self) -> int:
         return 3 if (self.dead or self.aging or self.moved or self.entry
-                     or self.dated or self.stale or self.missing_sources) else 0
+                     or self.dated or self.stale or self.missing_sources
+                     or self.empty_sources) else 0
 
 
 # Before 5.1.0 the scaffold wrote `Updated <today>` (`Обновлён` in the old
@@ -1645,7 +1647,7 @@ def split_sources(raw: str) -> list[str]:
 
 
 def note_sources(n: Note) -> list[str]:
-    return split_sources(n.sources)
+    return split_sources(n.sources or "")
 
 
 def resolve_source(project: Path, raw: str) -> Path:
@@ -1667,9 +1669,15 @@ def _newest_mtime(p: Path, cap: int = 20000) -> float:
     """mtime of a file, or of the newest file under a directory."""
     if not p.is_dir():
         return p.stat().st_mtime
-    newest, seen = p.stat().st_mtime, 0
-    for here, dirs, files in os.walk(p, onerror=lambda e: None):
-        dirs[:] = [d for d in dirs if not d.startswith(".") and d not in SCAN_SKIP]
+    # Files only: a directory's own mtime moves when an entry is added or
+    # removed -- a new subdirectory, an editor's swap file -- and is no
+    # change to anything the note describes. An empty directory falls back
+    # to it below.
+    newest, seen = 0.0, 0
+    # The stream walk's prune: no notes directory, no nested stream, nothing
+    # git ignores. `sources: .` otherwise went stale whenever a note was
+    # written, the notes being inside it (final review, I2).
+    for here, files in walk_stream(p):
         for f in files:
             seen += 1
             if seen > cap:
@@ -1678,7 +1686,7 @@ def _newest_mtime(p: Path, cap: int = 20000) -> float:
                 newest = max(newest, (Path(here) / f).stat().st_mtime)
             except OSError:
                 pass
-    return newest
+    return newest or p.stat().st_mtime
 
 
 def source_time(p: Path) -> float | None:
@@ -1693,24 +1701,35 @@ def source_time(p: Path) -> float | None:
     if not p.exists():
         return None
     here = p if p.is_dir() else p.parent
+    mtime = _newest_mtime(p)
     if (_git_out(here, "rev-parse", "--is-inside-work-tree") or "").strip() == "true":
         dirty = _git_out(here, "status", "--porcelain", "--", str(p))
         last = _git_out(here, "log", "-1", "--format=%ct", "--", str(p))
         if dirty == "" and last and last.strip().isdigit():
-            return float(last.strip())
-    return _newest_mtime(p)
+            # The earlier of the two. A clone makes the mtime new and leaves
+            # the commit old; the everyday "edit, update the note, commit"
+            # makes the commit new and leaves the edit's mtime old. Either
+            # alone flags a note that is current (final review, I1).
+            return min(float(last.strip()), mtime)
+    return mtime
 
 
 def stale_sources(project: Path, notes: list[Note]
-                  ) -> tuple[list[tuple[str, str, str, str]], list[tuple[str, str]]]:
-    """Notes older than what they describe, and sources that do not exist.
+                  ) -> tuple[list[tuple[str, str, str, str]],
+                             list[tuple[str, str]], list[str]]:
+    """Notes older than what they describe, sources that do not exist, and
+    notes whose `sources:` key is there but empty.
 
     The note's side is the mtime of its own file: notes are often kept out of
-    git, so a commit cannot answer for them."""
-    stale, missing = [], []
+    git, so a commit cannot answer for them. An empty key is what a YAML block
+    list leaves behind, the parser reading one line per field, and without a
+    word the check is off for that note (final review, I3)."""
+    stale, missing, empty = [], [], []
     for n in notes:
         listed = note_sources(n)
         if not listed:
+            if n.sources is not None:
+                empty.append(n.name)
             continue
         try:
             written = n.path.stat().st_mtime
@@ -1723,7 +1742,7 @@ def stale_sources(project: Path, notes: list[Note]
             elif t > written:
                 stale.append((n.name, raw, date.fromtimestamp(t).isoformat(),
                               date.fromtimestamp(written).isoformat()))
-    return stale, missing
+    return stale, missing, empty
 
 
 def verify_findings(root: Path, notes: list[Note]) -> VerifyResult:
@@ -1842,9 +1861,9 @@ def verify_findings(root: Path, notes: list[Note]) -> VerifyResult:
     # file here where length is a running cost rather than a one-off.
     entry = route_findings(root, chains=chains)
     dated = stale_dated_line(root / OVERVIEW, notes)
-    stale, missing = stale_sources(project, notes)
+    stale, missing, empty = stale_sources(project, notes)
     return VerifyResult(dead, aging, moved, gap_hours, entry, dated,
-                        stale, missing)
+                        stale, missing, empty)
 
 
 def print_verify(res: VerifyResult, out=None) -> int:
@@ -1882,6 +1901,12 @@ def print_verify(res: VerifyResult, out=None) -> int:
               "renamed, or a typo in `sources:`:", file=out)
         for note, src in res.missing_sources:
             print(f"  {note}  {src}", file=out)
+    if res.empty_sources:
+        print(f"\n`sources:` is empty ({len(res.empty_sources)}) — write the paths on "
+              "that one line, comma-separated; a YAML list under it is not read:",
+              file=out)
+        for note in res.empty_sources:
+            print(f"  {note}", file=out)
 
     if res.dated:
         line, newest = res.dated
