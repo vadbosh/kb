@@ -2648,7 +2648,43 @@ TRANSCRIPTS = [
     ("codex",  Path.home() / ".codex/sessions",  "rollout-*.jsonl"),
 ]
 OC_DB = Path.home() / ".local/share/opencode/opencode.db"
-PATH_RE = re.compile(r"(?:/[A-Za-z0-9._-]+){2,}|~/[A-Za-z0-9._/-]+")
+# A path starts at a word boundary: `skills/kb/SKILL.md` used to yield its tail
+# `/kb/SKILL.md` as an absolute path of its own.
+PATH_RE = re.compile(r"(?<![\w.~-])(?:/[A-Za-z0-9._-]+){2,}|~/[A-Za-z0-9._/-]+")
+
+
+def stream_of(hit: str, cache: dict) -> str:
+    """The work stream a path belongs to: the nearest directory on disk with
+    `.git`, `kb/` or `.kb/`, at any depth.
+
+    It used to be the first two components, which was the project while
+    repositories sat directly under one directory; once they moved a level
+    down, into a shared parent, every project came out as that parent, one
+    line for all of them. A path that no longer
+    exists, or has no such directory above it, keeps the old two-component
+    answer, which still names something."""
+    hit = hit.rstrip('.,;:)"\'')
+    fallback = "/".join(hit.split("/")[:3])
+    try:
+        p = Path(hit).expanduser()
+    except RuntimeError:
+        return fallback
+    home = Path.home()
+    for d in [p, *p.parents]:
+        if d == d.parent or d == home:
+            break
+        key = str(d)
+        if key not in cache:
+            try:
+                cache[key] = ((d / ".git").exists()
+                              or any((d / n / OVERVIEW).is_file() for n in NOTES_DIRS))
+            except OSError:
+                cache[key] = False
+        if cache[key]:
+            if hit.startswith("~/"):
+                return "~/" + os.path.relpath(d, home).replace(os.sep, "/")
+            return key
+    return fallback
 
 
 def _transcript_cwd(path: Path) -> str | None:
@@ -2837,7 +2873,7 @@ def cmd_streams(args) -> int:
         return 1
 
     seen = set()
-    paths, pathless = {}, []
+    paths, pathless, cache = {}, [], {}
     for t in texts:
         if t.startswith(("<", "Caveat", "#")) or t in seen:
             continue
@@ -2845,7 +2881,7 @@ def cmd_streams(args) -> int:
         hits = PATH_RE.findall(t)
         if hits:
             for h in hits:
-                root = "/".join(h.rstrip('.,;:)"\'').split("/")[:3])
+                root = stream_of(h, cache)
                 paths[root] = paths.get(root, 0) + 1
         elif len(t) >= 30:
             pathless.append(t[:52])

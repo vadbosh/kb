@@ -1099,6 +1099,29 @@ class Transcripts(Base):
         self.assertNotIn("/srv/foreign", res.stdout)
         self.assertIn("claude ×1", res.stdout)
 
+    def test_projects_under_one_parent_are_separate_streams(self):
+        """The stream was the first two path components, which was the project
+        while repositories sat in /home/<name>. Moved to /home/repos/<name>,
+        every project came out as one line, `/home/repos`. The project is the
+        nearest directory with `.git` or `kb/`, on disk, at any depth."""
+        import re as _re
+        repos = self.tmp / "repos"
+        (repos / "alpha" / ".git").mkdir(parents=True)
+        (repos / "beta" / "kb").mkdir(parents=True)
+        (repos / "beta" / "kb" / "00-overview.md").write_text("x\n", encoding="utf-8")
+        here = str(self.proj.resolve())
+        own = self.home / ".claude" / "projects" / _re.sub(r"[^A-Za-z0-9]", "-", here)
+        own.mkdir(parents=True)
+        text = (f"fix {repos}/alpha/src/x.py and {repos}/beta/docs/y.md, "
+                "then skills/kb/SKILL.md")
+        (own / "s.jsonl").write_text(json.dumps(
+            {"type": "user", "cwd": here,
+             "message": {"role": "user", "content": text}}) + "\n", encoding="utf-8")
+        res = self.kb("streams", expect=0)
+        self.assertIn(f"  {repos}/alpha\n", res.stdout)
+        self.assertIn(f"  {repos}/beta\n", res.stdout)
+        self.assertNotIn("/kb/SKILL.md", res.stdout)
+
 
 # ── parsing ─────────────────────────────────────────────────────────────────
 

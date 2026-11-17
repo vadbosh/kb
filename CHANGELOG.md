@@ -18,6 +18,18 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 5.2.3
+
+- **`kb streams` shows each project, wherever the repositories sit.** A
+  stream was the first two components of a path. That matched the project
+  while repositories sat directly under one directory (`/home/kb`), so the bug
+  stayed hidden. After they moved a level down into a shared parent, every
+  project came out as one line for that parent. A stream is now the nearest
+  directory on disk with `.git`, `kb/` or `.kb/`, at any depth. A path with no
+  such directory above it keeps the old answer.
+- A relative path in the transcript, such as `skills/kb/SKILL.md`, no longer
+  shows up as the absolute-looking fragment `/kb/SKILL.md`.
+
 ## 5.2.2
 
 - **A trailing comment after `sources:` is not a path.**
