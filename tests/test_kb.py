@@ -1486,6 +1486,133 @@ class Route(Base):
                          first)
 
 
+# ── sources: what a note describes, and when that moved on ─────────────────
+
+class Sources(Base):
+    """A note lists the files it describes; `verify` names it when one of them
+    changed after the note. The time of a clean tracked file is its last
+    commit, so a fresh clone, which gives every file a new mtime, does not
+    flag every note at once (kb/24-sources-staleness.md)."""
+
+    DAY = 86400
+
+    def age(self, path, days):
+        t = time.time() - days * self.DAY
+        os.utime(path, (t, t))
+
+    def note(self, root, sources, days=10, name="01-a.md"):
+        path = self.write_note(root, name, body="text")
+        text = path.read_text(encoding="utf-8").replace(
+            "kind: reference", f"kind: reference\nsources: {sources}", 1)
+        path.write_text(text, encoding="utf-8")
+        self.age(path, days)
+        return path
+
+    def src(self, rel, days=0, base=None):
+        path = (base or self.proj) / rel
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text("x\n", encoding="utf-8")
+        if days:
+            self.age(path, days)
+        return path
+
+    def git(self, *argv, days=0, cwd=None):
+        env = dict(os.environ)
+        if days:
+            stamp = f"@{int(time.time() - days * self.DAY)} +0000"
+            env.update(GIT_AUTHOR_DATE=stamp, GIT_COMMITTER_DATE=stamp)
+        subprocess.run(["git", "-c", "user.email=t@t", "-c", "user.name=t", *argv],
+                       cwd=str(cwd or self.proj), env=env, check=True,
+                       capture_output=True)
+
+    def kb_root(self):
+        root = self.make_kb()
+        self.fill_overview(root)
+        return root
+
+    def test_a_source_changed_after_the_note_is_named(self):
+        root = self.kb_root()
+        self.src("src/app.py", days=20)
+        self.note(root, "src/app.py")
+        self.src("src/app.py")                      # edited now
+        res = self.kb("verify", expect=3)
+        self.assertIn("01-a.md", res.stdout)
+        self.assertIn("src/app.py changed", res.stdout)
+
+    def test_a_source_older_than_the_note_is_quiet(self):
+        root = self.kb_root()
+        self.src("src/app.py", days=20)
+        self.note(root, "src/app.py")
+        res = self.kb("verify")
+        self.assertNotIn("src/app.py", res.stdout)
+
+    def test_a_fresh_clone_does_not_flag_everything(self):
+        self.git("init", "-q", ".")
+        root = self.kb_root()
+        self.src("src/app.py")
+        self.git("add", "src/app.py")
+        self.git("commit", "-qm", "old", days=20)
+        self.note(root, "src/app.py")              # mtime of the source: now
+        res = self.kb("verify")
+        self.assertNotIn("src/app.py changed", res.stdout)
+
+    def test_a_commit_after_the_note_is_named(self):
+        self.git("init", "-q", ".")
+        root = self.kb_root()
+        self.src("src/app.py", days=20)            # old mtime, new commit
+        self.git("add", "src/app.py")
+        self.git("commit", "-qm", "new")
+        self.note(root, "src/app.py")
+        res = self.kb("verify", expect=3)
+        self.assertIn("src/app.py changed", res.stdout)
+
+    def test_an_uncommitted_edit_is_named(self):
+        self.git("init", "-q", ".")
+        root = self.kb_root()
+        self.src("src/app.py")
+        self.git("add", "src/app.py")
+        self.git("commit", "-qm", "old", days=20)
+        self.note(root, "src/app.py")
+        (self.proj / "src/app.py").write_text("y\n", encoding="utf-8")
+        res = self.kb("verify", expect=3)
+        self.assertIn("src/app.py changed", res.stdout)
+
+    def test_a_missing_source_is_named(self):
+        root = self.kb_root()
+        self.note(root, "gone.py")
+        res = self.kb("verify", expect=3)
+        self.assertIn("sources that do not exist", res.stdout)
+        self.assertIn("gone.py", res.stdout)
+
+    def test_a_directory_source_uses_its_newest_file(self):
+        root = self.kb_root()
+        self.src("src/old.py", days=20)
+        self.note(root, "src/")
+        self.src("src/new.py")
+        res = self.kb("verify", expect=3)
+        self.assertIn("src/ changed", res.stdout)
+
+    def test_a_comma_list_keeps_spaces(self):
+        root = self.kb_root()
+        self.src("docs/my notes.md", days=20)
+        self.src("src/app.py", days=20)
+        self.note(root, "docs/my notes.md, src/app.py")
+        res = self.kb("verify")
+        self.assertNotIn("sources that do not exist", res.stdout)
+
+    def test_a_source_in_another_repository(self):
+        other = self.tmp / "other"
+        other.mkdir()
+        self.git("init", "-q", ".", cwd=other)
+        f = self.src("f.py", days=20, base=other)
+        self.git("add", "f.py", cwd=other)
+        self.git("commit", "-qm", "new", cwd=other)
+        root = self.kb_root()
+        self.note(root, str(f))
+        res = self.kb("verify", expect=3)
+        self.assertIn(f"{f} changed", res.stdout)
+
+
 # ── versioned, local, or nobody has chosen ──────────────────────────────────
 
 class GitState(Base):

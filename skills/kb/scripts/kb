@@ -46,7 +46,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
 
@@ -417,6 +417,9 @@ class Note:
     text: str = ""
     lines: int = 0
     chars: int = 0
+    # What the note describes, raw from front matter: `verify` names the note
+    # when one of these changed after it (kb/24-sources-staleness.md).
+    sources: str = ""
 
     @property
     def name(self) -> str:
@@ -559,6 +562,7 @@ def load_notes(root: Path) -> list[Note]:
             text=text,
             lines=text.count("\n") + 1,
             chars=len(text),
+            sources=meta.get("sources", ""),
         ))
     return notes
 
@@ -1584,11 +1588,14 @@ class VerifyResult:
     gap_hours: float
     entry: list[str]
     dated: tuple[str, str] | None = None
+    # (note, source as written, source date, note date) and (note, source).
+    stale: list[tuple[str, str, str, str]] = field(default_factory=list)
+    missing_sources: list[tuple[str, str]] = field(default_factory=list)
 
     @property
     def code(self) -> int:
         return 3 if (self.dead or self.aging or self.moved or self.entry
-                     or self.dated) else 0
+                     or self.dated or self.stale or self.missing_sources) else 0
 
 
 # Before 5.1.0 the scaffold wrote `Updated <today>` (`Обновлён` in the old
@@ -1614,6 +1621,95 @@ def stale_dated_line(overview: Path, notes: list[Note]) -> tuple[str, str] | Non
         if m.group(1) < newest:
             return m.group(0).strip(), newest
     return None
+
+
+def note_sources(n: Note) -> list[str]:
+    """`sources:` as a list. Commas separate when there are any, so a path with
+    a space survives in a comma list; otherwise whitespace does, as in
+    `supersedes:`."""
+    raw = n.sources.strip()
+    if not raw:
+        return []
+    parts = raw.split(",") if "," in raw else raw.split()
+    return [p.strip() for p in parts if p.strip()]
+
+
+def resolve_source(project: Path, raw: str) -> Path:
+    p = Path(raw).expanduser()
+    return p if p.is_absolute() else project / p
+
+
+def _git_out(cwd: Path, *argv: str) -> str | None:
+    """stdout of a git command, None when git is missing or the call fails."""
+    try:
+        res = subprocess.run(["git", *argv], cwd=str(cwd), capture_output=True,
+                             text=True, timeout=10)
+    except (OSError, subprocess.SubprocessError):
+        return None
+    return res.stdout if res.returncode == 0 else None
+
+
+def _newest_mtime(p: Path, cap: int = 20000) -> float:
+    """mtime of a file, or of the newest file under a directory."""
+    if not p.is_dir():
+        return p.stat().st_mtime
+    newest, seen = p.stat().st_mtime, 0
+    for here, dirs, files in os.walk(p, onerror=lambda e: None):
+        dirs[:] = [d for d in dirs if not d.startswith(".") and d not in SCAN_SKIP]
+        for f in files:
+            seen += 1
+            if seen > cap:
+                return newest
+            try:
+                newest = max(newest, (Path(here) / f).stat().st_mtime)
+            except OSError:
+                pass
+    return newest
+
+
+def source_time(p: Path) -> float | None:
+    """When the source last changed; None when it does not exist.
+
+    A tracked path with no uncommitted change answers with its last commit: a
+    clone or a checkout gives every file a fresh mtime, and that would make
+    every note look stale at once. Anything else -- untracked, edited and not
+    yet committed, outside a repository, no git at all -- answers with mtime.
+    git runs in the source's own directory, so a source in another repository
+    is asked of that repository."""
+    if not p.exists():
+        return None
+    here = p if p.is_dir() else p.parent
+    if (_git_out(here, "rev-parse", "--is-inside-work-tree") or "").strip() == "true":
+        dirty = _git_out(here, "status", "--porcelain", "--", str(p))
+        last = _git_out(here, "log", "-1", "--format=%ct", "--", str(p))
+        if dirty == "" and last and last.strip().isdigit():
+            return float(last.strip())
+    return _newest_mtime(p)
+
+
+def stale_sources(project: Path, notes: list[Note]
+                  ) -> tuple[list[tuple[str, str, str, str]], list[tuple[str, str]]]:
+    """Notes older than what they describe, and sources that do not exist.
+
+    The note's side is the mtime of its own file: notes are often kept out of
+    git, so a commit cannot answer for them."""
+    stale, missing = [], []
+    for n in notes:
+        listed = note_sources(n)
+        if not listed:
+            continue
+        try:
+            written = n.path.stat().st_mtime
+        except OSError:
+            continue
+        for raw in listed:
+            t = source_time(resolve_source(project, raw))
+            if t is None:
+                missing.append((n.name, raw))
+            elif t > written:
+                stale.append((n.name, raw, date.fromtimestamp(t).isoformat(),
+                              date.fromtimestamp(written).isoformat()))
+    return stale, missing
 
 
 def verify_findings(root: Path, notes: list[Note]) -> VerifyResult:
@@ -1732,7 +1828,9 @@ def verify_findings(root: Path, notes: list[Note]) -> VerifyResult:
     # file here where length is a running cost rather than a one-off.
     entry = route_findings(root, chains=chains)
     dated = stale_dated_line(root / OVERVIEW, notes)
-    return VerifyResult(dead, aging, moved, gap_hours, entry, dated)
+    stale, missing = stale_sources(project, notes)
+    return VerifyResult(dead, aging, moved, gap_hours, entry, dated,
+                        stale, missing)
 
 
 def print_verify(res: VerifyResult, out=None) -> int:
@@ -1758,6 +1856,18 @@ def print_verify(res: VerifyResult, out=None) -> int:
         print("  Every other check compares the notes with each other, so they "
               "stay clean while\n  describing a state the work has left. Read "
               "what changed; if it matters, it\n  belongs in a note.", file=out)
+
+    if res.stale:
+        print(f"\nnotes older than what they describe ({len(res.stale)}) — read "
+              "the source, then the note:", file=out)
+        for note, src, src_date, note_date in res.stale:
+            print(f"  {note}  {src} changed {src_date}, note written {note_date}",
+                  file=out)
+    if res.missing_sources:
+        print(f"\nsources that do not exist ({len(res.missing_sources)}) — moved, "
+              "renamed, or a typo in `sources:`:", file=out)
+        for note, src in res.missing_sources:
+            print(f"  {note}  {src}", file=out)
 
     if res.dated:
         line, newest = res.dated
