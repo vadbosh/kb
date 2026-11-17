@@ -18,6 +18,28 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 5.2.0
+
+- **A note can list what it describes, and `kb verify` names it when that
+  changes.** `sources: skills/kb/scripts/kb, docs/kb.en.md` in front matter:
+  paths from the project root, `~/…` and absolute paths too, comma- or
+  space-separated. `verify` prints the note, the source and both dates when a
+  source changed after the note was last written, names a source that no
+  longer exists, and names an empty `sources:` (a YAML list under it is not
+  read). Before this, `verify` could only say that the work had moved on, not
+  which note to re-read. The idea comes from BMAD-METHOD, where a ticket lists
+  its `sources:`.
+- **Which time counts.** For the note, its file's modification time: notes are
+  often kept out of git. For a source tracked by git with no uncommitted
+  change, the earlier of its last commit and its modification time; otherwise
+  its modification time. A fresh clone (new mtime, old commit) and the usual
+  "edit the code, update the note, commit" (old mtime, new commit) are both
+  quiet. A `git pull` that brings a change is named. A directory counts by its
+  newest file, with the same skips as the work walk.
+- **`kb add --sources <paths>`** writes the field and refuses a path that does
+  not exist, like `--supersedes`. `save.md` asks a note about code or
+  configuration to list its sources.
+
 ## 5.1.4
 
 - **`kb streams` reads only this project's Claude Code transcripts.** It walked
