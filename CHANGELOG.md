@@ -18,6 +18,25 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 5.2.1
+
+- **`verify` points at old notes that cite files and list no `sources:`.**
+  Notes written before 5.2.0 have no field, and nothing watched them. `verify`
+  now lists reference and recipe notes whose backticked paths exist, project
+  paths first, and marks a path that already changed after the note. `brief`
+  names those notes on its own `# sources:` line, and `/kb save` adds the field
+  from that list, reading a marked path against the note first. This is a
+  hint and never sets the exit code. `sources: none` opts a note out. Left out
+  of the list: the notes themselves, `.git/`, what git ignores, system
+  directories and one-component paths such as `/tmp`.
+- When both times fall on one day, a finding shows the time, and seconds when
+  they fall in one minute. The `add --sources` error says a single spaced path
+  needs a trailing comma, but only when the value has a space. `sources: ,`
+  counts as empty, and `none` beside paths is named. The manual says a
+  finding clears when the note is written again.
+- A backticked word such as `~30s` in a note no longer crashes `verify` and
+  `brief` with `RuntimeError` (found in review before release).
+
 ## 5.2.0
 
 - **A note can list what it describes, and `kb verify` names it when that
