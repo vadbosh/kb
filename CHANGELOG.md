@@ -18,6 +18,20 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 5.3.2
+
+Two design points of the review of 2026-11-17, accepted by the owner.
+
+- **A committed note counts by its last commit.** The note's side of the
+  `sources:` check was always its modification time. A clone gives every note a
+  new one, so a note that was already behind its source read as current, and
+  stayed that way. A note that git tracks, with no uncommitted change, now
+  counts by its last commit. Any other note keeps its modification time. For
+  such a note, a finding clears once the re-saved note is committed.
+- **`kb streams` counts a flat kb as a stream.** A directory with a loose
+  `00-overview.md` and no `.git` or `kb/` was not a stream marker, so two of
+  them under one parent came out as one line.
+
 ## 5.3.1
 
 Fixes from the review of 2026-11-17.

@@ -524,8 +524,12 @@ new modification time, so comparing that alone would mark every note at once.
 The usual order is to edit the code, update the note, then commit, so the
 commit alone is newer than a note that is current. The earlier of the two gets
 both cases right, and a `git pull` that brings a change, where both are newer,
-is still named. The note's own time is always its file's modification time:
-notes are often kept out of git.
+is still named.
+
+The note's own time follows the same idea. A note that git tracks, with no
+uncommitted change, counts by its last commit, so a note that was already
+behind its source before a clone stays named after it. Any other note counts by
+its modification time: notes are often kept out of git.
 
 Write the paths on the `sources:` line itself. A YAML list under an empty
 `sources:` is not read, and `verify` names such a note. A single path with a
@@ -535,7 +539,8 @@ is dropped.
 When the dates are on the same day, the report shows the time as well.
 
 A finding clears when the note is written again. If you read the source and the
-note is still right, re-save it or `touch` it.
+note is still right, re-save it or `touch` it. A note under git needs a commit
+too: until then its commit is still the older one.
 
 **A note that cites files and lists no `sources:`.** A reference or recipe
 note written before 5.2.0 has no field, so nothing watches it. `verify` lists

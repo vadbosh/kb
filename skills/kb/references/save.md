@@ -412,7 +412,7 @@ Exit 3 from `check` means act in the same turn:
 | `*.bak.*` left over | check them against the originals, then propose deleting |
 | overview still has its placeholder | write the paragraph — `restore` reads it as what the stream is |
 | notes but no `state` | `kb add state --kind state` — `restore` takes "the situation now" from it |
-| `verify`: notes older than what they describe | read the source, correct the note or confirm it; re-saving the note clears the line |
+| `verify`: notes older than what they describe | read the source, correct the note or confirm it; re-saving the note clears the line — for a note git tracks, only once that save is committed |
 | `verify` hint: notes that cite files and list no `sources:` | add the field as the section above says; it never sets the exit code, so look for it |
 | **file over the size threshold** | `kb outline` → judge by kind-mixing → propose a seam OR say "no seam, leaving it" |
 

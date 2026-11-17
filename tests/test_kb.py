@@ -1130,6 +1130,26 @@ class Transcripts(Base):
         self.assertNotIn("/srv/foreign", res.stdout)
         self.assertIn("claude ×1", res.stdout)
 
+    def test_d3_flat_kbs_under_one_parent_are_separate_streams(self):
+        """A flat kb -- a loose 00-overview.md, no .git, no kb/ -- was not a
+        stream marker, so two of them fell back to the first two components
+        and came out as one line (review 2026-11-17, D3)."""
+        import re as _re
+        work = self.tmp / "work"
+        for name in ("flat", "plain"):
+            (work / name).mkdir(parents=True)
+            (work / name / "00-overview.md").write_text("x\n", encoding="utf-8")
+        here = str(self.proj.resolve())
+        own = self.home / ".claude" / "projects" / _re.sub(r"[^A-Za-z0-9]", "-", here)
+        own.mkdir(parents=True)
+        text = f"edit {work}/flat/01-a.md and {work}/plain/02-b.md"
+        (own / "s.jsonl").write_text(json.dumps(
+            {"type": "user", "cwd": here,
+             "message": {"role": "user", "content": text}}) + "\n", encoding="utf-8")
+        res = self.kb("streams", expect=0)
+        self.assertIn(f"  {work}/flat\n", res.stdout)
+        self.assertIn(f"  {work}/plain\n", res.stdout)
+
     def test_projects_under_one_parent_are_separate_streams(self):
         """The stream was the first two path components, which was the project
         while repositories sat in /home/<name>. Moved to /home/repos/<name>,
@@ -1656,6 +1676,45 @@ class Sources(Base):
         out = self.kb("verify").stdout
         self.assertIn("docs.txt", out)
         self.assertNotIn("build/out.txt", out)
+
+    # ── review 2026-11-17, D1: the note's own time under git ─────────────────
+
+    def committed_note_then_source(self):
+        """Note and source committed 10 days ago, the source changed and
+        committed 5 days ago: the note was stale before anybody cloned."""
+        self.git("init", "-q", ".")
+        root = self.kb_root()
+        self.src("src/app.py", days=20)
+        note = self.note(root, "src/app.py", days=10)
+        self.git("add", "-A")
+        self.git("commit", "-qm", "note", days=10)
+        (self.proj / "src/app.py").write_text("y\n", encoding="utf-8")
+        self.age(self.proj / "src/app.py", 5)
+        self.git("commit", "-qam", "src", days=5)
+        return note
+
+    def test_d1_a_note_stale_before_a_clone_stays_stale_after_it(self):
+        """A clone gives the note a new mtime, and the note's side was always
+        its mtime: a note already behind its source read as current, for good."""
+        note = self.committed_note_then_source()
+        self.assertIn("src/app.py changed", self.kb("verify", expect=3).stdout)
+        self.age(note, 0)                            # what a clone does
+        self.assertIn("src/app.py changed", self.kb("verify", expect=3).stdout)
+
+    def test_d1_a_note_committed_with_its_source_is_quiet(self):
+        self.git("init", "-q", ".")
+        root = self.kb_root()
+        self.src("src/app.py")
+        self.note(root, "src/app.py", days=0)
+        self.git("add", "-A")
+        self.git("commit", "-qm", "both")
+        self.assertNotIn("src/app.py changed", self.kb("verify").stdout)
+
+    def test_d1_a_note_edited_after_its_commit_uses_its_mtime(self):
+        note = self.committed_note_then_source()
+        note.write_text(note.read_text(encoding="utf-8") + "\nchecked\n",
+                        encoding="utf-8")              # dirty, written now
+        self.assertNotIn("src/app.py changed", self.kb("verify").stdout)
 
     def test_c8_one_verify_walks_a_shared_source_once(self):
         """`stale_sources` and `unwatched_notes` timed every (note, path) pair:

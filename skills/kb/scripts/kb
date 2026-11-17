@@ -1977,6 +1977,26 @@ def source_time(p: Path) -> float | None:
     return hit
 
 
+def note_time(path: Path) -> float:
+    """When the note was last written, for comparing with its sources.
+
+    A note git tracks with no uncommitted change answers with its last commit:
+    a clone gives every note a fresh mtime, and a note that was already behind
+    its source then read as current for good (review 2026-11-17, D1). Commit
+    alone, not the `min` the source side takes -- the min is there so that
+    "edit, update the note, commit" stays quiet, and the note's commit is
+    exactly that moment. Edited, untracked, or no git: its mtime, as before;
+    most notes here are kept out of git and never reach the first branch."""
+    mtime = path.stat().st_mtime
+    here = path.parent
+    if (_git_out(here, "rev-parse", "--is-inside-work-tree") or "").strip() != "true":
+        return mtime
+    if _git_out(here, "status", "--porcelain", "--", str(path)) != "":
+        return mtime
+    last = (_git_out(here, "log", "-1", "--format=%ct", "--", str(path)) or "").strip()
+    return float(last) if last.isdigit() else mtime
+
+
 # One `verify_findings` call times each source once: several notes citing one
 # large directory walked it once per note, and `brief` pays that at every
 # session start (review 2026-11-17, C8). Scoped to the call, never longer:
@@ -2015,8 +2035,9 @@ def stale_sources(project: Path, notes: list[Note]
     notes whose `sources:` key is there but empty, and directory sources too
     large to time.
 
-    The note's side is the mtime of its own file: notes are often kept out of
-    git, so a commit cannot answer for them. An empty key is what a YAML block
+    The note's side is `note_time`: its last commit when git tracks it and it
+    is clean, otherwise its mtime -- notes are often kept out of git, and
+    there a commit cannot answer for them. An empty key is what a YAML block
     list leaves behind, the parser reading one line per field, and without a
     word the check is off for that note (final review, I3)."""
     stale, missing, empty, large = [], [], [], []
@@ -2029,7 +2050,7 @@ def stale_sources(project: Path, notes: list[Note]
                 empty.append(n.name)
             continue
         try:
-            written = n.path.stat().st_mtime
+            written = note_time(n.path)
         except OSError:
             continue
         for raw in listed:
@@ -2079,7 +2100,7 @@ def unwatched_notes(project: Path, root: Path, notes: list[Note]
         if not cited:
             continue
         try:
-            written = n.path.stat().st_mtime
+            written = note_time(n.path)
         except OSError:
             written = float("inf")
         marked = []
@@ -2987,7 +3008,7 @@ PATH_RE = re.compile(r"(?<![\w.~-])(?:/[A-Za-z0-9._-]+){2,}|~/[A-Za-z0-9._/-]+")
 
 def stream_of(hit: str, cache: dict) -> str:
     """The work stream a path belongs to: the nearest directory on disk with
-    `.git`, `kb/` or `.kb/`, at any depth.
+    `.git`, `kb/`, `.kb/` or a loose `00-overview.md`, at any depth.
 
     It used to be the first two components, which was the project while
     repositories sat directly under one directory; once they moved a level
@@ -3008,8 +3029,11 @@ def stream_of(hit: str, cache: dict) -> str:
         key = str(d)
         if key not in cache:
             try:
-                cache[key] = ((d / ".git").exists()
-                              or any((d / n / OVERVIEW).is_file() for n in NOTES_DIRS))
+                # A loose overview too: a flat kb is a stream with nothing
+                # else to mark it, and two of them under one parent merged
+                # into one line (review 2026-11-17, D3). Same test as
+                # `is_stream`.
+                cache[key] = (d / ".git").exists() or is_stream(d)
             except OSError:
                 cache[key] = False
         if cache[key]:
