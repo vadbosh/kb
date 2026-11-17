@@ -1093,6 +1093,16 @@ def cmd_add(args) -> int:
                 f"  Here: {have}\n"
                 "  A name that does not resolve is never reported again: the "
                 "index drops the mark and `check` treats the name as retired.")
+    # The same moment for `--sources`: a mistyped path is reported by `verify`
+    # as missing, but only once somebody runs it; refused here it never lands.
+    if getattr(args, "sources", None):
+        project = project_of(root)
+        absent = [s for s in split_sources(args.sources)
+                  if not resolve_source(project, s).exists()]
+        if absent:
+            die(f"--sources names {', '.join(absent)}, which does not exist under "
+                f"{project}.\n  Paths are relative to the project root; "
+                "`~/…` and absolute paths work too.")
     # Gaps are never reused: a number that once pointed at a file may still be
     # referenced from a commit message, another note, or somewhere outside.
     num = max((n.num for n in notes), default=0) + 1
@@ -1128,6 +1138,8 @@ def cmd_add(args) -> int:
           f"updated: {date.today().isoformat()}"]
     if args.supersedes:
         fm.append(f"supersedes: {args.supersedes}")
+    if getattr(args, "sources", None):
+        fm.append(f"sources: {args.sources}")
     fm += [FM_FENCE, "", f"# {title}", ""]
     # The body, when the caller has it already. Without this the note is created
     # empty and then overwritten whole -- two round trips instead of one, and in
@@ -1623,15 +1635,17 @@ def stale_dated_line(overview: Path, notes: list[Note]) -> tuple[str, str] | Non
     return None
 
 
-def note_sources(n: Note) -> list[str]:
+def split_sources(raw: str) -> list[str]:
     """`sources:` as a list. Commas separate when there are any, so a path with
     a space survives in a comma list; otherwise whitespace does, as in
     `supersedes:`."""
-    raw = n.sources.strip()
-    if not raw:
-        return []
+    raw = raw.strip()
     parts = raw.split(",") if "," in raw else raw.split()
     return [p.strip() for p in parts if p.strip()]
+
+
+def note_sources(n: Note) -> list[str]:
+    return split_sources(n.sources)
 
 
 def resolve_source(project: Path, raw: str) -> Path:
@@ -3026,6 +3040,9 @@ def main() -> int:
     p.add_argument("--kind", default="reference", choices=list(KINDS))
     p.add_argument("--title", help="what the reader finds here (index row text)")
     p.add_argument("--supersedes", help="file this one replaces")
+    p.add_argument("--sources",
+                   help="files or directories this note describes; "
+                        "`kb verify` names the note when they change after it")
     p.add_argument("--body-file", metavar="PATH",
                    help="note body, or - for stdin; skips the section skeleton")
     p.add_argument("--no-sync", action="store_true", help="skip the index rewrite")

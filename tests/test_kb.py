@@ -1612,6 +1612,21 @@ class Sources(Base):
         res = self.kb("verify", expect=3)
         self.assertIn(f"{f} changed", res.stdout)
 
+    def test_add_writes_the_sources_field(self):
+        self.src("src/app.py")
+        self.kb("add", "a", "--kind", "reference", "--title", "a",
+                "--sources", "src/app.py", expect=0)
+        text = next((self.proj / "kb").glob("01-*.md")).read_text(encoding="utf-8")
+        self.assertIn("sources: src/app.py\n", text)
+
+    def test_add_refuses_a_source_that_does_not_exist(self):
+        # A typo would switch the check off for that note without a word: the
+        # same reason `--supersedes` is checked at write time.
+        res = self.kb("add", "a", "--kind", "reference", "--title", "a",
+                      "--sources", "src/app.py, nope.py", expect=1)
+        self.assertIn("nope.py", res.stderr)
+        self.assertFalse(list((self.proj / "kb").glob("01-*.md")))
+
 
 # ── versioned, local, or nobody has chosen ──────────────────────────────────
 
