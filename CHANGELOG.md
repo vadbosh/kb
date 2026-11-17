@@ -18,6 +18,28 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 5.3.0
+
+- **Notes in git need the owner's decision, and `kb check` enforces it.**
+  Whether to commit the notes was a question in prose and one line of
+  `kb add` output. A session that skipped it and ran `git add -A` decided for
+  the owner, and `kb status` then reported `git: tracked` as if somebody had
+  chosen it. The decision is now recorded in the marker line of the index:
+  `git=committed` or `git=local`. `kb check` reports notes that git tracks and
+  that carry no `git=committed`, and exits 3. The finding names both ways out:
+  `kb share`, or `git rm -r --cached <kb>` and then `kb local`. A kb that is
+  the repository root is offered `kb share` or a move with `kb adopt`, because
+  untracking it would untrack the whole repository.
+- **New command `kb share [--dry-run]`.** It records `git=committed` and does
+  nothing else: no `git add`, no commit. If an ignore rule still keeps the
+  notes out, it says so.
+- `kb local` now records `git=local` as well as writing `.git/info/exclude`.
+- `kb sync` keeps the mark when it rebuilds the index.
+- **Upgrading:** a kb whose notes are already committed gets the new finding
+  on its first `kb check`. Run `kb share` if the notes belong in the
+  repository. A copy of the CLI older than 5.3.0 drops the mark on its next
+  `kb sync`, and the finding comes back.
+
 ## 5.2.3
 
 - **`kb streams` shows each project, wherever the repositories sit.** A

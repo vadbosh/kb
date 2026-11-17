@@ -41,6 +41,9 @@ What its verdict lines mean:
 - **check: disagree** → the detail follows; `kb sync` fixes a stale index. Never
   trust a stale table silently.
 - **check: A CREDENTIAL** → report the file and line, edit nothing.
+- **`is tracked by git and nobody recorded that it should be`** → the notes
+  were committed without the owner's decision. Put it under Discrepancies with
+  both ways out as printed and ask which; run neither yourself.
 - **verify: suspicions** → the detail follows. A flagged path may live in a
   container or on another host; files newer than the snapshot mean the work
   moved on and the snapshot may be behind. Surface these under Discrepancies,

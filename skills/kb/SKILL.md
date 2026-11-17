@@ -1,7 +1,7 @@
 ---
 name: kb
 description: Read and write a project's kb/ work-notes — a Markdown knowledge base whose index is generated rather than maintained by hand. Handles phrases "kbsave", "kbrestore", "/kb", "запиши в kb", "запиши в заметки", "прочитай kb", "прочитай заметки", "восстанови контекст из kb", "save to kb", "read kb", "что в заметках", "задокументируй это", "оформи в kb". Use at the start of work to load the notes and see what changed, and at the end to persist findings, decisions, traps or a dated snapshot instead of leaving them in the conversation.
-version: "5.2.3"
+version: "5.3.0"
 ---
 
 # kb
@@ -16,7 +16,7 @@ front matter, so it cannot drift from the files it describes.
 |---|---|
 | to load the notes, orient, see what changed — "kbrestore", "прочитай kb", start of a session | `references/restore.md` |
 | to write down what was learned — "kbsave", "запиши в kb", end of a task | `references/save.md` |
-| **one named command** — `/kb check`, `/kb status`, `/kb brief`, `/kb list`, `/kb verify`, `/kb outline`, `/kb sync`, `/kb streams`, `/kb route`, `/kb local` | neither; see below |
+| **one named command** — `/kb check`, `/kb status`, `/kb brief`, `/kb list`, `/kb verify`, `/kb outline`, `/kb sync`, `/kb streams`, `/kb route`, `/kb local`, `/kb share` | neither; see below |
 | a `⚠` line about the entry point, from any command that printed one | `references/entry-point.md`, in addition |
 
 Read only the one that applies. Everything each half needs beyond this page is
@@ -41,6 +41,9 @@ answer:
 - **exit 3 from `check`** — act on what it lists in the same turn: `kb sync` for a
   stale index, fix or restore a missing link target, add front matter. A size
   finding is an invitation to run `kb outline` and judge, not an order to split.
+  One finding is not yours to act on: `is tracked by git and nobody recorded
+  that it should be`. Ask the human which of its two ways out they want; never
+  run `kb share` to make the exit code 0.
 
 With no directory named, run it for the current project; `kb list` covers every
 known one.
@@ -76,6 +79,9 @@ kb streams                                    where this session stands, then th
 kb route                                      AGENTS.md at the project root + a
                                               CLAUDE.md that imports it
 kb local                                      keep the notes out of git
+kb share                                      record that the notes belong in
+                                              the repository — on the human's
+                                              word only; commits nothing
 ```
 
 Resolve the notes directory from cwd: `./kb`, then `./.kb`, then the same two

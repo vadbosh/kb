@@ -288,12 +288,14 @@ in. kb says so once — when it creates the `kb/` directory.
 ```bash
 kb local          # .git/info/exclude — the notes stay here, and the
                   # entry point kb wrote goes with them
-                  # or commit them, and they ship with the project
+kb share          # or record that they ship with the project, then commit them
 ```
 
 `.git/info/exclude` applies to one checkout, `.gitignore` to everyone who clones
-the repository. kb records its own choice nowhere: `kb status` asks git every
-time.
+the repository. The choice is the owner's, and kb records it in the marker line
+of the index (`git=committed` or `git=local`). Notes that git tracks with no
+`git=committed` are a `kb check` finding, exit 3: a `git add -A` that swept them
+in is not a decision.
 
 ---
 
@@ -352,6 +354,7 @@ CLI also works on its own if you prefer driving it by hand.
 | `kb hook --install` | git pre-commit that refuses a commit on exit 4 |
 | `kb route` | `AGENTS.md` at the project root so agents find the notes without kb; `CLAUDE.md` imports it |
 | `kb local [--dry-run]` | keep the notes on this machine (`.git/info/exclude`) |
+| `kb share [--dry-run]` | record that the notes belong in the repository; commits nothing |
 | `--dir X` | operate on X instead of `./kb` or `./.kb` |
 
 ---

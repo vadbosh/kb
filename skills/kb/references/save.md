@@ -207,20 +207,30 @@ Any other name works and none of them are searched, so the answer is a stream
 that needs `--dir` on every command forever. Do not offer one.
 
 **A kb created this turn inside a git repository needs one question, once.** `kb`
-prints `not ignored — committed by default` when it scaffolds; that default was
-chosen by `git add -A`, not by anybody. Put it to the human with the harness's
-own prompt and do not decide it yourself — it governs whether private working
-notes reach a shared remote:
+prints `UNANSWERED: … nothing has been decided about it` when it scaffolds; left
+alone, `git add -A` decides it, and nobody chose that. Put it to the human with
+the harness's own prompt and do not decide it yourself — it governs whether
+private working notes reach a shared remote:
 
-- **committed** — the notes ship with the project, the team reads them. Nothing
-  to run.
+- **committed** — the notes ship with the project, the team reads them.
+  `kb share` records that; the commit itself is the human's.
 - **this machine only** — `kb local` writes `.git/info/exclude`. Not
   `.gitignore`, which is itself committed and would impose the choice on everyone
   who clones.
 
-Never asked again: the branch is only reachable while `kb/` does not exist. What
-the answer was is readable afterwards from `kb status`, which asks git rather
-than a stored flag.
+**Run either command only after the human answered this question.** An answer
+to a question about fields, a kind or a title is not this answer, and neither
+is "go ahead" with the save. Never stage the notes with `git add -A` before it:
+tracked notes without `kb share` are a `kb check` finding (exit 3), and the
+finding is about you.
+
+The same finding on an existing kb — `is tracked by git and nobody recorded
+that it should be` — is the same question, asked late. Put it to the human with
+both ways out as `check` prints them; do not pick `kb share` because it is the
+one that makes the exit code 0.
+
+Never asked again once answered: the answer is recorded as `git=committed` or
+`git=local` in the marker line of the index, and `kb status` shows it.
 
 Do not deliberate about this. The subject of the work does not decide where its
 notes live — the working directory does, and reasoning past that is how notes

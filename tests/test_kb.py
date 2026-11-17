@@ -1907,6 +1907,102 @@ class GitState(Base):
         self.assertNotIn("git:", self.kb("status").stdout)
         res = self.kb("local", expect=1)
         self.assertIn("not inside a git repository", res.stderr)
+        res = self.kb("share", expect=1)
+        self.assertIn("not inside a git repository", res.stderr)
+
+    # ── the decision to commit the notes is the human's (5.3.0) ────────────
+
+    def committed_kb(self):
+        """Notes swept into a commit by `git add -A`, nobody asked. This is
+        what happened in findings on 2026-11-06: committed, pushed to a public
+        repository, and `status` called it `git: tracked` as if chosen."""
+        self.git("init", "-q", ".")
+        root = self.make_kb()
+        self.fill_overview(root)
+        self.git("add", "-A")
+        self.git("commit", "-qm", "notes")
+        return root
+
+    def test_tracked_notes_nobody_decided_on_are_a_finding(self):
+        root = self.committed_kb()
+        res = self.kb("check", expect=3)
+        self.assertIn("nobody recorded", res.stdout)
+        # Both ways out, because which one is right is not the tool's call.
+        self.assertIn("kb share", res.stdout)
+        self.assertIn(f"git rm -r --cached {root}", res.stdout)
+        self.assertIn("kb local", res.stdout)
+        self.assertIn("not recorded", self.kb("status").stdout)
+
+    def test_share_records_the_decision_and_check_goes_clean(self):
+        root = self.committed_kb()
+        res = self.kb("share", expect=0)
+        self.assertIn("nothing was committed", res.stdout)
+        mark = (root / "00-overview.md").read_text(encoding="utf-8")
+        self.assertIn("kb:begin lang=en git=committed", mark)
+        self.kb("check", expect=0)
+        self.assertIn("by decision", self.kb("status").stdout)
+        self.assertIn("nothing to do", self.kb("share", expect=0).stdout)
+
+    def test_the_decision_survives_a_sync(self):
+        """The mark lives inside the generated block, and `sync` regenerates
+        that block from front matter. Dropped there, every `add` after a
+        `share` would bring the finding back."""
+        root = self.committed_kb()
+        self.kb("share", expect=0)
+        self.kb("add", "b", "--kind", "reference", "--title", "b", expect=0)
+        self.kb("sync", expect=0)
+        self.assertIn("git=committed",
+                      (root / "00-overview.md").read_text(encoding="utf-8"))
+        self.assertNotIn("index table is stale", self.kb("check").stdout)
+        self.assertNotIn("nobody recorded", self.kb("check").stdout)
+
+    def test_untracking_then_local_goes_clean(self):
+        root = self.committed_kb()
+        self.git("rm", "-r", "-q", "--cached", str(root))
+        self.kb("local", expect=0)
+        self.assertIn("git=local",
+                      (root / "00-overview.md").read_text(encoding="utf-8"))
+        self.kb("check", expect=0)
+
+    def test_share_says_when_an_exclude_rule_still_keeps_them_out(self):
+        self.git("init", "-q", ".")
+        root = self.make_kb()
+        self.kb("local", expect=0)
+        res = self.kb("share", expect=0)
+        self.assertIn("still excluded", res.stdout)
+        self.assertIn("git=committed",
+                      (root / "00-overview.md").read_text(encoding="utf-8"))
+
+    def test_share_dry_run_writes_nothing(self):
+        root = self.committed_kb()
+        before = (root / "00-overview.md").read_text(encoding="utf-8")
+        self.assertIn("would record", self.kb("share", "--dry-run", expect=0).stdout)
+        self.assertEqual(before, (root / "00-overview.md").read_text(encoding="utf-8"))
+
+    def test_notes_outside_git_or_undecided_are_not_a_finding(self):
+        """Only a commit nobody decided on is reported. A kb outside any
+        repository, an excluded one, and a fresh one still waiting for the
+        question are all left as they were."""
+        root = self.make_kb()
+        self.fill_overview(root)
+        self.kb("check", expect=0)
+        self.git("init", "-q", ".")
+        self.kb("check", expect=0)          # undecided: `add` asks, not check
+        self.kb("local", expect=0)
+        self.kb("check", expect=0)
+
+    def test_a_flat_kb_at_the_repository_root_is_not_told_to_untrack_it(self):
+        """`git rm -r --cached <root>` on a kb that IS the repository root
+        untracks the whole repository."""
+        self.git("init", "-q", ".")
+        self.kb("init", "--dir", ".", env={"KB_ALLOW_EXISTING": "1"}, expect=0)
+        self.fill_overview(self.proj)
+        self.git("add", "-A")
+        self.git("commit", "-qm", "notes")
+        res = self.kb("check", expect=3)
+        self.assertIn("kb share", res.stdout)
+        self.assertNotIn("git rm", res.stdout)
+        self.assertIn("kb adopt", res.stdout)
 
 
 # ── one fixture, commands in the order a session uses them ──────────────────

@@ -357,15 +357,19 @@ because after that it never arises again:
 
 ```
 kb local          # .git/info/exclude — the notes stay here
-                  # or commit them, and they ship with the project
+kb share          # or record that they ship with the project, then commit them
 ```
 
 `.git/info/exclude` and not `.gitignore`: the latter is itself committed, so it
 imposes one person's choice on everyone who clones the repository.
 
-Nothing is stored about the answer — `kb status` asks git. A stored flag would
-be a second copy of a fact git already owns, and the two part company the first
-time someone edits an ignore rule.
+Whether the notes are tracked or ignored, `kb status` asks git every time.
+Whether anybody *decided* that, git cannot say: a tracked overview means only
+that somebody ran `git add`, and `git add -A` runs it without asking. So the
+answer is recorded in the marker line of the index: `git=committed` by
+`kb share`, `git=local` by `kb local`. `kb check` reports tracked notes without
+`git=committed` and exits 3. The finding names both ways out: `kb share`,
+or `git rm -r --cached <kb>` followed by `kb local`.
 
 ---
 
@@ -387,6 +391,7 @@ time someone edits an ignore rule.
 | `kb hook --install` | git pre-commit that refuses a commit on exit 4 |
 | `kb route` | `AGENTS.md` at the project root + a `CLAUDE.md` that imports it |
 | `kb local [--dry-run]` | keep the notes out of git (`.git/info/exclude`) |
+| `kb share [--dry-run]` | record that the notes belong in the repository (`git=committed`); commits nothing |
 | `--dir X` | operate on X instead of `./kb` or `./.kb` |
 
 `kb check` exits 3 on drift and **4 when a credential is found in a note**. What

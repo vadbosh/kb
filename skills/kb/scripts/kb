@@ -584,7 +584,22 @@ def current_state(notes: list[Note]) -> Note | None:
     return max(states, key=lambda n: (n.sort_date, n.num)) if states else None
 
 
-def render_block(notes: list[Note]) -> str:
+# Whether the notes belong in the repository is the owner's decision, and git
+# cannot record it: a tracked overview says only that somebody ran `git add`,
+# which `git add -A` does without asking anyone. So the answer is kept where kb
+# already writes and nobody else does -- the marker line of the index block --
+# and `check` reports tracked notes that carry no `git=committed`. `share` and
+# `local` are the two commands that write it.
+GIT_MARK_RE = re.compile(r"kb:begin\b[^\n]*?\bgit=(committed|local)\b")
+
+
+def git_mark(text: str) -> str | None:
+    """The recorded decision, `committed` or `local`; None when none is."""
+    m = GIT_MARK_RE.search(text)
+    return m.group(1) if m else None
+
+
+def render_block(notes: list[Note], git: str | None = None) -> str:
     """Index table, sorted by number.
 
     Number order, not kind order: numbers already encode when a topic appeared,
@@ -606,7 +621,10 @@ def render_block(notes: list[Note]) -> str:
                 replaces.setdefault(n.name, []).append(f"{by_name[ref].num:02d}")
                 replaced_by[ref] = f"{n.num:02d}"
 
-    lines = [MARK_BEGIN + f" lang={FRAME_LANG}" + S("block_note")]
+    # `git=` after `lang=`: copies of the CLI older than 5.3.0 match
+    # `kb:begin\s+lang=` and must keep finding it.
+    mark = f" lang={FRAME_LANG}" + (f" git={git}" if git else "")
+    lines = [MARK_BEGIN + mark + S("block_note")]
     if cur:
         lines += ["", S("current").format(name=cur.name, date=cur.sort_date)]
     lines += ["", S("header"), "|---|---|---|---|"]
@@ -992,8 +1010,10 @@ def write_skeleton(root: Path, title: str | None) -> Path:
               "decided about it.\n"
               "  Left alone, `git add -A` commits the notes — a default nobody "
               "chose.\n"
-              "  Ask the person which, then act: commit them to share, or "
-              "`kb local` to keep them on this machine.", file=sys.stderr)
+              "  Ask the person which, then act: `kb share` and commit them to "
+              "share, or `kb local` to keep them on this machine.\n"
+              "  Until one is run, committed notes are a `kb check` finding.",
+              file=sys.stderr)
     # Prose asking for this would not fire -- measured on this tool's own notes,
     # where four rewrites of an instruction produced four different failures. A
     # line in the output that the caller already reads does.
@@ -1214,7 +1234,7 @@ def cmd_sync(args) -> int:
               f"outside the markers and the filled sections of the entry point "
               f"are yours and stay as they were")
     notes = load_notes(root)
-    new = replace_block(text, render_block(notes))
+    new = replace_block(text, render_block(notes, git_mark(text)))
     if new is None:
         die(f"no managed block in {overview}\n"
             f"  add these two lines where the index table belongs, then re-run:\n"
@@ -1291,7 +1311,7 @@ class CheckCtx:
 def check_index(c: CheckCtx) -> list[str]:
     if replace_block(c.overview, "") is None:
         return ["no managed block in the overview — `kb adopt` or add the markers"]
-    expected = render_block(c.notes)
+    expected = render_block(c.notes, git_mark(c.overview))
     if MARK_BEGIN in c.overview and expected not in c.overview:
         return ["index table is stale — run `kb sync`"]
     return []
@@ -1421,6 +1441,35 @@ def check_size(c: CheckCtx) -> list[str]:
     return out
 
 
+def check_git_decision(c: CheckCtx) -> list[str]:
+    """Tracked notes with no recorded decision to track them.
+
+    The question "commit the notes or keep them here" was asked in prose and
+    in one line of `add` output, and a session that skipped it and ran
+    `git add -A` answered it for the owner -- after which `status` reported
+    the result as settled. Measured in findings, 2026-11-06: notes, AGENTS.md
+    and CLAUDE.md committed and pushed to a public repository, nobody asked.
+
+    Only this one state is a finding. Undecided notes (neither tracked nor
+    ignored) are left to the question `add` asks; flagging them would put every
+    new kb in a repository at exit 3 before anyone could be asked."""
+    if git_state(c.root) != "versioned" or git_mark(c.overview) == "committed":
+        return []
+    root = absolute(c.root)
+    git_dir = find_git_dir(root)
+    head = (f"{root.name}/ is tracked by git and nobody recorded that it should "
+            "be — ask the owner which: `kb share` if the notes belong in the "
+            "repository")
+    # Flat layout on the repository root: the untracking command for "these
+    # notes" is the one for the whole repository.
+    if git_dir is not None and root == absolute(git_dir.parent):
+        return [head + "; otherwise move them into a directory of their own "
+                f"(`kb adopt` offers {NOTES_DIRS[0]}/) — they are the "
+                "repository root, so they cannot be untracked on their own"]
+    return [head + f", or `git rm -r --cached {root}` and then `kb local` to "
+            "keep them on this machine (they stay in the history either way)"]
+
+
 def check_backups(c: CheckCtx) -> list[str]:
     baks = list(c.root.glob("*.bak.*"))
     if baks:
@@ -1440,6 +1489,7 @@ CHECKS: list[tuple[str, "object"]] = [
     ("unanswered", check_unanswered),
     ("entry-point", check_entry_point),
     ("charter", check_charter),
+    ("git-decision", check_git_decision),
     ("state-exists", check_state_exists),
     ("whitespace", check_whitespace),
     ("titles", check_titles),
@@ -2580,12 +2630,21 @@ def cmd_local(args) -> int:
                                                repo.resolve()).replace(os.sep, "/"))
 
     missing = [w for w in wants if w not in listed]
+    marked = git_mark((root / OVERVIEW).read_text(encoding="utf-8")) == "local"
     if not missing:
-        print(f"{exclude} already lists {', '.join(wants)} — nothing to do")
+        if args.dry_run or marked:
+            print(f"{exclude} already lists {', '.join(wants)} — nothing to do"
+                  + ("" if marked else f"; would record git=local in {OVERVIEW}"))
+            return 0
+        record_git_decision(root, "local")
+        print(f"{exclude} already lists {', '.join(wants)}; recorded git=local "
+              f"in {OVERVIEW}")
         return 0
     if args.dry_run:
-        print(f"would append {', '.join(missing)} to {exclude}")
+        print(f"would append {', '.join(missing)} to {exclude}"
+              + ("" if marked else f" and record git=local in {OVERVIEW}"))
         return 0
+    record_git_decision(root, "local")
     exclude.parent.mkdir(parents=True, exist_ok=True)
     sep = "" if not existing or existing.endswith("\n") else "\n"
     exclude.write_text(existing + sep + "".join(f"{w}\n" for w in missing),
@@ -2598,6 +2657,54 @@ def cmd_local(args) -> int:
               "is a promise a clone cannot keep")
     if kept:
         print(f"  already listed: {', '.join(kept)}")
+    return 0
+
+
+def record_git_decision(root: Path, value: str) -> bool:
+    """Write `git=<value>` into the marker line. True if the file changed.
+
+    The block is re-rendered rather than the line patched, so the mark lands
+    exactly where `sync` would put it and `check_index` sees no difference."""
+    overview = root / OVERVIEW
+    text = overview.read_text(encoding="utf-8")
+    new = replace_block(text, render_block(load_notes(root), value))
+    if new is None:
+        die(f"no managed block in {overview} — the decision is kept in its "
+            "marker line; `kb adopt` adds one")
+    if new == text:
+        return False
+    overview.write_text(new, encoding="utf-8")
+    return True
+
+
+def cmd_share(args) -> int:
+    """Record that the owner wants the notes in the repository.
+
+    Records, and does nothing else: no `git add`, no commit. Run only on the
+    owner's word -- the whole point of the mark is that `git add -A` is not
+    one, and neither is this command run on a session's own judgement.
+    """
+    root = find_root(args.dir)
+    refuse_outside(root)
+    if find_git_dir(root) is None:
+        die(f"{root} is not inside a git repository — there is nothing to share "
+            "the notes through")
+    overview = root / OVERVIEW
+    if git_mark(overview.read_text(encoding="utf-8")) == "committed":
+        print(f"{OVERVIEW} already records git=committed — nothing to do")
+        return 0
+    if args.dry_run:
+        print(f"would record git=committed in {overview}")
+        return 0
+    record_git_decision(root, "committed")
+    print(f"recorded git=committed in {overview}")
+    print("  nothing was committed — `git add` the notes and commit when ready")
+    # Not undone here: `local` wrote those lines on a decision too, and which
+    # of them still apply (the notes, the entry point) is the owner's to say.
+    if git_state(root) == "local":
+        print(f"  the notes are still excluded by an ignore rule — `git "
+              f"check-ignore -v {absolute(root)}` names it; remove it, or `git "
+              "add` will skip them")
     return 0
 
 
@@ -3044,7 +3151,11 @@ def cmd_status(args) -> int:
     notes = load_notes(root)
     cur = current_state(notes)
     print(f"kb root: {root}   files: {len(notes)}")
-    said = {"versioned": "git: tracked — the notes ship with the repository",
+    shared = git_mark((root / OVERVIEW).read_text(encoding="utf-8")) == "committed"
+    said = {"versioned": "git: tracked by decision (kb share) — the notes ship "
+                         "with the repository" if shared else
+                         "git: tracked, and the decision to track them was not "
+                         "recorded — `kb check` says what to do",
             "local": "git: excluded — the notes stay on this machine",
             "undecided": "git: neither tracked nor ignored — `kb local` keeps "
                          "them here, a commit shares them"}.get(git_state(root))
@@ -3310,6 +3421,11 @@ def main() -> int:
         "local", help="keep the notes out of git (.git/info/exclude)"))
     p.add_argument("--dry-run", action="store_true", help="print what would happen")
     p.set_defaults(fn=cmd_local)
+
+    p = with_dir(sub.add_parser(
+        "share", help="record that the notes belong in the repository (git=committed)"))
+    p.add_argument("--dry-run", action="store_true", help="print what would happen")
+    p.set_defaults(fn=cmd_share)
 
     p = with_dir(sub.add_parser("outline", help="section map with weights — where the seams are"))
     p.add_argument("file", nargs="?", help="file; omitted = every file over "
