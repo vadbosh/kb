@@ -1727,6 +1727,17 @@ class Sources(Base):
         self.note(root, ",")
         self.assertIn("`sources:` is empty", self.kb("verify", expect=3).stdout)
 
+    def test_a_comment_after_sources_is_not_a_path(self):
+        # `sources: none # examples only` gave four missing sources: the parser
+        # keeps a ` #` in values on purpose -- titles hold "issue #12" -- so
+        # the list itself drops a trailing comment (F622).
+        root = self.kb_root()
+        self.src("src/app.py", days=20)
+        self.note(root, "none # examples only", name="01-a.md")
+        self.note(root, "src/app.py  # the entry", name="02-b.md")
+        res = self.kb("verify", expect=0)
+        self.assertNotIn("do not exist", res.stdout)
+
     def test_none_beside_a_path_is_named(self):
         root = self.kb_root()
         self.src("src/app.py", days=20)

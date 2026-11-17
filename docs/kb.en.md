@@ -517,7 +517,8 @@ notes are often kept out of git.
 
 Write the paths on the `sources:` line itself. A YAML list under an empty
 `sources:` is not read, and `verify` names such a note. A single path with a
-space needs a trailing comma: `sources: docs/my notes.md,`.
+space needs a trailing comma: `sources: docs/my notes.md,`. A trailing `# comment`
+is dropped.
 
 When the dates are on the same day, the report shows the time as well.
 

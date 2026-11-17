@@ -1642,11 +1642,18 @@ def stale_dated_line(overview: Path, notes: list[Note]) -> tuple[str, str] | Non
     return None
 
 
+def sources_value(raw: str) -> str:
+    """The value of `sources:` without a trailing YAML-style comment. Cut here,
+    not in `parse_front_matter`: a title such as "issue #12" keeps its ` #`, and
+    `sources: none # examples only` gave four missing sources (F622)."""
+    return re.sub(r"\s#.*$", "", raw).strip()
+
+
 def split_sources(raw: str) -> list[str]:
     """`sources:` as a list. Commas separate when there are any, so a path with
     a space survives in a comma list; otherwise whitespace does, as in
     `supersedes:`."""
-    raw = raw.strip()
+    raw = sources_value(raw)
     # `none` is a decision, not a path: a note that cites files only as
     # examples says so, and the hint about notes without sources stops.
     if raw.lower() == "none":
@@ -1813,7 +1820,7 @@ def stale_sources(project: Path, notes: list[Note]
         if not listed:
             # `sources:` and `sources: ,` both leave nothing to watch; only
             # `none` says so on purpose.
-            if n.sources is not None and n.sources.strip().lower() != "none":
+            if n.sources is not None and sources_value(n.sources).lower() != "none":
                 empty.append(n.name)
             continue
         try:

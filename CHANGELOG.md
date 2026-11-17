@@ -18,6 +18,14 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 5.2.2
+
+- **A trailing comment after `sources:` is not a path.**
+  `sources: none # examples only` was read as four paths that do not exist:
+  `none`, `#`, `examples` and `only`. The list now drops a trailing ` # …`. The
+  general front-matter parser still keeps it, because a title such as
+  `issue #12 notes` must stay whole.
+
 ## 5.2.1
 
 - **`verify` points at old notes that cite files and list no `sources:`.**
