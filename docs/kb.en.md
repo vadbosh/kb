@@ -531,6 +531,12 @@ them on a line of its own: `/kb save` adds the field from that list. This is a
 hint, not a suspicion: it never changes the exit code. `sources: none` marks a
 note whose paths are only examples, and the hint stops for it.
 
+Project paths come first. Left out: the notes themselves, `.git/`, what git
+ignores, `/dev`, `/usr` and similar system directories, and one-component paths
+such as `/tmp`. A path that already changed after the note is marked
+`(changed after the note)`. Read it against the note before you add the field:
+adding the field rewrites the note, and after that the change no longer shows.
+
 `kb add --sources <paths>` writes the field and refuses a path that does not
 exist.
 

@@ -337,10 +337,14 @@ a remote system.
 
 **`brief` prints `# sources: N note(s) cite files and list none`** when older
 notes have no field. In the same save, add `sources:` to each one it names:
-`kb verify` shows the paths each one cites — keep the ones the note actually
+`kb verify` lists every path each one cites — keep the ones the note actually
 describes, drop the ones it only mentions. A note whose paths are only
-examples gets `sources: none`. Editing the note this way also clears it from
-the list; that is the point, not a side effect.
+examples gets `sources: none`.
+
+**A path marked `(changed after the note)` is read first.** Adding the field
+rewrites the note, and from then on that change looks older than the note: the
+one moment it can be caught is before the edit. Read the source against the
+note, correct the note if it is wrong, then add the field.
 
 **Run a command before writing a claim about the system** — now, not from memory
 of a run earlier in the session. `check` and `verify` cannot help: they prove the
@@ -386,7 +390,7 @@ and turned up in the next session's `kb brief`, in another assistant.
 
 Exit 3 from `check` means act in the same turn:
 
-| What `check` reported | What to do |
+| What `check` or `verify` reported | What to do |
 |---|---|
 | stale index table | `kb sync` |
 | links a missing file | fix the link or restore the file |
@@ -396,6 +400,8 @@ Exit 3 from `check` means act in the same turn:
 | `*.bak.*` left over | check them against the originals, then propose deleting |
 | overview still has its placeholder | write the paragraph — `restore` reads it as what the stream is |
 | notes but no `state` | `kb add state --kind state` — `restore` takes "the situation now" from it |
+| `verify`: notes older than what they describe | read the source, correct the note or confirm it; re-saving the note clears the line |
+| `verify` hint: notes that cite files and list no `sources:` | add the field as the section above says; it never sets the exit code, so look for it |
 | **file over the size threshold** | `kb outline` → judge by kind-mixing → propose a seam OR say "no seam, leaving it" |
 
 Never stay silent about size and never defer it; never split silently either —
@@ -449,7 +455,9 @@ that left something stale hands it to whoever comes next, in whatever assistant.
 
 ```
 kb verify     vanished paths, notes past their re-check age, an overview date
-              older than the newest note, the entry point; exit 3 = look
+              older than the newest note, the entry point, notes older than
+              their sources; exit 3 = look. After the verdict, a hint about
+              notes without `sources:` that never sets the exit code
 ```
 
 It reports **suspicions** — a flagged path may live in a container or on another

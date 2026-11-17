@@ -46,6 +46,9 @@ What its verdict lines mean:
   moved on and the snapshot may be behind. Surface these under Discrepancies,
   fix nothing unasked, and never rewrite a path without confirming the
   replacement exists.
+- **`# sources: N note(s) cite files and list none`** → a hint, not a
+  suspicion. Say in one line under Discrepancies that `/kb save` adds the field
+  to those notes; this half edits nothing.
 
 `verify` also reports on the project's entry point, under its own heading. Those
 findings are conditions, not events — each stays wrong until fixed:

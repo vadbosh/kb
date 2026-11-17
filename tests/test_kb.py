@@ -1663,6 +1663,91 @@ class Sources(Base):
         brief = self.kb("brief", expect=0)
         self.assertIn("# sources: 1 note(s) cite files and list none", brief.stdout)
 
+    def test_a_tilde_word_does_not_crash_verify(self):
+        # `~30s` is prose ("about thirty seconds"); expanduser raised
+        # RuntimeError on it and took verify and brief down (review 5.2.1, C1).
+        root = self.kb_root()
+        self.write_note(root, "01-a.md", body="Takes `~30s` per run, see `~nouser1/x`.")
+        self.kb("verify", expect=0)
+        self.kb("brief", expect=0)
+        self.note(root, "~nouser1/x", name="02-b.md")
+        self.assertIn("~nouser1/x", self.kb("verify", expect=3).stdout)
+
+    def test_the_hint_marks_a_cited_file_newer_than_the_note(self):
+        # Adding `sources:` rewrites the note and hides what already changed;
+        # the hint says which paths to read first (review 5.2.1, I1).
+        root = self.kb_root()
+        self.src("src/app.py", days=10)
+        path = self.write_note(root, "01-a.md", body="See `src/app.py`.")
+        self.age(path, 30)
+        res = self.kb("verify", expect=0)
+        self.assertIn("src/app.py (changed after the note)", res.stdout)
+
+    def test_the_hint_works_in_the_flat_layout(self):
+        # notes dir == project: every project path was dropped (review, I2).
+        flat = self.tmp / "flat"
+        flat.mkdir()
+        self.src("src/app.py", days=20, base=flat)
+        self.kb("init", "--dir", ".", cwd=flat, env={"KB_ALLOW_EXISTING": "1"},
+                expect=0)
+        self.fill_overview(flat)
+        self.write_note(flat, "01-a.md", body="See `src/app.py` and `01-a.md`.")
+        res = self.kb("verify", cwd=flat, expect=0)
+        self.assertIn("01-a.md  src/app.py", res.stdout)
+        self.assertNotIn("src/app.py, 01-a.md", res.stdout)
+
+    def test_the_hint_skips_system_and_git_paths_and_lists_project_paths_first(self):
+        # Real notes: `/dev/urandom`, `.git/info/exclude` and home config
+        # crowded the visible top of the list (review 5.2.1, I3).
+        self.git("init", "-q", ".")
+        root = self.kb_root()
+        self.src("src/app.py", days=20)
+        (self.proj / ".gitignore").write_text("build/\n", encoding="utf-8")
+        self.src("build/out.js", days=20)
+        self.write_note(root, "01-a.md", body=(
+            "Uses `/dev/urandom`, `/usr/bin/env`, `.git/info/exclude`, "
+            "`build/out.js`, `~/.bashrc` and `src/app.py`."))
+        (self.home / ".bashrc").write_text("x\n", encoding="utf-8")
+        res = self.kb("verify", expect=0)
+        line = next(l for l in res.stdout.splitlines() if l.startswith("  01-a.md"))
+        self.assertTrue(line.startswith("  01-a.md  src/app.py"), line)
+        for noise in ("/dev/urandom", "/usr/bin/env", ".git/", "build/out.js"):
+            self.assertNotIn(noise, line)
+
+    def test_the_hint_names_one_file_once(self):
+        root = self.kb_root()
+        self.src("install.sh", days=20)
+        self.write_note(root, "01-a.md", body="Run `./install.sh`; `install.sh` copies.")
+        line = next(l for l in self.kb("verify").stdout.splitlines()
+                    if l.startswith("  01-a.md"))
+        self.assertEqual(line.count("install.sh"), 1, line)
+
+    def test_a_comma_alone_is_an_empty_sources_line(self):
+        root = self.kb_root()
+        self.note(root, ",")
+        self.assertIn("`sources:` is empty", self.kb("verify", expect=3).stdout)
+
+    def test_none_beside_a_path_is_named(self):
+        root = self.kb_root()
+        self.src("src/app.py", days=20)
+        self.note(root, "none, src/app.py")
+        self.assertIn("`none` stands alone", self.kb("verify", expect=3).stdout)
+
+    def test_the_comma_advice_only_for_a_spaced_path(self):
+        res = self.kb("add", "a", "--kind", "reference", "--title", "a",
+                      "--sources", "src/ap.py", expect=1)
+        self.assertNotIn("comma", res.stderr)
+
+    def test_same_minute_findings_show_seconds(self):
+        root = self.kb_root()
+        note = self.note(root, "src/app.py", days=0)
+        self.src("src/app.py")
+        base = time.mktime(date.today().timetuple()) + 3600   # 01:00 today
+        os.utime(note, (base + 5, base + 5))
+        os.utime(self.proj / "src/app.py", (base + 40, base + 40))
+        self.assertRegex(self.kb("verify", expect=3).stdout,
+                         r"changed \S+ 01:00:40, note written \S+ 01:00:05")
+
     def test_a_top_level_directory_is_not_a_source(self):
         # Measured on this repository's own notes: `/tmp` in a recipe about
         # sandboxes came out as a source. A system directory is where work
@@ -1693,13 +1778,14 @@ class Sources(Base):
         root = self.kb_root()
         self.src("src/app.py", days=20)
         note = self.note(root, "src/app.py", days=0)
-        t = time.time() - 120
-        os.utime(note, (t, t))
         self.src("src/app.py")
+        # Fixed moments of today, so the test means the same at midnight.
+        base = time.mktime(date.today().timetuple())
+        os.utime(note, (base + 3600, base + 3600))               # 01:00
+        os.utime(self.proj / "src/app.py", (base + 7200, base + 7200))  # 02:00
         res = self.kb("verify", expect=3)
-        if date.fromtimestamp(t) == date.today():
-            self.assertRegex(res.stdout, r"changed \d{4}-\d\d-\d\d \d\d:\d\d, "
-                                         r"note written \d{4}-\d\d-\d\d \d\d:\d\d")
+        self.assertRegex(res.stdout, r"changed \d{4}-\d\d-\d\d 02:00, "
+                                     r"note written \d{4}-\d\d-\d\d 01:00")
 
     def test_add_with_a_spaced_path_says_to_use_a_comma(self):
         self.src("docs/my notes.md")
