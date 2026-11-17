@@ -42,6 +42,7 @@ import io
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -89,8 +90,8 @@ def search_bases(cwd: Path):
     anyway — notes sitting directly in a home directory have nothing to be about.
     """
     home = Path.home().resolve()
-    git = find_git_dir(cwd)
-    stop = git.parent.resolve() if git else None
+    git = find_git_repo(cwd)
+    stop = git.top if git else None
     d = cwd
     while True:
         if d != home:
@@ -590,12 +591,34 @@ def current_state(notes: list[Note]) -> Note | None:
 # already writes and nobody else does -- the marker line of the index block --
 # and `check` reports tracked notes that carry no `git=committed`. `share` and
 # `local` are the two commands that write it.
-GIT_MARK_RE = re.compile(r"kb:begin\b[^\n]*?\bgit=(committed|local)\b")
+GIT_MARK_RE = re.compile(r"\bgit=(committed|local)\b")
+
+# The markers are whole lines, at the start of a line, and nothing else is.
+# Found as substrings, the first `kb:begin` anywhere was the block: a sentence
+# above it quoting the marker made `sync` cut from the middle of that sentence,
+# deleting the rest of it and the real marker line, and the quoted
+# `git=committed` read as the owner's decision. Every reader of the block --
+# `replace_block`, `git_mark`, the frame check in `sync` -- takes it from here.
+BEGIN_LINE_RE = re.compile(r"^<!-- kb:begin\b[^\n]*$", re.M)
+END_LINE_RE = re.compile(r"^<!-- kb:end -->[ \t]*$", re.M)
+
+
+def find_block(text: str) -> tuple[int, int, str] | None:
+    """(start, end, marker line) of the managed block; None if there is none."""
+    b = BEGIN_LINE_RE.search(text)
+    if not b:
+        return None
+    e = END_LINE_RE.search(text, b.end())
+    if not e:
+        return None
+    return b.start(), e.end(), b.group(0)
 
 
 def git_mark(text: str) -> str | None:
-    """The recorded decision, `committed` or `local`; None when none is."""
-    m = GIT_MARK_RE.search(text)
+    """The recorded decision, `committed` or `local`; None when none is.
+    Read from the marker line only, never from the prose around it."""
+    blk = find_block(text)
+    m = GIT_MARK_RE.search(blk[2]) if blk else None
     return m.group(1) if m else None
 
 
@@ -647,11 +670,11 @@ def render_block(notes: list[Note], git: str | None = None) -> str:
 
 def replace_block(text: str, block: str) -> str | None:
     """Swap the managed block, leaving every other byte alone. None if no markers."""
-    start = text.find(MARK_BEGIN)
-    end = text.find(MARK_END)
-    if start == -1 or end == -1 or end < start:
+    blk = find_block(text)
+    if blk is None:
         return None
-    return text[:start] + block + text[end + len(MARK_END):]
+    start, end, _ = blk
+    return text[:start] + block + text[end:]
 
 
 def harvest_table(text: str) -> dict[str, str]:
@@ -822,19 +845,70 @@ def refuse_bad_root(root: Path) -> None:
             "make a directory for the subject first")
 
 
-def find_git_dir(start: Path) -> Path | None:
-    """The `.git` directory governing `start`, or None.
+@dataclass(frozen=True)
+class GitRepo:
+    """Where git itself says things are, for one starting directory."""
+    top: Path        # the work tree root
+    exclude: Path    # the exclude file git reads for this work tree
+    hooks: Path      # the hooks directory git runs from
 
-    Directory only: a `.git` FILE is a worktree or submodule pointer, and the
-    exclude file it points at is not where anyone looking for it would look.
-    Treating that case as "no repository" costs an advisory, never correctness.
+
+_GIT_REPO_CACHE: dict[str, "GitRepo | None"] = {}
+
+
+def find_git_repo(start: Path) -> GitRepo | None:
+    """The repository governing `start`, as git sees it, or None.
+
+    Asked of git, not of the filesystem. This used to accept only a `.git`
+    DIRECTORY, on the grounds that missing a worktree or a submodule "costs an
+    advisory, never correctness". Since 5.3.0 it costs the guard: in a
+    worktree, where `.git` is a file, committed notes read as clean and
+    `share`, `local` and `hook` refused to run. A submodule went the other
+    way -- the superproject's `.git` was found, and `local` wrote an exclude
+    file the submodule never reads.
+
+    The filesystem walk stays, only as the cheap negative: no `.git` of either
+    kind above `start` means no repository and no subprocess. Most streams
+    here are not repositories, and `search_bases` runs on every command.
+    None also when git is missing or refuses (a `safe.directory` mismatch).
     """
-    p = start.resolve()
-    while p != p.parent:
-        if (p / ".git").is_dir():
-            return p / ".git"
-        p = p.parent
-    return None
+    try:
+        p = start.resolve()
+    except OSError:
+        return None
+    key = str(p)
+    if key in _GIT_REPO_CACHE:
+        return _GIT_REPO_CACHE[key]
+    q, seen = p, False
+    while True:
+        if (q / ".git").exists():
+            seen = True
+            break
+        if q == q.parent:
+            break
+        q = q.parent
+    repo = None
+    if seen:
+        # A notes directory about to be created does not exist yet; git is
+        # asked from the nearest directory that does.
+        here = p
+        while not here.is_dir() and here != here.parent:
+            here = here.parent
+        try:
+            res = subprocess.run(
+                ["git", "rev-parse", "--show-toplevel",
+                 "--git-path", "info/exclude", "--git-path", "hooks"],
+                cwd=here, capture_output=True, text=True, timeout=10)
+            lines = res.stdout.splitlines()
+            # `--git-path` answers relative to cwd unless the path is outside
+            # it; `--path-format=absolute` would say so directly but needs
+            # git 2.31, newer than some system gits still in use.
+            if res.returncode == 0 and len(lines) == 3:
+                repo = GitRepo(*(absolute(here / x) for x in lines))
+        except (OSError, subprocess.SubprocessError):
+            repo = None
+    _GIT_REPO_CACHE[key] = repo
+    return repo
 
 
 def git_state(root: Path) -> str | None:
@@ -850,14 +924,14 @@ def git_state(root: Path) -> str | None:
 
     None means the question does not arise: no repository, or no git binary.
     """
-    if find_git_dir(root) is None:
+    if find_git_repo(root) is None:
         return None
     overview = str((root / OVERVIEW).resolve())
     # Both commands run IN the notes directory, not above it. `root.parent` was
     # the same place for the nested layout and one directory too high for the
     # flat one: a stream that is itself the repository root put git outside the
     # work tree, both calls exited 128, and committed notes were reported as
-    # "nobody has chosen yet". `find_git_dir(root)` already proved root is
+    # "nobody has chosen yet". `find_git_repo(root)` already proved root is
     # inside a repository, so root is always a safe cwd.
     try:
         tracked = subprocess.run(
@@ -897,7 +971,7 @@ def git_ignored_children(stream: Path) -> set[Path]:
         kids = [d for d in stream.iterdir() if d.is_dir()]
     except OSError:
         return set()
-    if not kids or find_git_dir(stream) is None:
+    if not kids or find_git_repo(stream) is None:
         return set()
     try:
         res = subprocess.run(
@@ -1228,7 +1302,8 @@ def cmd_sync(args) -> int:
     # below replaces only what sits between the markers, so the frame turns
     # English in place and nothing is appended; say so once, because the
     # headings a scaffold wrote outside the markers stay as they were.
-    was = re.search(r"kb:begin\s+lang=([a-z]{2})\b", text)
+    blk = find_block(text)
+    was = re.search(r"kb:begin\s+lang=([a-z]{2})\b", blk[2]) if blk else None
     if was and was.group(1) != FRAME_LANG:
         print(f"frame: {was.group(1)} → {FRAME_LANG}; the titles, the prose "
               f"outside the markers and the filled sections of the entry point "
@@ -1312,7 +1387,7 @@ def check_index(c: CheckCtx) -> list[str]:
     if replace_block(c.overview, "") is None:
         return ["no managed block in the overview — `kb adopt` or add the markers"]
     expected = render_block(c.notes, git_mark(c.overview))
-    if MARK_BEGIN in c.overview and expected not in c.overview:
+    if expected not in c.overview:
         return ["index table is stale — run `kb sync`"]
     return []
 
@@ -1447,27 +1522,60 @@ def check_git_decision(c: CheckCtx) -> list[str]:
     The question "commit the notes or keep them here" was asked in prose and
     in one line of `add` output, and a session that skipped it and ran
     `git add -A` answered it for the owner -- after which `status` reported
-    the result as settled. Measured in findings, 2026-11-06: notes, AGENTS.md
-    and CLAUDE.md committed and pushed to a public repository, nobody asked.
+    the result as settled. It happened: notes, AGENTS.md and CLAUDE.md went
+    to a public repository, and nobody was asked.
 
     Only this one state is a finding. Undecided notes (neither tracked nor
     ignored) are left to the question `add` asks; flagging them would put every
     new kb in a repository at exit 3 before anyone could be asked."""
-    if git_state(c.root) != "versioned" or git_mark(c.overview) == "committed":
+    if git_mark(c.overview) == "committed":
+        return []
+    repo = find_git_repo(c.root)
+    if repo is None:
         return []
     root = absolute(c.root)
-    git_dir = find_git_dir(root)
+    # Any note, not only the overview: a partial `git add`, or an ignore rule
+    # naming 00-overview.md, tracked the notes and left `git_state` saying
+    # "undecided" -- the overview is the one file it asks about.
+    if not git_tracked(root, [root / OVERVIEW] + [n.path for n in c.notes]):
+        return []
     head = (f"{root.name}/ is tracked by git and nobody recorded that it should "
             "be — ask the owner which: `kb share` if the notes belong in the "
             "repository")
     # Flat layout on the repository root: the untracking command for "these
     # notes" is the one for the whole repository.
-    if git_dir is not None and root == absolute(git_dir.parent):
+    if root == repo.top:
         return [head + "; otherwise move them into a directory of their own "
                 f"(`kb adopt` offers {NOTES_DIRS[0]}/) — they are the "
                 "repository root, so they cannot be untracked on their own"]
-    return [head + f", or `git rm -r --cached {root}` and then `kb local` to "
-            "keep them on this machine (they stay in the history either way)"]
+    # The entry point kb wrote goes with the notes, as `kb local` treats it.
+    # Named only the notes, the advice left AGENTS.md committed while `local`
+    # wrote an exclude rule that git does not apply to a tracked file.
+    targets = [root] + git_tracked(root, own_entry_files(project_of(root)))
+    cmd = "git rm -r --cached " + " ".join(shlex.quote(str(t)) for t in targets)
+    return [head + f", or `{cmd}` and then `kb local` to keep them on this "
+            "machine (they stay in the history either way)"]
+
+
+def git_tracked(cwd: Path, paths: list[Path]) -> list[Path]:
+    """Those of `paths` that git tracks (index included), in their order."""
+    if not paths:
+        return []
+    try:
+        res = subprocess.run(
+            ["git", "ls-files", "-z", "--full-name", "--",
+             *[str(absolute(p)) for p in paths]],
+            cwd=cwd if cwd.is_dir() else cwd.parent,
+            capture_output=True, text=True, timeout=10)
+    except (OSError, subprocess.SubprocessError):
+        return []
+    if res.returncode != 0:
+        return []
+    repo = find_git_repo(cwd)
+    if repo is None:
+        return []
+    listed = {absolute(repo.top / f) for f in res.stdout.split("\0") if f}
+    return [p for p in paths if absolute(p) in listed]
 
 
 def check_backups(c: CheckCtx) -> list[str]:
@@ -1657,6 +1765,8 @@ class VerifyResult:
     stale: list[tuple[str, str, str, str]] = field(default_factory=list)
     missing_sources: list[tuple[str, str]] = field(default_factory=list)
     empty_sources: list[str] = field(default_factory=list)
+    # (note, source): a directory too large to walk, so its time is unknown.
+    large_sources: list[tuple[str, str]] = field(default_factory=list)
     # A hint, outside `code`: (note, cited paths that exist).
     unwatched: list[tuple[str, list[tuple[str, bool]]]] = field(default_factory=list)
 
@@ -1664,7 +1774,7 @@ class VerifyResult:
     def code(self) -> int:
         return 3 if (self.dead or self.aging or self.moved or self.entry
                      or self.dated or self.stale or self.missing_sources
-                     or self.empty_sources) else 0
+                     or self.empty_sources or self.large_sources) else 0
 
 
 # Before 5.1.0 the scaffold wrote `Updated <today>` (`Обновлён` in the old
@@ -1777,7 +1887,11 @@ def cited_paths(text: str, project: Path, root: Path) -> list[str]:
         elif r == root_r or root_r in r.parents:
             continue
         seen.add(r)
-        (other if raw.startswith(("/", "~")) else rel).append(raw)
+        # Only paths inside the project go to git. One `../` path in the batch
+        # made `check-ignore` exit 128 and the filter answer nothing for every
+        # path (review 2026-11-17, A17).
+        outside = project_r not in r.parents
+        (other if outside or raw.startswith(("/", "~")) else rel).append(raw)
     ignored = _git_ignored(project, [r.removeprefix("./") for r in rel])
     rel = [r for r in rel if r.removeprefix("./") not in ignored]
     return rel + other
@@ -1805,10 +1919,21 @@ def _git_out(cwd: Path, *argv: str) -> str | None:
     return res.stdout if res.returncode == 0 else None
 
 
-def _newest_mtime(p: Path, cap: int = 20000) -> float:
-    """mtime of a file, or of the newest file under a directory."""
+SOURCE_FILE_CAP = 20000     # files walked under one directory source
+
+
+class SourceTooLarge(Exception):
+    """A directory source past SOURCE_FILE_CAP, with no commit to answer for it."""
+
+
+def _newest_mtime(p: Path, cap: int | None = None) -> tuple[float, bool]:
+    """mtime of a file, or of the newest file under a directory, and whether
+    every file was seen. Past the cap the answer is the newest file SO FAR, and
+    the caller must not take it for the whole directory (review 2026-11-17,
+    A16): which file the walk had reached decided whether a change was found."""
+    cap = SOURCE_FILE_CAP if cap is None else cap
     if not p.is_dir():
-        return p.stat().st_mtime
+        return p.stat().st_mtime, True
     # Files only: a directory's own mtime moves when an entry is added or
     # removed -- a new subdirectory, an editor's swap file -- and is no
     # change to anything the note describes. An empty directory falls back
@@ -1817,16 +1942,16 @@ def _newest_mtime(p: Path, cap: int = 20000) -> float:
     # The stream walk's prune: no notes directory, no nested stream, nothing
     # git ignores. `sources: .` otherwise went stale whenever a note was
     # written, the notes being inside it (final review, I2).
-    for here, files in walk_stream(p):
+    for here, files in walk_stream(p, hidden=True):
         for f in files:
             seen += 1
             if seen > cap:
-                return newest
+                return newest, False
             try:
                 newest = max(newest, (Path(here) / f).stat().st_mtime)
             except OSError:
                 pass
-    return newest or p.stat().st_mtime
+    return (newest or p.stat().st_mtime), True
 
 
 def source_time(p: Path) -> float | None:
@@ -1838,33 +1963,63 @@ def source_time(p: Path) -> float | None:
     yet committed, outside a repository, no git at all -- answers with mtime.
     git runs in the source's own directory, so a source in another repository
     is asked of that repository."""
+    if _SOURCE_TIMES is None:
+        return _source_time(p)
+    key = str(absolute(p))
+    if key not in _SOURCE_TIMES:
+        try:
+            _SOURCE_TIMES[key] = _source_time(p)
+        except SourceTooLarge as e:
+            _SOURCE_TIMES[key] = e
+    hit = _SOURCE_TIMES[key]
+    if isinstance(hit, SourceTooLarge):
+        raise hit
+    return hit
+
+
+# One `verify_findings` call times each source once: several notes citing one
+# large directory walked it once per note, and `brief` pays that at every
+# session start (review 2026-11-17, C8). Scoped to the call, never longer:
+# `brief` and `verify` must see an edit made a second earlier.
+_SOURCE_TIMES: dict | None = None
+
+
+def _source_time(p: Path) -> float | None:
     if not p.exists():
         return None
     here = p if p.is_dir() else p.parent
-    mtime = _newest_mtime(p)
+    mtime, complete = _newest_mtime(p)
     if (_git_out(here, "rev-parse", "--is-inside-work-tree") or "").strip() == "true":
         dirty = _git_out(here, "status", "--porcelain", "--", str(p))
         last = _git_out(here, "log", "-1", "--format=%ct", "--", str(p))
         if dirty == "" and last and last.strip().isdigit():
+            if not complete:
+                # Clean and tracked: the commit covers every file, walked or
+                # not. Only the min() with a partial mtime would be wrong.
+                return float(last.strip())
             # The earlier of the two. A clone makes the mtime new and leaves
             # the commit old; the everyday "edit, update the note, commit"
             # makes the commit new and leaves the edit's mtime old. Either
             # alone flags a note that is current (final review, I1).
             return min(float(last.strip()), mtime)
+    if not complete:
+        raise SourceTooLarge(str(p))
     return mtime
 
 
 def stale_sources(project: Path, notes: list[Note]
                   ) -> tuple[list[tuple[str, str, str, str]],
-                             list[tuple[str, str]], list[str]]:
-    """Notes older than what they describe, sources that do not exist, and
-    notes whose `sources:` key is there but empty.
+                             list[tuple[str, str]], list[str],
+                             list[tuple[str, str]]]:
+    """Notes older than what they describe, sources that do not exist,
+    notes whose `sources:` key is there but empty, and directory sources too
+    large to time.
 
     The note's side is the mtime of its own file: notes are often kept out of
     git, so a commit cannot answer for them. An empty key is what a YAML block
     list leaves behind, the parser reading one line per field, and without a
     word the check is off for that note (final review, I3)."""
-    stale, missing, empty = [], [], []
+    stale, missing, empty, large = [], [], [], []
     for n in notes:
         listed = note_sources(n)
         if not listed:
@@ -1882,12 +2037,16 @@ def stale_sources(project: Path, notes: list[Note]
                 missing.append((n.name, "none — `none` stands alone: drop it or "
                                         "the paths"))
                 continue
-            t = source_time(resolve_source(project, raw))
+            try:
+                t = source_time(resolve_source(project, raw))
+            except SourceTooLarge:
+                large.append((n.name, raw))
+                continue
             if t is None:
                 missing.append((n.name, raw))
             elif t > written:
                 stale.append((n.name, raw, *_two_moments(t, written)))
-    return stale, missing, empty
+    return stale, missing, empty, large
 
 
 def _two_moments(a: float, b: float) -> tuple[str, str]:
@@ -1925,7 +2084,10 @@ def unwatched_notes(project: Path, root: Path, notes: list[Note]
             written = float("inf")
         marked = []
         for raw in cited:
-            t = source_time(resolve_source(project, raw))
+            try:
+                t = source_time(resolve_source(project, raw))
+            except SourceTooLarge:
+                t = None                # a hint; "changed" is not known
             marked.append((raw, t is not None and t > written))
         out.append((n.name, marked))
     return out
@@ -1933,6 +2095,15 @@ def unwatched_notes(project: Path, root: Path, notes: list[Note]
 
 def verify_findings(root: Path, notes: list[Note]) -> VerifyResult:
     """Everything `verify` suspects, with nothing printed. See `cmd_verify`."""
+    global _SOURCE_TIMES
+    _SOURCE_TIMES = {}
+    try:
+        return _verify_findings(root, notes)
+    finally:
+        _SOURCE_TIMES = None
+
+
+def _verify_findings(root: Path, notes: list[Note]) -> VerifyResult:
     today = date.today()
 
     # The overview is scanned too, and it is the file that needed it most. Its
@@ -2047,9 +2218,9 @@ def verify_findings(root: Path, notes: list[Note]) -> VerifyResult:
     # file here where length is a running cost rather than a one-off.
     entry = route_findings(root, chains=chains)
     dated = stale_dated_line(root / OVERVIEW, notes)
-    stale, missing, empty = stale_sources(project, notes)
+    stale, missing, empty, large = stale_sources(project, notes)
     return VerifyResult(dead, aging, moved, gap_hours, entry, dated,
-                        stale, missing, empty,
+                        stale, missing, empty, large,
                         unwatched_notes(project, root, notes))
 
 
@@ -2094,6 +2265,13 @@ def print_verify(res: VerifyResult, out=None) -> int:
               file=out)
         for note in res.empty_sources:
             print(f"  {note}", file=out)
+    if res.large_sources:
+        print(f"\nsources too large to time ({len(res.large_sources)}) — over "
+              f"{SOURCE_FILE_CAP} files and not a clean tracked directory, so a "
+              "change in them may be missed; list the subdirectories the note "
+              "describes instead:", file=out)
+        for note, src in res.large_sources:
+            print(f"  {note}  {src}", file=out)
 
     if res.dated:
         line, newest = res.dated
@@ -2169,13 +2347,15 @@ def cmd_hook(args) -> int:
     """
     root = find_root(args.dir)
     refuse_outside(root)
-    git_dir = find_git_dir(root)
-    if not git_dir:
+    git = find_git_repo(root)
+    if not git:
         die(f"{root} is not inside a git repository — nothing to hook into.\n"
             "  `kb check` still runs at the end of every save; that is the check\n"
             "  that applies when the notes are not versioned.")
 
-    hook = git_dir / "hooks" / "pre-commit"
+    # `--git-path hooks`: in a worktree the hooks live in the common directory,
+    # and `core.hooksPath` may move them anywhere.
+    hook = git.hooks / "pre-commit"
     body = HOOK_BODY.format(kb=Path(sys.argv[0]).resolve(), root=root.resolve())
 
     if hook.exists() and "kb hook --install" not in hook.read_text(
@@ -2281,10 +2461,18 @@ def route_findings(root: Path, *, on_write: bool = False,
         # "committed" was the word here and it was not true: the file is
         # merely not excluded, and in a repository with no commits at all
         # nothing is committed. A finding that overstates the state is acted on
-        # against a situation that does not exist.
-        out.append(f"{target.name} is not excluded while {root.name}/ is — the "
-                   f"next `git add -A` commits it, and a clone then gets a "
-                   f"pointer to a directory it does not have")
+        # against a situation that does not exist. The reverse was wrong too:
+        # a TRACKED file listed in the exclude file was called "not excluded",
+        # and adding the rule again changes nothing.
+        if git_tracked(project, [target]):
+            out.append(f"{target.name} is committed while {root.name}/ is "
+                       f"excluded — a clone gets a pointer to a directory it "
+                       f"does not have; `git rm --cached {shlex.quote(str(target))}`"
+                       ", an exclude rule does not apply to a tracked file")
+        else:
+            out.append(f"{target.name} is not excluded while {root.name}/ is — "
+                       f"the next `git add -A` commits it, and a clone then "
+                       f"gets a pointer to a directory it does not have")
     elif state == "versioned" and ignored and on_write:
         # Only where the file is being written, and deliberately not on every
         # save and every restore. The two directions are not equally bad: a
@@ -2414,8 +2602,14 @@ def route_weight(project: Path, start: Path | None = None) -> tuple[int, list[st
     return total, parts
 
 
-def walk_stream(project: Path):
+def walk_stream(project: Path, hidden: bool = False):
     """The work tree of one stream: `(directory, filenames)`, pruned once.
+
+    `hidden=True` keeps dot-directories (still not `.git`, which is in
+    SCAN_SKIP). The source walk needs them: `sources: src` describes
+    `src/.github/` too, and pruning it hid committed changes there for good,
+    the newer commit losing to the older pruned mtime (review 2026-11-17, A12).
+    The work walk keeps pruning them -- `.venv` and editor state are not work.
 
     Two callers wanted the same traversal with the same exclusions -- the
     subdirectory budgets here, and "the work outran the notes" in `verify` --
@@ -2428,7 +2622,8 @@ def walk_stream(project: Path):
     for dirpath, dirnames, filenames in os.walk(project, onerror=lambda e: None):
         here = Path(dirpath)
         dirnames[:] = [d for d in dirnames
-                       if d not in SCAN_SKIP and not d.startswith(".")
+                       if d not in SCAN_SKIP
+                       and (hidden or not d.startswith("."))
                        # Another stream's notes are not this stream's work, and
                        # its entry point is that stream's budget. A nested kb
                        # reported its own overview as evidence that the parent
@@ -2567,6 +2762,26 @@ def cmd_route(args) -> int:
     return 1 if refused else 0
 
 
+def own_entry_files(project: Path) -> list[Path]:
+    """The entry-point files at `project` that kb wrote, and only those.
+
+    An `AGENTS.md` without the markers belongs to somebody, and a `CLAUDE.md`
+    holding anything but the import does too. `local` excludes these with the
+    notes, and `check` names them in its way out, so the two cannot disagree
+    about which files go with the decision."""
+    out = []
+    for name in (ROUTE_FILE, CLAUDE_FILE):
+        f = project / name
+        if not f.is_file():
+            continue
+        body = f.read_text(encoding="utf-8", errors="replace")
+        mine = (find_block(body) is not None if name == ROUTE_FILE
+                else body.strip() == CLAUDE_IMPORT)
+        if mine:
+            out.append(f)
+    return out
+
+
 def cmd_local(args) -> int:
     """Keep the notes on this machine — `.git/info/exclude`, not `.gitignore`.
 
@@ -2576,11 +2791,11 @@ def cmd_local(args) -> int:
     """
     root = find_root(args.dir)
     refuse_outside(root)
-    git_dir = find_git_dir(root)
-    if git_dir is None:
+    git = find_git_repo(root)
+    if git is None:
         die(f"{root} is not inside a git repository — nothing to exclude from")
 
-    repo = git_dir.parent
+    repo = git.top
     # The flat layout put directly on a repository root has nothing to exclude:
     # the pattern for "this directory" relative to itself is `/./`, which git
     # does not understand and which was written out verbatim. There is no
@@ -2592,9 +2807,8 @@ def cmd_local(args) -> int:
             "  Either move them into a directory of their own (`kb adopt` "
             f"offers {NOTES_DIRS[0]}/), or keep this repository private.")
 
-    state = git_state(root)
-    if state == "versioned":
-        die(f"{root / OVERVIEW} is already tracked. An exclude rule would change "
+    if git_tracked(root, [root / OVERVIEW] + [n.path for n in load_notes(root)]):
+        die(f"{root} is already tracked. An exclude rule would change "
             "nothing — git does not apply them to files it already tracks.\n"
             "  `git rm -r --cached` the directory first, and decide what to do "
             "about the history: the notes are already in it.")
@@ -2606,7 +2820,9 @@ def cmd_local(args) -> int:
     # decision, not about one directory, so it checks all of it every time and
     # says "nothing to do" only when all of it is already listed.
     rel = os.path.relpath(root.resolve(), repo.resolve()).replace(os.sep, "/")
-    exclude = git_dir / "info" / "exclude"
+    # Where git reads it, not `<top>/.git/info/exclude`: in a worktree `.git`
+    # is a file, and the exclude file lives in the common directory.
+    exclude = git.exclude
     existing = exclude.read_text(encoding="utf-8") if exclude.exists() else ""
     listed = [line.strip() for line in existing.splitlines()]
 
@@ -2618,16 +2834,19 @@ def cmd_local(args) -> int:
     # an `AGENTS.md` without the markers belongs to somebody, and a `CLAUDE.md`
     # holding anything but the import does too.
     project = project_of(root)
-    wants = [f"/{rel}/"]
-    for name in (ROUTE_FILE, CLAUDE_FILE):
-        f = project / name
-        if not f.is_file():
-            continue
-        body = f.read_text(encoding="utf-8", errors="replace")
-        mine = MARK_BEGIN in body if name == ROUTE_FILE else body.strip() == CLAUDE_IMPORT
-        if mine:
-            wants.append("/" + os.path.relpath(f.resolve(),
-                                               repo.resolve()).replace(os.sep, "/"))
+    entry = own_entry_files(project)
+    wants = [f"/{rel}/"] + ["/" + os.path.relpath(f.resolve(), repo.resolve())
+                            .replace(os.sep, "/") for f in entry]
+    # A rule in the exclude file does nothing for a file git already tracks.
+    # Saying "nothing about them is committed" while AGENTS.md was committed
+    # was the opposite of the truth -- reached by following `check`'s own
+    # advice, back when it named only the notes.
+    tracked = git_tracked(root, entry)
+
+    def say_tracked() -> None:
+        for f in tracked:
+            print(f"  {f.name} is tracked — `git rm --cached {shlex.quote(str(f))}`"
+                  "; an exclude rule does not apply to a tracked file")
 
     missing = [w for w in wants if w not in listed]
     marked = git_mark((root / OVERVIEW).read_text(encoding="utf-8")) == "local"
@@ -2635,10 +2854,12 @@ def cmd_local(args) -> int:
         if args.dry_run or marked:
             print(f"{exclude} already lists {', '.join(wants)} — nothing to do"
                   + ("" if marked else f"; would record git=local in {OVERVIEW}"))
+            say_tracked()
             return 0
         record_git_decision(root, "local")
         print(f"{exclude} already lists {', '.join(wants)}; recorded git=local "
               f"in {OVERVIEW}")
+        say_tracked()
         return 0
     if args.dry_run:
         print(f"would append {', '.join(missing)} to {exclude}"
@@ -2650,7 +2871,11 @@ def cmd_local(args) -> int:
     exclude.write_text(existing + sep + "".join(f"{w}\n" for w in missing),
                        encoding="utf-8")
     print(f"appended {', '.join(missing)} to {exclude}")
-    print("  the notes stay on this machine; nothing about them is committed")
+    if tracked:
+        print("  the notes stay on this machine, but not all of it is out of git:")
+        say_tracked()
+    else:
+        print("  the notes stay on this machine; nothing about them is committed")
     kept = [w for w in wants[1:] if w not in missing]
     if len(wants) > 1:
         print("  the entry point goes with them — a pointer without its notes "
@@ -2686,7 +2911,7 @@ def cmd_share(args) -> int:
     """
     root = find_root(args.dir)
     refuse_outside(root)
-    if find_git_dir(root) is None:
+    if find_git_repo(root) is None:
         die(f"{root} is not inside a git repository — there is nothing to share "
             "the notes through")
     overview = root / OVERVIEW
@@ -3158,7 +3383,8 @@ def cmd_status(args) -> int:
                          "recorded — `kb check` says what to do",
             "local": "git: excluded — the notes stay on this machine",
             "undecided": "git: neither tracked nor ignored — `kb local` keeps "
-                         "them here, a commit shares them"}.get(git_state(root))
+                         "them here, `kb share` and a commit share them"
+                         }.get(git_state(root))
     if said:
         print(said)
     if cur:
@@ -3318,7 +3544,7 @@ def cmd_adopt(args) -> int:
         for bak, live, body in made:
             now = live.read_text(encoding="utf-8")
             intact = (body is not None and now.endswith(body)) or \
-                     (body is None and MARK_BEGIN in now)
+                     (body is None and find_block(now) is not None)
             if intact:
                 bak.unlink()
                 dropped += 1

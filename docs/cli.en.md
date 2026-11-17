@@ -401,8 +401,13 @@ git cannot store it: a tracked overview says only that somebody ran `git add`.
 So `kb check` reports notes that git tracks and that carry no `git=committed`,
 and exits 3. The finding names both ways out: `kb share` to keep the notes in
 the repository, or `git rm -r --cached <kb>` and `kb local` to keep them on
-this machine. Notes outside a repository, excluded notes and notes nobody has
-committed yet are not a finding.
+this machine. The printed `git rm` also names `AGENTS.md` and `CLAUDE.md` when
+kb wrote them and git tracks them. Notes outside a repository, excluded notes
+and notes nobody has committed yet are not a finding. A git worktree counts as
+a repository.
+
+The mark is read only from the marker line itself: a line that starts with
+`<!-- kb:begin`. A marker quoted in the text around the index changes nothing.
 
 `kb status` prints `git: tracked by decision (kb share)`, `git: tracked, and the
 decision to track them was not recorded`, `git: excluded` or

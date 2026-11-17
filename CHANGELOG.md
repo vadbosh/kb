@@ -18,6 +18,39 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 5.3.1
+
+Fixes from the review of 2026-11-17.
+
+- **The 5.3.0 guard works in a git worktree.** In a worktree `.git` is a file,
+  and kb recognised only a `.git` directory. Committed notes there read as
+  `clean`, and `kb share`, `kb local` and `kb hook` refused with "not inside a
+  git repository". kb now asks git where the work tree, the exclude file and
+  the hooks directory are.
+- **A marker quoted in the overview's text is not the marker.** The first
+  `kb:begin` anywhere in the overview was taken as the block. A sentence above
+  the index that quoted the marker made `kb sync` delete the rest of that
+  sentence and the real marker line. A quoted `git=committed` also counted as
+  the owner's decision. The markers are now whole lines that start with
+  `<!-- kb:begin` and `<!-- kb:end -->`.
+- **The way out printed by `kb check` includes the entry point.** It named only
+  the notes. After that `git rm`, `AGENTS.md` and `CLAUDE.md` stayed committed,
+  and `kb local` said nothing was. The command now names them too when kb wrote
+  them and git tracks them. `kb local` says when one of them is tracked, and
+  `kb verify` calls such a file committed rather than "not excluded".
+- **Notes are tracked when any of them is**, not only the overview. A partial
+  `git add` left the finding silent.
+- **`sources:` on a directory sees hidden subdirectories.** A committed change
+  under `src/.github/` was never reported. What git ignores is still skipped.
+- **A directory source over 20 000 files is no longer timed by the files seen
+  so far.** If git tracks it and it is clean, its last commit answers.
+  Otherwise `kb verify` lists it as too large to time and exits 3.
+- A `../` path in a note no longer switches off the ignore filter for the other
+  paths in that note.
+- `kb verify` times each source once per run, not once per note that cites it.
+- `kb status` no longer says "a commit shares them" about undecided notes; it
+  says "`kb share` and a commit share them".
+
 ## 5.3.0
 
 - **Notes in git need the owner's decision, and `kb check` enforces it.**

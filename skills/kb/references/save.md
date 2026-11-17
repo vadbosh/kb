@@ -227,7 +227,9 @@ finding is about you.
 The same finding on an existing kb — `is tracked by git and nobody recorded
 that it should be` — is the same question, asked late. Put it to the human with
 both ways out as `check` prints them; do not pick `kb share` because it is the
-one that makes the exit code 0.
+one that makes the exit code 0. If the answer is "this machine only", run the
+printed `git rm` as printed: it names `AGENTS.md` and `CLAUDE.md` too when git
+tracks them, and shortening it to the notes leaves the pointer committed.
 
 Never asked again once answered: the answer is recorded as `git=committed` or
 `git=local` in the marker line of the index, and `kb status` shows it.

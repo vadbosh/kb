@@ -368,8 +368,11 @@ Whether anybody *decided* that, git cannot say: a tracked overview means only
 that somebody ran `git add`, and `git add -A` runs it without asking. So the
 answer is recorded in the marker line of the index: `git=committed` by
 `kb share`, `git=local` by `kb local`. `kb check` reports tracked notes without
-`git=committed` and exits 3. The finding names both ways out: `kb share`,
-or `git rm -r --cached <kb>` followed by `kb local`.
+`git=committed` and exits 3, whether git tracks the overview or only some of
+the notes. The finding names both ways out: `kb share`, or
+`git rm -r --cached <kb>` followed by `kb local`. The `git rm` it prints also
+names `AGENTS.md` and `CLAUDE.md` when kb wrote them and git tracks them: an
+exclude rule does nothing for a tracked file.
 
 ---
 
@@ -503,7 +506,11 @@ Paths are relative to the project root; `~/…` and absolute paths work too.
 Separate them with commas, or with spaces when no path has a space in it.
 `verify` names the note, the source and both dates when a source changed after
 the note was last written, and names a source that no longer exists. A
-directory counts by its newest file.
+directory counts by its newest file. Hidden subdirectories such as `.github/`
+count too; what git ignores does not. A directory with more than 20 000 files
+is not walked to the end. If git tracks it and it has no uncommitted change,
+its last commit answers for it. Otherwise `verify` names it as too large to
+time, and the note should list the subdirectories it describes instead.
 
 Which time counts for the source:
 

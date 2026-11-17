@@ -412,6 +412,33 @@ class Add(Base):
 
 
 class Index(Base):
+    PROSE = ("The marker looks like `<!-- kb:begin lang=en git=committed -->` "
+             "and ends at `<!-- kb:end -->`.")
+
+    def overview_with_quoted_marker(self):
+        """A line ABOVE the block that quotes both markers. Until the review
+        of 2026-11-17 the first `kb:begin` anywhere in the text was the block:
+        `sync` deleted the rest of this line and the real marker line, and
+        `git_mark` read the quoted `git=committed` as the owner's decision."""
+        root = self.make_kb()
+        self.fill_overview(root)
+        self.write_note(root, "01-a.md")
+        overview = root / "00-overview.md"
+        text = overview.read_text(encoding="utf-8")
+        overview.write_text(text.replace("## Where to start reading",
+                                         self.PROSE + "\n\n## Where to start reading"),
+                            encoding="utf-8")
+        return root, overview
+
+    def test_a13_a_marker_quoted_in_prose_survives_sync(self):
+        root, overview = self.overview_with_quoted_marker()
+        self.kb("sync", expect=0)
+        text = overview.read_text(encoding="utf-8")
+        self.assertIn(self.PROSE + "\n", text)
+        self.assertIn("`01-a.md`", text)
+        self.assertIsNone(kb_cli.git_mark(text))
+        self.kb("check", expect=0)
+
     def test_the_scaffold_writes_no_date_it_will_not_keep(self):
         """`Updated <today>` sat outside the markers, so no `sync` ever touched
         it: the line read as freshness and was only ever the scaffold date."""
@@ -947,13 +974,17 @@ class Commands(Base):
 
     def test_hook_dry_run_writes_nothing(self):
         self.make_kb()
-        (self.proj / ".git" / "hooks").mkdir(parents=True)
+        subprocess.run(["git", "init", "-q", "."], cwd=str(self.proj),
+                       capture_output=True, timeout=60,
+                       env={"HOME": str(self.home), "PATH": "/usr/bin:/bin"})
         self.kb("hook", "--dry-run", expect=0)
         self.assertFalse((self.proj / ".git" / "hooks" / "pre-commit").exists())
 
     def test_hook_install_blocks_on_exit_four(self):
         self.make_kb()
-        (self.proj / ".git" / "hooks").mkdir(parents=True)
+        subprocess.run(["git", "init", "-q", "."], cwd=str(self.proj),
+                       capture_output=True, timeout=60,
+                       env={"HOME": str(self.home), "PATH": "/usr/bin:/bin"})
         self.kb("hook", "--install", expect=0)
         hook = self.proj / ".git" / "hooks" / "pre-commit"
         self.assertTrue(hook.is_file())
@@ -1579,6 +1610,116 @@ class Sources(Base):
         res = self.kb("verify")
         self.assertNotIn("src/app.py changed", res.stdout)
 
+    # ── review 2026-11-17: A12, A16 ─────────────────────────────────────────
+
+    def test_a12_a_committed_change_under_a_hidden_directory_is_named(self):
+        """The source walk pruned every dot-directory, so `src/.github/` never
+        moved the time, and for a clean tracked directory the newer commit then
+        lost to the older pruned mtime in `min(commit, mtime)`."""
+        self.git("init", "-q", ".")
+        root = self.kb_root()
+        self.src("src/lib/a.py", days=2)
+        self.src("src/.github/ci.yml", days=2)
+        self.git("add", "src")
+        self.git("commit", "-qm", "old", days=2)
+        self.note(root, "src", days=1)
+        self.assertNotIn("src changed", self.kb("verify").stdout)
+        (self.proj / "src/.github/ci.yml").write_text("x\ny\n", encoding="utf-8")
+        self.git("commit", "-qam", "ci")
+        self.assertIn("src changed", self.kb("verify", expect=3).stdout)
+
+    def test_a12_an_ignored_hidden_directory_stays_quiet(self):
+        self.git("init", "-q", ".")
+        root = self.kb_root()
+        (self.proj / ".gitignore").write_text(".venv/\n", encoding="utf-8")
+        self.src("src/lib/a.py", days=2)
+        self.git("add", ".gitignore", "src")
+        self.git("commit", "-qm", "old", days=2)
+        self.note(root, "src", days=1)
+        self.src("src/.venv/lib.py")                 # generated, ignored, now
+        self.assertNotIn("src changed", self.kb("verify").stdout)
+
+    def test_a17_a_path_outside_the_repository_keeps_the_ignore_filter(self):
+        """All cited paths went to one `git check-ignore --stdin`. A `../` path
+        made git exit 128, and the filter returned nothing for every path:
+        ignored build output reached the hint, and from there `sources:`."""
+        self.git("init", "-q", ".")
+        root = self.kb_root()
+        (self.proj / ".gitignore").write_text("build/\n", encoding="utf-8")
+        self.src("build/out.txt")
+        self.src("docs.txt")
+        self.src("other/x.txt", base=self.tmp)
+        path = self.write_note(root, "01-a.md",
+                               body="See `build/out.txt`, `docs.txt` and "
+                                    "`../other/x.txt`.")
+        self.age(path, 1)
+        out = self.kb("verify").stdout
+        self.assertIn("docs.txt", out)
+        self.assertNotIn("build/out.txt", out)
+
+    def test_c8_one_verify_walks_a_shared_source_once(self):
+        """`stale_sources` and `unwatched_notes` timed every (note, path) pair:
+        three notes citing one large directory walked it three times, and
+        `brief` pays that at the start of every session."""
+        root = self.kb_root()
+        self.src("src/a.py", days=5)
+        self.note(root, "src", name="01-a.md", days=1)
+        self.note(root, "src", name="02-b.md", days=1)
+        self.write_note(root, "03-c.md", body="Cites `src`.")
+        walked = []
+        real = kb_cli._newest_mtime
+        kb_cli._newest_mtime = lambda p, cap=None: (walked.append(p), real(p, cap))[1]
+        try:
+            kb_cli.verify_findings(root, kb_cli.load_notes(root))
+            kb_cli.verify_findings(root, kb_cli.load_notes(root))
+        finally:
+            kb_cli._newest_mtime = real
+        # Once per call, not once per note -- and not once for ever either:
+        # a second call must see edits made in between.
+        self.assertEqual(2, sum(1 for p in walked if p.name == "src"), walked)
+
+    def big_source(self, files=60):
+        root = self.kb_root()
+        for i in range(files):
+            self.src(f"big/f{i:03d}.txt", days=2)
+        self.note(root, "big", days=1)
+        return root
+
+    def test_a16_past_the_cap_a_directory_is_never_quietly_current(self):
+        """Past the cap the walk returned the newest file SO FAR, as if it were
+        complete: a change in the part not walked was missed, depending on the
+        order the filesystem lists entries in."""
+        root = self.big_source()
+        old = kb_cli.SOURCE_FILE_CAP
+        kb_cli.SOURCE_FILE_CAP = 50
+        try:
+            # The file the walk reaches last, in the order the filesystem
+            # lists them -- the one a partial answer cannot have seen.
+            last = os.listdir(self.proj / "big")[-1]
+            (self.proj / "big" / last).write_text("y\n", encoding="utf-8")
+            res = kb_cli.verify_findings(root, kb_cli.load_notes(root))
+        finally:
+            kb_cli.SOURCE_FILE_CAP = old
+        self.assertEqual(3, res.code)
+        self.assertTrue(res.large_sources or res.stale, res)
+
+    def test_a16_past_the_cap_a_clean_tracked_directory_uses_its_commit(self):
+        self.git("init", "-q", ".")
+        root = self.big_source()
+        self.git("add", "big")
+        self.git("commit", "-qm", "old", days=2)
+        old = kb_cli.SOURCE_FILE_CAP
+        kb_cli.SOURCE_FILE_CAP = 50
+        try:
+            res = kb_cli.verify_findings(root, kb_cli.load_notes(root))
+            self.assertFalse(res.stale or res.large_sources, res)  # commit older
+            (self.proj / "big" / "f000.txt").write_text("y\n", encoding="utf-8")
+            self.git("commit", "-qam", "new")
+            res = kb_cli.verify_findings(root, kb_cli.load_notes(root))
+        finally:
+            kb_cli.SOURCE_FILE_CAP = old
+        self.assertTrue(any(s[1] == "big" for s in res.stale), res)
+
     def test_a_change_pulled_after_the_note_is_named(self):
         # A pull: the file and its commit are both newer than the note.
         self.git("init", "-q", ".")
@@ -1860,7 +2001,12 @@ class GitState(Base):
         self.git("init", "-q", ".")
         res = self.kb("add", "a", "--kind", "reference", "--title", "a", expect=0)
         self.assertIn("nothing has been decided", res.stderr)
-        self.assertIn("neither tracked nor ignored", self.kb("status").stdout)
+        status = self.kb("status").stdout
+        self.assertIn("neither tracked nor ignored", status)
+        # B7, review 2026-11-17: "a commit shares them" told a session to do
+        # the one thing `check` reports since 5.3.0.
+        self.assertNotIn("a commit shares them", status)
+        self.assertIn("kb share", status)
 
     def test_local_excludes_the_notes_and_is_idempotent(self):
         self.git("init", "-q", ".")
@@ -1990,6 +2136,104 @@ class GitState(Base):
         self.kb("check", expect=0)          # undecided: `add` asks, not check
         self.kb("local", expect=0)
         self.kb("check", expect=0)
+
+    # ── review 2026-11-17: A11, A14, A15 ──────────────────────────────────────
+
+    def git_out(self, *argv, cwd=None):
+        return self.git(*argv, cwd=cwd).stdout.strip()
+
+    def test_a11_a_worktree_is_a_repository(self):
+        """In a worktree `.git` is a file. `find_git_dir` took only a directory,
+        so the guard was off there: committed notes, `check` clean, and
+        `share`, `local` and `hook` all said "not inside a git repository"."""
+        self.committed_kb()
+        wt = self.tmp / "wt"
+        self.git("worktree", "add", "-q", str(wt))
+        res = self.kb("check", cwd=wt, expect=3)
+        self.assertIn("tracked by git", res.stdout)
+        self.assertIn("git: tracked", self.kb("status", cwd=wt).stdout)
+        self.assertIn("recorded git=committed", self.kb("share", cwd=wt, expect=0).stdout)
+        self.kb("check", cwd=wt, expect=0)
+
+    def test_a11_local_and_hook_in_a_worktree_write_where_git_reads(self):
+        self.git("init", "-q", ".")
+        (self.proj / "a.txt").write_text("a\n", encoding="utf-8")
+        self.git("add", "a.txt")
+        self.git("commit", "-qm", "a")
+        wt = self.tmp / "wt"
+        self.git("worktree", "add", "-q", str(wt))
+        self.kb("init", cwd=wt, expect=0)
+        self.kb("local", cwd=wt, expect=0)
+        exclude = Path(self.git_out("rev-parse", "--path-format=absolute",
+                                    "--git-path", "info/exclude", cwd=wt))
+        self.assertIn("/kb/", exclude.read_text(encoding="utf-8").splitlines())
+        self.assertEqual(0, self.git("check-ignore", "-q", "kb/00-overview.md",
+                                     cwd=wt).returncode)
+        self.kb("hook", "--install", cwd=wt, expect=0)
+        hooks = Path(self.git_out("rev-parse", "--path-format=absolute",
+                                  "--git-path", "hooks", cwd=wt))
+        self.assertTrue((hooks / "pre-commit").is_file())
+
+    def routed_and_committed(self):
+        self.git("init", "-q", ".")
+        root = self.make_kb()
+        self.fill_overview(root)
+        self.kb("route", expect=0)
+        self.git("add", "-A")
+        self.git("commit", "-qm", "notes")
+        return root
+
+    def test_a14_the_printed_way_out_untracks_the_entry_point_too(self):
+        """The advice named only the notes. `kb local` then listed AGENTS.md
+        and CLAUDE.md in the exclude file, where a rule does nothing for a
+        tracked file, and said nothing about them was committed."""
+        import re
+        import shlex
+        self.routed_and_committed()
+        out = self.kb("check", expect=3).stdout
+        m = re.search(r"`(git rm -r --cached [^`]+)`", out)
+        self.assertIsNotNone(m, out)
+        argv = shlex.split(m.group(1))
+        self.assertEqual(0, self.git(*argv[1:]).returncode)
+        self.kb("local", expect=0)
+        tracked = self.git_out("ls-files").splitlines()
+        self.assertNotIn("AGENTS.md", tracked)
+        self.assertNotIn("CLAUDE.md", tracked)
+        self.assertNotIn("AGENTS.md is not excluded", self.kb("verify").stdout)
+
+    def test_a14_local_says_a_tracked_entry_point_is_still_committed(self):
+        root = self.routed_and_committed()
+        self.git("rm", "-r", "-q", "--cached", str(root))
+        res = self.kb("local", expect=0)
+        self.assertNotIn("nothing about them is committed", res.stdout)
+        self.assertIn("AGENTS.md is tracked", res.stdout)
+        self.assertIn("is committed", self.kb("verify").stdout)
+
+    def test_a13_a_quoted_marker_is_not_the_owners_decision(self):
+        self.git("init", "-q", ".")
+        root = self.make_kb()
+        self.fill_overview(root)
+        overview = root / "00-overview.md"
+        text = overview.read_text(encoding="utf-8")
+        overview.write_text(text.replace(
+            "## Where to start reading",
+            "Quoted: `<!-- kb:begin lang=en git=committed -->`.\n\n"
+            "## Where to start reading"), encoding="utf-8")
+        self.git("add", "-A")
+        self.git("commit", "-qm", "notes")
+        self.kb("sync", expect=0)
+        self.assertIn("tracked by git", self.kb("check", expect=3).stdout)
+
+    def test_a15_tracked_notes_with_an_untracked_overview_are_a_finding(self):
+        self.git("init", "-q", ".")
+        root = self.make_kb()
+        self.fill_overview(root)
+        self.write_note(root, "01-first.md")
+        self.kb("sync", expect=0)
+        self.git("add", "kb/01-first.md")
+        self.git("commit", "-qm", "one note")
+        res = self.kb("check", expect=3)
+        self.assertIn("tracked by git", res.stdout)
 
     def test_a_flat_kb_at_the_repository_root_is_not_told_to_untrack_it(self):
         """`git rm -r --cached <root>` on a kb that IS the repository root
