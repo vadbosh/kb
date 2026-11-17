@@ -2233,6 +2233,49 @@ class GitState(Base):
                                   "--git-path", "hooks", cwd=wt))
         self.assertTrue((hooks / "pre-commit").is_file())
 
+    def submodule(self):
+        """A superproject at proj/ with a submodule at proj/sub. In the
+        submodule `.git` is a file pointing into proj/.git/modules/sub, and
+        before 5.3.1 the walk found proj/.git instead -- the superproject's."""
+        lib = self.tmp / "lib"
+        lib.mkdir()
+        (lib / "a.txt").write_text("a\n", encoding="utf-8")
+        self.git("init", "-q", ".", cwd=lib)
+        self.git("add", "a.txt", cwd=lib)
+        self.git("commit", "-qm", "a", cwd=lib)
+        self.git("init", "-q", ".")
+        self.git("-c", "protocol.file.allow=always", "submodule", "add", "-q",
+                 str(lib), "sub")
+        self.git("commit", "-qm", "sub")
+        sub = self.proj / "sub"
+        self.assertTrue((sub / ".git").is_file())
+        return sub
+
+    def test_a11_local_in_a_submodule_writes_the_submodules_exclude(self):
+        sub = self.submodule()
+        self.kb("init", cwd=sub, expect=0)
+        self.kb("local", cwd=sub, expect=0)
+        exclude = Path(self.git_out("rev-parse", "--path-format=absolute",
+                                    "--git-path", "info/exclude", cwd=sub))
+        self.assertIn("modules", exclude.parts)
+        self.assertIn("/kb/", exclude.read_text(encoding="utf-8").splitlines())
+        self.assertEqual(0, self.git("check-ignore", "-q", "kb/00-overview.md",
+                                     cwd=sub).returncode)
+        # And nothing was written into the superproject's own exclude file.
+        top = self.proj / ".git" / "info" / "exclude"
+        self.assertNotIn("/kb/", top.read_text(encoding="utf-8").splitlines()
+                         if top.exists() else [])
+
+    def test_a11_committed_notes_in_a_submodule_are_a_finding(self):
+        sub = self.submodule()
+        root = self.make_kb(cwd=sub)
+        self.fill_overview(root)
+        self.git("add", "kb", cwd=sub)
+        self.git("commit", "-qm", "notes", cwd=sub)
+        res = self.kb("check", cwd=sub, expect=3)
+        self.assertIn("tracked by git", res.stdout)
+        self.assertIn(f"git rm -r --cached {root}", res.stdout)
+
     def routed_and_committed(self):
         self.git("init", "-q", ".")
         root = self.make_kb()
