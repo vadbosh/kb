@@ -18,6 +18,19 @@ a reader looks at, and the tag `git checkout` needs. They drift independently,
 and a release where they disagree is worse than an untagged one: each source
 looks authoritative, and nothing says which is right.
 
+## 5.3.3
+
+Documentation only: a language review of the text added in 5.3.0–5.3.2.
+
+- `docs/kb.*.md` quote the actual `verify` line, `sources too large to time`,
+  instead of paraphrasing it.
+- `docs/cli.*.md`: "git cannot store it" named nothing after a code block; it
+  now says "the decision". The Russian text names the ignore rule, and one
+  over-long line is wrapped.
+- `docs/kb.ru.md`: three Russian sentences reworded where the word order
+  followed the English or a word was a calque.
+- `tests/test_kb.py` gained two tests for a git submodule (no code change).
+
 ## 5.3.2
 
 Two design points of the review of 2026-11-17, accepted by the owner.

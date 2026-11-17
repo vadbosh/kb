@@ -509,8 +509,9 @@ the note was last written, and names a source that no longer exists. A
 directory counts by its newest file. Hidden subdirectories such as `.github/`
 count too; what git ignores does not. A directory with more than 20 000 files
 is not walked to the end. If git tracks it and it has no uncommitted change,
-its last commit answers for it. Otherwise `verify` names it as too large to
-time, and the note should list the subdirectories it describes instead.
+its last commit answers for it. Otherwise `verify` lists it under
+`sources too large to time`, and the note should list the subdirectories it
+describes instead.
 
 Which time counts for the source:
 
@@ -526,10 +527,10 @@ commit alone is newer than a note that is current. The earlier of the two gets
 both cases right, and a `git pull` that brings a change, where both are newer,
 is still named.
 
-The note's own time follows the same idea. A note that git tracks, with no
-uncommitted change, counts by its last commit, so a note that was already
-behind its source before a clone stays named after it. Any other note counts by
-its modification time: notes are often kept out of git.
+The note's own time follows the same idea. A note that git tracks and that has
+no uncommitted change counts by its last commit. So a note that was already
+behind its source before a clone is still named after the clone. Any other
+note counts by its modification time: notes are often kept out of git.
 
 Write the paths on the `sources:` line itself. A YAML list under an empty
 `sources:` is not read, and `verify` names such a note. A single path with a
