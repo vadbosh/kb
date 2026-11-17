@@ -516,7 +516,20 @@ is still named. The note's own time is always its file's modification time:
 notes are often kept out of git.
 
 Write the paths on the `sources:` line itself. A YAML list under an empty
-`sources:` is not read, and `verify` names such a note.
+`sources:` is not read, and `verify` names such a note. A single path with a
+space needs a trailing comma: `sources: docs/my notes.md,`.
+
+When the dates are on the same day, the report shows the time as well.
+
+A finding clears when the note is written again. If you read the source and the
+note is still right, re-save it or `touch` it.
+
+**A note that cites files and lists no `sources:`.** A reference or recipe
+note written before 5.2.0 has no field, so nothing watches it. `verify` lists
+such notes with the existing paths they cite in backticks, and `brief` names
+them on a line of its own: `/kb save` adds the field from that list. This is a
+hint, not a suspicion: it never changes the exit code. `sources: none` marks a
+note whose paths are only examples, and the hint stops for it.
 
 `kb add --sources <paths>` writes the field and refuses a path that does not
 exist.

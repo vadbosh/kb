@@ -335,6 +335,13 @@ changed". A note with no `sources:` is never checked this way. Skip it only for
 a note that describes nothing on disk: a decision about direction, a state of
 a remote system.
 
+**`brief` prints `# sources: N note(s) cite files and list none`** when older
+notes have no field. In the same save, add `sources:` to each one it names:
+`kb verify` shows the paths each one cites — keep the ones the note actually
+describes, drop the ones it only mentions. A note whose paths are only
+examples gets `sources: none`. Editing the note this way also clears it from
+the list; that is the point, not a side effect.
+
 **Run a command before writing a claim about the system** — now, not from memory
 of a run earlier in the session. `check` and `verify` cannot help: they prove the
 notes agree with each other, never that a sentence about the world is true, and a

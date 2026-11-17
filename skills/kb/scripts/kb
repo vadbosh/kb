@@ -47,7 +47,7 @@ import subprocess
 import sys
 import tempfile
 from dataclasses import dataclass, field
-from datetime import date
+from datetime import date, datetime
 from pathlib import Path
 
 OVERVIEW = "00-overview.md"
@@ -1102,7 +1102,8 @@ def cmd_add(args) -> int:
         if absent:
             die(f"--sources names {', '.join(absent)}, which does not exist under "
                 f"{project}.\n  Paths are relative to the project root; "
-                "`~/…` and absolute paths work too.")
+                "`~/…` and absolute paths work too.\n  A path with a space needs "
+                "a comma list, even of one: --sources \"docs/my notes.md,\"")
     # Gaps are never reused: a number that once pointed at a file may still be
     # referenced from a commit message, another note, or somewhere outside.
     num = max((n.num for n in notes), default=0) + 1
@@ -1604,6 +1605,8 @@ class VerifyResult:
     stale: list[tuple[str, str, str, str]] = field(default_factory=list)
     missing_sources: list[tuple[str, str]] = field(default_factory=list)
     empty_sources: list[str] = field(default_factory=list)
+    # A hint, outside `code`: (note, cited paths that exist).
+    unwatched: list[tuple[str, list[str]]] = field(default_factory=list)
 
     @property
     def code(self) -> int:
@@ -1642,8 +1645,46 @@ def split_sources(raw: str) -> list[str]:
     a space survives in a comma list; otherwise whitespace does, as in
     `supersedes:`."""
     raw = raw.strip()
+    # `none` is a decision, not a path: a note that cites files only as
+    # examples says so, and the hint about notes without sources stops.
+    if raw.lower() == "none":
+        return []
     parts = raw.split(",") if "," in raw else raw.split()
     return [p.strip() for p in parts if p.strip()]
+
+
+# Kinds whose subject is usually something on disk. A decision cites code as a
+# reason and a state cites it as news; asking them for sources would be noise.
+SOURCED_KINDS = {"reference", "recipe"}
+CITED_RE = re.compile(r"`(~?[A-Za-z0-9._/-]{3,})`")
+
+
+def cited_paths(text: str, project: Path, notes_dir: Path) -> list[str]:
+    """Paths in backticks that exist: relative to the project, absolute, `~/…`.
+    The notes themselves are not sources. Commands in backticks have spaces and
+    flags have no file behind them, so neither survives the existence test."""
+    out = []
+    notes_dir = notes_dir.resolve()
+    for raw in CITED_RE.findall(text):
+        raw = raw.rstrip(".,;:")
+        if raw in out or raw.startswith("-") or "..." in raw:
+            continue
+        p = resolve_source(project, raw)
+        # `/tmp`, `/usr`, `~`: where work happens, not what a note describes.
+        # Measured on this repository's notes, where a sandbox recipe's `/tmp`
+        # came out as a source. Two components, as `checkable_paths` asks.
+        if raw.startswith(("/", "~")) and len(p.parts) < 3:
+            continue
+        try:
+            if not p.exists():
+                continue
+            r = p.resolve()
+        except OSError:
+            continue
+        if r == project.resolve() or r == notes_dir or notes_dir in r.parents:
+            continue
+        out.append(raw)
+    return out
 
 
 def note_sources(n: Note) -> list[str]:
@@ -1728,7 +1769,7 @@ def stale_sources(project: Path, notes: list[Note]
     for n in notes:
         listed = note_sources(n)
         if not listed:
-            if n.sources is not None:
+            if n.sources is not None and not n.sources.strip():
                 empty.append(n.name)
             continue
         try:
@@ -1740,9 +1781,33 @@ def stale_sources(project: Path, notes: list[Note]
             if t is None:
                 missing.append((n.name, raw))
             elif t > written:
-                stale.append((n.name, raw, date.fromtimestamp(t).isoformat(),
-                              date.fromtimestamp(written).isoformat()))
+                stale.append((n.name, raw, *_two_moments(t, written)))
     return stale, missing, empty
+
+
+def _two_moments(a: float, b: float) -> tuple[str, str]:
+    """Dates, with the time when both fall on one day: "changed 2026-11-17,
+    note written 2026-11-17" read as a contradiction, and it is the usual case."""
+    da, db = date.fromtimestamp(a), date.fromtimestamp(b)
+    if da != db:
+        return da.isoformat(), db.isoformat()
+    fmt = "%Y-%m-%d %H:%M"
+    return (datetime.fromtimestamp(a).strftime(fmt),
+            datetime.fromtimestamp(b).strftime(fmt))
+
+
+def unwatched_notes(project: Path, root: Path, notes: list[Note]
+                    ) -> list[tuple[str, list[str]]]:
+    """Reference and recipe notes with no `sources:` key that cite files which
+    exist. Notes from before 5.2.0 list nothing, and nothing pointed at them."""
+    out = []
+    for n in notes:
+        if n.kind not in SOURCED_KINDS or n.sources is not None:
+            continue
+        cited = cited_paths(n.text, project, root)
+        if cited:
+            out.append((n.name, cited))
+    return out
 
 
 def verify_findings(root: Path, notes: list[Note]) -> VerifyResult:
@@ -1863,7 +1928,8 @@ def verify_findings(root: Path, notes: list[Note]) -> VerifyResult:
     dated = stale_dated_line(root / OVERVIEW, notes)
     stale, missing, empty = stale_sources(project, notes)
     return VerifyResult(dead, aging, moved, gap_hours, entry, dated,
-                        stale, missing, empty)
+                        stale, missing, empty,
+                        unwatched_notes(project, root, notes))
 
 
 def print_verify(res: VerifyResult, out=None) -> int:
@@ -1924,9 +1990,20 @@ def print_verify(res: VerifyResult, out=None) -> int:
               "somebody fixes it,\n  and `route` said so only in the turn that "
               "wrote the file.", file=out)
 
+    # A hint, not a suspicion: it never sets the exit code, so a kb whose old
+    # notes stay as they are does not turn every restore into a finding.
+    if res.unwatched:
+        print(f"\nnotes that cite files and list no `sources:` ({len(res.unwatched)})"
+              " — `/kb save` adds them; `sources: none` if they describe nothing "
+              "on disk:", file=out)
+        for note, cited in res.unwatched:
+            more = f", +{len(cited) - 3} more" if len(cited) > 3 else ""
+            print(f"  {note}  {', '.join(cited[:3])}{more}", file=out)
+
     if res.code == 0:
         print("nothing suspicious: every checkable path resolves, no note is "
-              "past its re-check age, and no work has outrun the notes", file=out)
+              "past its re-check age or older than its sources, and no work has "
+              "outrun the notes", file=out)
         return 0
     print("\nAdvisory only. Whether a fact about a live cluster still holds "
           "cannot be answered here — only by a human or a command.", file=out)
@@ -2768,7 +2845,8 @@ def cmd_brief(args) -> int:
     checks = io.StringIO()
     rc_check = print_check(check_problems(root, notes, external=False),
                            out=checks)
-    rc_verify = print_verify(verify_findings(root, notes), out=checks)
+    vr = verify_findings(root, notes)
+    rc_verify = print_verify(vr, out=checks)
     detail = checks.getvalue().strip()
     if rc_check == 4:
         print("# check: A CREDENTIAL IS IN THE NOTES — see below; do not edit "
@@ -2779,6 +2857,11 @@ def cmd_brief(args) -> int:
         print("# check: clean")
     print("# verify: " + ("suspicions — see below, the notes may have gone "
                           "stale" if rc_verify == 3 else "nothing suspicious"))
+    # Its own line: the detail below is printed only on exit 3, and this hint
+    # never sets it, yet restore is where `/kb save` learns of it.
+    if vr.unwatched:
+        print(f"# sources: {len(vr.unwatched)} note(s) cite files and list none — "
+              f"`/kb save` adds them: {', '.join(n for n, _ in vr.unwatched)}")
     if rc_check != 0 or rc_verify != 0:
         print()
         for line in detail.split("\n"):

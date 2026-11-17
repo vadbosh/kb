@@ -1650,6 +1650,67 @@ class Sources(Base):
         res = self.kb("verify", expect=3)
         self.assertIn(f"{f} changed", res.stdout)
 
+    def test_a_note_citing_files_without_sources_is_hinted(self):
+        # Notes written before 5.2.0 list nothing, and nothing pointed at them.
+        # The hint does not change the exit code: a note that stays as it is
+        # must not turn every restore into a suspicion.
+        root = self.kb_root()
+        self.src("src/app.py", days=20)
+        self.write_note(root, "01-a.md", body="The entry is `src/app.py`.")
+        res = self.kb("verify", expect=0)
+        self.assertIn("cite files and list no `sources:`", res.stdout)
+        self.assertIn("01-a.md  src/app.py", res.stdout)
+        brief = self.kb("brief", expect=0)
+        self.assertIn("# sources: 1 note(s) cite files and list none", brief.stdout)
+
+    def test_a_top_level_directory_is_not_a_source(self):
+        # Measured on this repository's own notes: `/tmp` in a recipe about
+        # sandboxes came out as a source. A system directory is where work
+        # happens, not what a note describes.
+        root = self.kb_root()
+        self.write_note(root, "01-a.md", body="Run it in `/tmp` and `/usr`.")
+        self.assertNotIn("list no `sources:`", self.kb("verify").stdout)
+
+    def test_the_hint_skips_decisions_and_states(self):
+        root = self.kb_root()
+        self.src("src/app.py", days=20)
+        self.write_note(root, "01-a.md", kind="decision", body="Keep `src/app.py`.")
+        self.assertNotIn("list no `sources:`", self.kb("verify").stdout)
+
+    def test_sources_none_is_a_deliberate_opt_out(self):
+        root = self.kb_root()
+        self.src("src/app.py", days=20)
+        path = self.note(root, "none")
+        path.write_text(path.read_text(encoding="utf-8").replace(
+            "text", "Mentions `src/app.py` as an example only."), encoding="utf-8")
+        res = self.kb("verify", expect=0)
+        self.assertNotIn("list no `sources:`", res.stdout)
+        self.assertNotIn("do not exist", res.stdout)
+        self.assertNotIn("is empty", res.stdout)
+
+    def test_same_day_findings_show_the_time(self):
+        # "changed 2026-11-17, note written 2026-11-17" read as a contradiction.
+        root = self.kb_root()
+        self.src("src/app.py", days=20)
+        note = self.note(root, "src/app.py", days=0)
+        t = time.time() - 120
+        os.utime(note, (t, t))
+        self.src("src/app.py")
+        res = self.kb("verify", expect=3)
+        if date.fromtimestamp(t) == date.today():
+            self.assertRegex(res.stdout, r"changed \d{4}-\d\d-\d\d \d\d:\d\d, "
+                                         r"note written \d{4}-\d\d-\d\d \d\d:\d\d")
+
+    def test_add_with_a_spaced_path_says_to_use_a_comma(self):
+        self.src("docs/my notes.md")
+        res = self.kb("add", "a", "--kind", "reference", "--title", "a",
+                      "--sources", "docs/my notes.md", expect=1)
+        self.assertIn("comma", res.stderr)
+
+    def test_nothing_suspicious_mentions_sources(self):
+        self.kb_root()
+        self.assertIn("older than its sources", self.kb("verify", expect=0).stdout)
+
     def test_add_writes_the_sources_field(self):
         self.src("src/app.py")
         self.kb("add", "a", "--kind", "reference", "--title", "a",
