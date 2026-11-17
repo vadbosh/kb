@@ -504,13 +504,19 @@ Which time counts for the source:
 
 | The source | Its time |
 |---|---|
-| tracked by git, no uncommitted change | the last commit that touched it |
+| tracked by git, no uncommitted change | the earlier of its last commit and its modification time |
 | edited and not committed, untracked, or outside git | its modification time |
 
-A fresh clone gives every file a new modification time. Comparing those alone
-would mark every note at once, so a clean tracked file answers with its commit
-instead. The note's own time is always its file's modification time: notes are
-often kept out of git.
+Neither time works alone for a tracked file. A fresh clone gives every file a
+new modification time, so comparing that alone would mark every note at once.
+The usual order is to edit the code, update the note, then commit, so the
+commit alone is newer than a note that is current. The earlier of the two gets
+both cases right, and a `git pull` that brings a change, where both are newer,
+is still named. The note's own time is always its file's modification time:
+notes are often kept out of git.
+
+Write the paths on the `sources:` line itself. A YAML list under an empty
+`sources:` is not read, and `verify` names such a note.
 
 `kb add --sources <paths>` writes the field and refuses a path that does not
 exist.
